@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap" rel="stylesheet" />
 
 <!-- SweetAlert2 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" />
@@ -1676,9 +1677,9 @@ async function generateAndStore() {
   });
 
   try {
-    // ── Render certificate on <canvas> ──────────────────────
-    const canvas = document.getElementById('cert-canvas');
-    drawCertificateOnCanvas(canvas, certName);
+   // ── Render certificate on <canvas> ──────────────────────
+const canvas = document.getElementById('cert-canvas');
+await drawCertificateOnCanvas(canvas, certName);
 
     // ── Convert canvas → PNG blob → base64 ──────────────────
     const imgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
@@ -1726,181 +1727,55 @@ async function generateAndStore() {
   }
 }
 
-// ── Draw certificate template + name on <canvas> ──────────────────
-function drawCertificateOnCanvas(canvas, name) {
+// ── Fungsi Pembantu: Memastikan gambar Canva selesai di-load sebelum dicetak ──
+function loadTemplateImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = (err) => reject(err);
+    img.src = src;
+  });
+}
+
+// ── Draw certificate template + name on <canvas> (VERSI KUSTOM CANVA) ──
+async function drawCertificateOnCanvas(canvas, name) {
   const ctx = canvas.getContext('2d');
   const W   = canvas.width;   // 900
   const H   = canvas.height;  // 636
 
-  // ── Background gradient ──────────────────────────────────────
-  const bgGrad = ctx.createLinearGradient(0, 0, W, H);
-  bgGrad.addColorStop(0,   '#1b1c27');
-  bgGrad.addColorStop(0.5, '#22243a');
-  bgGrad.addColorStop(1,   '#1b1c27');
-  ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 0, W, H);
+  // 1. Bersihkan canvas dari sisa gambar lama
+  ctx.clearRect(0, 0, W, H);
 
-  // ── Grid pattern ─────────────────────────────────────────────
-  ctx.save();
-  ctx.strokeStyle = 'rgba(204,255,0,0.04)';
-  ctx.lineWidth   = 1;
-  for (let x = 0; x <= W; x += 48) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-  for (let y = 0; y <= H; y += 48) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-  ctx.restore();
-
-  // ── Outer border ─────────────────────────────────────────────
-  ctx.save();
-  ctx.strokeStyle = 'rgba(204,255,0,0.20)';
-  ctx.lineWidth   = 1.5;
-  roundRect(ctx, 24, 24, W-48, H-48, 20);
-  ctx.stroke();
-  ctx.restore();
-
-  // ── Inner border ─────────────────────────────────────────────
-  ctx.save();
-  ctx.strokeStyle = 'rgba(204,255,0,0.08)';
-  ctx.lineWidth   = 1;
-  roundRect(ctx, 36, 36, W-72, H-72, 14);
-  ctx.stroke();
-  ctx.restore();
-
-  // ── Accent glow blobs ────────────────────────────────────────
-  const g1 = ctx.createRadialGradient(W-80, 80, 0, W-80, 80, 260);
-  g1.addColorStop(0, 'rgba(204,255,0,0.10)');
-  g1.addColorStop(1, 'rgba(204,255,0,0)');
-  ctx.fillStyle = g1;
-  ctx.fillRect(0, 0, W, H);
-
-  const g2 = ctx.createRadialGradient(80, H-80, 0, 80, H-80, 200);
-  g2.addColorStop(0, 'rgba(107,122,255,0.10)');
-  g2.addColorStop(1, 'rgba(107,122,255,0)');
-  ctx.fillStyle = g2;
-  ctx.fillRect(0, 0, W, H);
-
-  // ── Brand shield icon ─────────────────────────────────────────
-  drawShield(ctx, W/2, 90, 32);
-
-  // ── "CERTIFICATE OF PARTICIPATION" label ─────────────────────
-  ctx.save();
-  ctx.font        = '600 11px "Space Grotesk", sans-serif';
-  ctx.fillStyle   = 'rgba(204,255,0,0.7)';
-  ctx.letterSpacing = '0.18em';
-  ctx.textAlign   = 'center';
-  ctx.fillText('CERTIFICATE OF PARTICIPATION', W/2, 156);
-  ctx.restore();
-
-  // ── "This is to certify that" ─────────────────────────────────
-  ctx.save();
-  ctx.font      = '300 15px "Space Grotesk", sans-serif';
-  ctx.fillStyle = 'rgba(240,240,245,0.5)';
-  ctx.textAlign = 'center';
-  ctx.fillText('This is to certify that', W/2, 210);
-  ctx.restore();
-
-  // ── RECIPIENT NAME ────────────────────────────────────────────
-  ctx.save();
-  const nameFontSize = name.length > 30 ? 36 : name.length > 22 ? 42 : 50;
-  ctx.font        = `800 ${nameFontSize}px "Space Grotesk", sans-serif`;
-  ctx.fillStyle   = '#ccff00';
-  ctx.textAlign   = 'center';
-  ctx.shadowColor = 'rgba(204,255,0,0.5)';
-  ctx.shadowBlur  = 18;
-  ctx.fillText(name, W/2, 278);
-  ctx.shadowBlur  = 0;
-  ctx.restore();
-
-  // ── Name underline accent ─────────────────────────────────────
-  const nameW = Math.min(ctx.measureText(name).width + 80, W - 100);
-  const ulX   = (W - nameW) / 2;
-  const ulGrad = ctx.createLinearGradient(ulX, 0, ulX + nameW, 0);
-  ulGrad.addColorStop(0,   'rgba(204,255,0,0)');
-  ulGrad.addColorStop(0.3, 'rgba(204,255,0,0.6)');
-  ulGrad.addColorStop(0.7, 'rgba(204,255,0,0.6)');
-  ulGrad.addColorStop(1,   'rgba(204,255,0,0)');
-  ctx.save();
-  ctx.strokeStyle = ulGrad;
-  ctx.lineWidth   = 1.5;
-  ctx.beginPath(); ctx.moveTo(ulX, 294); ctx.lineTo(ulX + nameW, 294); ctx.stroke();
-  ctx.restore();
-
-  // ── "has successfully participated in" ───────────────────────
-  ctx.save();
-  ctx.font      = '300 15px "Space Grotesk", sans-serif';
-  ctx.fillStyle = 'rgba(240,240,245,0.5)';
-  ctx.textAlign = 'center';
-  ctx.fillText('has successfully participated in', W/2, 336);
-  ctx.restore();
-
-  // ── EVENT NAME ────────────────────────────────────────────────
-  ctx.save();
-  const evFontSize = EVENT_NAME.length > 40 ? 18 : 22;
-  ctx.font        = `700 ${evFontSize}px "Space Grotesk", sans-serif`;
-  ctx.fillStyle   = '#f0f0f5';
-  ctx.textAlign   = 'center';
-  ctx.fillText(EVENT_NAME, W/2, 370);
-  ctx.restore();
-
-  // ── Separator dots ────────────────────────────────────────────
-  ctx.save();
-  ctx.fillStyle = 'rgba(204,255,0,0.4)';
-  for (let i = -2; i <= 2; i++) {
-    ctx.beginPath(); ctx.arc(W/2 + i*16, 398, 2, 0, Math.PI*2); ctx.fill();
+  try {
+    // 2. Memuat file template gambar kosong dari Canva
+    const template = await loadTemplateImage('sertifikat-template.png');
+    ctx.drawImage(template, 0, 0, W, H);
+  } catch (error) {
+    console.error("Gagal memuat gambar template Canva:", error);
+    ctx.fillStyle = '#1b1c27';
+    ctx.fillRect(0, 0, W, H);
   }
-  ctx.restore();
 
-  // ── DATE & LOCATION ───────────────────────────────────────────
+  // 3. ── RECIPIENT NAME (Sesuai Desain & Koordinat Exact Anda) ────────
   ctx.save();
-  ctx.font      = '400 13px "Space Grotesk", sans-serif';
-  ctx.fillStyle = 'rgba(240,240,245,0.4)';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${EVENT_DATE}  ·  ${EVENT_LOCATION}`, W/2, 424);
+  ctx.font      = '68px "Alex Brush"'; // Menggunakan Font Kaligrafi
+  ctx.fillStyle = '#d09e3b';           // Warna Emas
+  ctx.textAlign = 'left';              // Mulai dari titik koordinat X
+  
+  // Mencetak nama di posisi exact sesuai desain Canva Anda
+  ctx.fillText(name, 372.5, 309.7); 
   ctx.restore();
 
-  // ── Bottom meta bar ───────────────────────────────────────────
-  const barY = H - 80;
-  ctx.save();
-  ctx.fillStyle = 'rgba(255,255,255,0.03)';
-  roundRect(ctx, 60, barY, W-120, 44, 8);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-  ctx.lineWidth = 1;
-  roundRect(ctx, 60, barY, W-120, 44, 8);
-  ctx.stroke();
-  ctx.restore();
-
-  // UID label
+  // 4. (Opsional) UID Code kecil di pojok bawah untuk validasi
   ctx.save();
   ctx.font      = '400 10px "JetBrains Mono", monospace';
-  ctx.fillStyle = 'rgba(240,240,245,0.25)';
+  ctx.fillStyle = 'rgba(204,204,204,0.5)'; // Warna abu-abu redup agar tidak mengganggu desain
   ctx.textAlign = 'left';
-  ctx.fillText('CERT-ID', 84, barY + 16);
-  ctx.font      = '500 10px "JetBrains Mono", monospace';
-  ctx.fillStyle = 'rgba(204,255,0,0.5)';
-  ctx.fillText(generateCertId(), 84, barY + 30);
-  ctx.restore();
-
-  // Issued date
-  ctx.save();
-  ctx.font      = '400 10px "JetBrains Mono", monospace';
-  ctx.fillStyle = 'rgba(240,240,245,0.25)';
-  ctx.textAlign = 'center';
-  ctx.fillText('ISSUED', W/2, barY + 16);
-  ctx.fillStyle = 'rgba(240,240,245,0.4)';
-  ctx.fillText(new Date().toISOString().split('T')[0], W/2, barY + 30);
-  ctx.restore();
-
-  // Verified badge
-  ctx.save();
-  ctx.font      = '400 10px "JetBrains Mono", monospace';
-  ctx.fillStyle = 'rgba(240,240,245,0.25)';
-  ctx.textAlign = 'right';
-  ctx.fillText('STATUS', W - 84, barY + 16);
-  ctx.font      = '700 10px "JetBrains Mono", monospace';
-  ctx.fillStyle = '#00e5a0';
-  ctx.fillText('✓ VERIFIED', W - 84, barY + 30);
+  const uid = currentUser ? currentUser.uid.slice(-8).toUpperCase() : 'UNKNOWN';
+  ctx.fillText('UID: CP-' + Date.now().toString(36).toUpperCase() + '-' + uid, 84, H - 30);
   ctx.restore();
 }
-
 // ── Helper: draw shield icon on canvas ───────────────────────────
 function drawShield(ctx, cx, cy, r) {
   ctx.save();

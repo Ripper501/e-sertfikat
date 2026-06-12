@@ -1741,46 +1741,50 @@ function loadTemplateImage(src) {
 // ── Draw certificate template + name on <canvas> (VERSI KUSTOM CANVA) ──
 async function drawCertificateOnCanvas(canvas, name) {
   const ctx = canvas.getContext('2d');
-  const W   = canvas.width;   // 900
-  const H   = canvas.height;  // 636
+  const W   = canvas.width;  // 900
+  const H   = canvas.height; // 636
 
-  // 1. Bersihkan canvas dari sisa gambar lama
+  // 1. Bersihkan dan muat template
   ctx.clearRect(0, 0, W, H);
-
   try {
-    // 2. Memuat file template gambar kosong dari Canva
     const template = await loadTemplateImage('sertifikat-template.png');
     ctx.drawImage(template, 0, 0, W, H);
-  } catch (error) {
-    console.error("Gagal memuat gambar template Canva:", error);
+  } catch (e) {
+    console.error("Gagal memuat template, pastikan file ada!");
     ctx.fillStyle = '#1b1c27';
     ctx.fillRect(0, 0, W, H);
   }
 
-  // 3. ── RECIPIENT NAME (Sesuai Desain & Koordinat Exact Anda) ────────
-  ctx.save();
-  ctx.font      = '68px "Alex Brush"'; // Menggunakan Font Kaligrafi
-  ctx.fillStyle = '#d09e3b';           // Warna Emas
-  ctx.textAlign = 'left';              // Mulai dari titik koordinat X
-
-  let fontSize = 68;
-  if (name.length > 25) {
-    fontSize = 50; // Perkecil jika sangat panjang
-  }
+  // 2. ── PENGATURAN NAMA SISWA (Sistem Pintar) ────────
+  const maxWidth = 593; // Batas lebar area nama di Canva Anda
+  const centerY = 309.7; // Titik Y target
   
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#d09e3b';
+  
+  // Memulai dengan ukuran font maksimal (68px)
+  let fontSize = 68;
   ctx.font = `${fontSize}px "Alex Brush"`;
   
-  // Mencetak nama di posisi exact sesuai desain Canva Anda
-  ctx.fillText(name, 372.5, 309.7); 
+  // LOOP PINTAR: Mengecilkan font jika teks melebihi 593px
+  while (ctx.measureText(name).width > maxWidth && fontSize > 20) {
+    fontSize -= 1; // Kurangi ukuran font sedikit demi sedikit
+    ctx.font = `${fontSize}px "Alex Brush"`;
+  }
+  
+  // Mencetak nama di tengah canvas (W/2 = 450)
+  ctx.fillText(name, W / 2, centerY); 
   ctx.restore();
 
-  // 4. (Opsional) UID Code kecil di pojok bawah untuk validasi
+  // 3. ── UID CODE (Tetap ada tapi samar) ────────
   ctx.save();
   ctx.font      = '400 10px "JetBrains Mono", monospace';
-  ctx.fillStyle = 'rgba(204,204,204,0.5)'; // Warna abu-abu redup agar tidak mengganggu desain
+  ctx.fillStyle = 'rgba(204,204,204,0.3)'; // Dibuat lebih transparan agar tidak mengganggu
   ctx.textAlign = 'left';
   const uid = currentUser ? currentUser.uid.slice(-8).toUpperCase() : 'UNKNOWN';
-  ctx.fillText('UID: CP-' + Date.now().toString(36).toUpperCase() + '-' + uid, 84, H - 30);
+  ctx.fillText('UID: ' + uid, 84, H - 30);
   ctx.restore();
 }
 // ── Helper: draw shield icon on canvas ───────────────────────────

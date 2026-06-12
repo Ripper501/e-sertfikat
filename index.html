@@ -27,6 +27,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
 <style>
   /* ─── RESET & BASE ────────────────────────────────────── */
@@ -2680,21 +2681,39 @@ async function cedLoadFromFirestore() {
 }
 
 // ── Req #1: Handle local file upload → instant Base64 preview ────
-function cedHandleUpload(event) {
+// ── Req #1: Handle local file upload → Firebase Storage ────
+async function cedHandleUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    ced.templateBase64 = e.target.result;   // store Base64 data URL
+  const nm = document.getElementById('ced-upload-name');
+  nm.textContent = '⏳ Mengunggah foto ke Storage (Tunggu sebentar)...';
+  nm.style.display = 'block';
+  nm.style.color = 'var(--accent)'; // Warna hijau terang
 
-    const nm = document.getElementById('ced-upload-name');
-    nm.textContent   = '✓ ' + file.name;
-    nm.style.display = 'block';
+  try {
+    // 1. Buat referensi penyimpanan di Firebase Storage
+    const storageRef = firebase.storage().ref('templates/' + Date.now() + '_' + file.name);
+    
+    // 2. Upload file asli (bebas ukuran berapapun)
+    const snapshot = await storageRef.put(file);
+    
+    // 3. Ambil URL pendek dari Google
+    const downloadURL = await snapshot.ref.getDownloadURL();
+    
+    // 4. Simpan URL ke variabel sistem
+    ced.templateBase64 = downloadURL;
 
-    cedRedraw();   // render immediately onto canvas
-  };
-  reader.readAsDataURL(file);   // reads file as data:image/... base64 string
+    nm.textContent = '✓ Berhasil diunggah! ' + file.name;
+    nm.style.color = 'var(--success)';
+
+    // 5. Tampilkan gambar di layar editor
+    cedRedraw();
+  } catch (err) {
+    nm.textContent = '✗ Gagal mengunggah: ' + err.message;
+    nm.style.color = 'var(--danger)';
+    console.error('[Storage Upload Error]:', err);
+  }
 }
 
 // ── Req #2: Debounced redraw on name / font change ───────────────

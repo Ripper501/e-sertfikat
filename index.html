@@ -1762,6 +1762,13 @@ async function drawCertificateOnCanvas(canvas, name) {
   ctx.font      = '68px "Alex Brush"'; // Menggunakan Font Kaligrafi
   ctx.fillStyle = '#d09e3b';           // Warna Emas
   ctx.textAlign = 'left';              // Mulai dari titik koordinat X
+
+  let fontSize = 68;
+  if (name.length > 25) {
+    fontSize = 50; // Perkecil jika sangat panjang
+  }
+  
+  ctx.font = `${fontSize}px "Alex Brush"`;
   
   // Mencetak nama di posisi exact sesuai desain Canva Anda
   ctx.fillText(name, 372.5, 309.7); 

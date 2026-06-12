@@ -2680,40 +2680,35 @@ async function cedLoadFromFirestore() {
   }
 }
 
-// ── Req #1: Handle local file upload → instant Base64 preview ────
-// ── Req #1: Handle local file upload → Firebase Storage ────
-async function cedHandleUpload(event) {
+// ── Req #1: Handle local file upload → instant Base64 preview (no Storage upload) ────
+function cedHandleUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
   const nm = document.getElementById('ced-upload-name');
-  nm.textContent = '⏳ Mengunggah foto ke Storage (Tunggu sebentar)...';
+  nm.textContent = '⏳ Membaca foto...';
   nm.style.display = 'block';
-  nm.style.color = 'var(--accent)'; // Warna hijau terang
+  nm.style.color = 'var(--accent)';
 
-  try {
-    // 1. Buat referensi penyimpanan di Firebase Storage
-    const storageRef = firebase.storage().ref('templates/' + Date.now() + '_' + file.name);
-    
-    // 2. Upload file asli (bebas ukuran berapapun)
-    const snapshot = await storageRef.put(file);
-    
-    // 3. Ambil URL pendek dari Google
-    const downloadURL = await snapshot.ref.getDownloadURL();
-    
-    // 4. Simpan URL ke variabel sistem
-    ced.templateBase64 = downloadURL;
+  // Baca file langsung sebagai Base64 — tidak perlu internet, tidak perlu Storage
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // Simpan Base64 ke variabel sistem
+    ced.templateBase64 = e.target.result;
+    // Simpan nama file untuk referensi saat Save
+    ced._pendingFileName = file.name;
 
-    nm.textContent = '✓ Berhasil diunggah! ' + file.name;
+    nm.textContent = '✓ Foto siap: ' + file.name + ' (belum disimpan ke Firestore)';
     nm.style.color = 'var(--success)';
 
-    // 5. Tampilkan gambar di layar editor
+    // Langsung tampilkan di canvas editor
     cedRedraw();
-  } catch (err) {
-    nm.textContent = '✗ Gagal mengunggah: ' + err.message;
+  };
+  reader.onerror = function() {
+    nm.textContent = '✗ Gagal membaca file.';
     nm.style.color = 'var(--danger)';
-    console.error('[Storage Upload Error]:', err);
-  }
+  };
+  reader.readAsDataURL(file);
 }
 
 // ── Req #2: Debounced redraw on name / font change ───────────────
@@ -2862,7 +2857,7 @@ function _cedDrawPlaceholder(ctx, W, H) {
   });
 })();
 
-// ── Req #4: Save Configuration to Firestore ──────────────────────
+// ── Req #4: Save Configuration to Firestore (upload gambar saat Save) ──────────────────
 async function cedSaveConfig() {
   const btn    = document.getElementById('ced-save-btn');
   const status = document.getElementById('ced-save-status');
@@ -2870,31 +2865,65 @@ async function cedSaveConfig() {
   // Sync latest font selection before saving
   ced.fontFamily = document.getElementById('ced-font-select').value;
 
-  const payload = {
-    fontFamily: ced.fontFamily,
-    nameX:      450,          // always centred — stored for reference
-    nameY:      ced.nameY,    // Y coordinate set by click-to-position
-    updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
-  };
-
-  // Include template only when one has been uploaded (avoids overwriting
-  // an existing Firestore template with nothing on a font-only edit)
-  if (ced.templateBase64) {
-    payload.templateBase64 = ced.templateBase64;
-  }
-
   btn.disabled = true;
   status.textContent = '';
   status.style.color = 'var(--text-muted)';
 
+  const payload = {
+    fontFamily: ced.fontFamily,
+    nameX:      450,
+    nameY:      ced.nameY,
+    updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  // Jika ada gambar baru (Base64), upload ke Firebase Storage dulu
+  if (ced.templateBase64 && ced.templateBase64.startsWith('data:')) {
+    try {
+      status.textContent = '⏳ Mengunggah template ke Storage...';
+      status.style.color = 'var(--accent)';
+
+      // Konversi Base64 → Blob
+      const res  = await fetch(ced.templateBase64);
+      const blob = await res.blob();
+
+      // Upload ke Firebase Storage
+      const fileName  = ced._pendingFileName || ('template_' + Date.now() + '.png');
+      const storageRef = firebase.storage().ref('templates/' + Date.now() + '_' + fileName);
+      const snapshot   = await storageRef.put(blob);
+      const downloadURL = await snapshot.ref.getDownloadURL();
+
+      // Simpan URL (bukan Base64) ke Firestore
+      payload.templateBase64 = downloadURL;
+      // Update variabel lokal supaya tidak re-upload kalau Save lagi
+      ced.templateBase64 = downloadURL;
+      ced._pendingFileName = null;
+
+    } catch (err) {
+      status.textContent = '✗ Gagal upload gambar: ' + err.message;
+      status.style.color = 'var(--danger)';
+      btn.disabled = false;
+      return;
+    }
+  } else if (ced.templateBase64) {
+    // Sudah URL Firebase, cukup simpan ulang
+    payload.templateBase64 = ced.templateBase64;
+  }
+
   try {
-    // merge:true keeps any unrelated keys (e.g. old templateBase64) intact
+    status.textContent = '⏳ Menyimpan konfigurasi...';
     await db.collection('settings').doc('certificate_config').set(payload, { merge: true });
-    status.textContent = '✓ Saved! All future certificates will use this configuration.';
+    status.textContent = '✓ Tersimpan! Semua sertifikat akan menggunakan konfigurasi ini.';
     status.style.color = 'var(--success)';
+
+    // Update nama file indicator
+    const nm = document.getElementById('ced-upload-name');
+    if (nm && nm.style.display !== 'none') {
+      nm.textContent = '✓ Template tersimpan di Firestore';
+    }
+
     setTimeout(() => { status.textContent = ''; }, 5000);
   } catch (err) {
-    status.textContent = '✗ Save failed: ' + err.message;
+    status.textContent = '✗ Gagal menyimpan: ' + err.message;
     status.style.color = 'var(--danger)';
     console.error('[CED Save]', err);
   } finally {

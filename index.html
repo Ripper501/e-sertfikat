@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-<link href="https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
 <!-- SweetAlert2 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" />
@@ -916,6 +916,210 @@
 
   /* ─── ADMIN ACCESS DENIED OVERLAY ────────────────────────── */
   #screen-admin-denied { max-width: 420px; }
+
+  /* ══════════════════════════════════════════════════════════════
+     CERTIFICATE VISUAL EDITOR — PANEL STYLES
+  ══════════════════════════════════════════════════════════════ */
+
+  /* ── Panel container ── */
+  #cert-editor-panel {
+    display: none;
+    margin-top: 20px;
+    animation: fadeUp 0.4s cubic-bezier(0.4,0,0.2,1) both;
+  }
+  #cert-editor-panel.is-open { display: block; }
+
+  /* ── Outer glass card ── */
+  .ced-card {
+    background: rgba(11, 12, 22, 0.80);
+    backdrop-filter: blur(28px) saturate(1.5);
+    -webkit-backdrop-filter: blur(28px) saturate(1.5);
+    border: 1px solid rgba(204,255,0,0.22);
+    border-radius: var(--radius-lg);
+    padding: 26px 28px 32px;
+    box-shadow:
+      0 0 0 1px rgba(204,255,0,0.04),
+      0 32px 80px rgba(0,0,0,0.65),
+      0 0 100px rgba(204,255,0,0.06);
+  }
+
+  /* ── Title bar ── */
+  .ced-titlebar {
+    display: flex; align-items: center; gap: 13px;
+    padding-bottom: 18px; margin-bottom: 22px;
+    border-bottom: 1px solid rgba(204,255,0,0.10);
+  }
+  .ced-icon {
+    width: 36px; height: 36px; flex-shrink: 0;
+    background: linear-gradient(135deg, #ccff00 0%, #9ecf00 100%);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 18px rgba(204,255,0,0.38);
+  }
+  .ced-icon svg { width: 18px; height: 18px; }
+  .ced-title-wrap { flex: 1; min-width: 0; }
+  .ced-title { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+  .ced-subtitle {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-muted); letter-spacing: 0.10em;
+    text-transform: uppercase; margin-top: 3px;
+  }
+  .ced-close {
+    width: 30px; height: 30px; flex-shrink: 0;
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft);
+    border-radius: 8px; cursor: pointer; color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition);
+  }
+  .ced-close:hover { background: rgba(255,77,109,0.15); border-color: var(--danger); color: var(--danger); }
+  .ced-close svg { width: 14px; height: 14px; }
+
+  /* ── Two-column body layout ── */
+  .ced-body {
+    display: grid;
+    grid-template-columns: 290px 1fr;
+    gap: 22px; align-items: start;
+  }
+  @media (max-width: 800px) { .ced-body { grid-template-columns: 1fr; } }
+
+  /* ── Left: control column ── */
+  .ced-controls { display: flex; flex-direction: column; gap: 16px; }
+
+  .ced-field { display: flex; flex-direction: column; gap: 7px; }
+  .ced-label {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase;
+  }
+
+  /* Upload drop-zone */
+  .ced-upload {
+    position: relative; border: 1.5px dashed rgba(204,255,0,0.24);
+    border-radius: var(--radius-sm); padding: 15px 12px;
+    text-align: center; cursor: pointer; transition: var(--transition); overflow: hidden;
+  }
+  .ced-upload:hover { border-color: var(--accent); background: rgba(204,255,0,0.04); }
+  .ced-upload input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .ced-upload-ico { width: 24px; height: 24px; color: var(--accent); margin: 0 auto 5px; }
+  .ced-upload-lbl { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .ced-upload-sub { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.05em; }
+  .ced-upload-name {
+    display: none; margin-top: 7px; font-family: var(--font-mono); font-size: 10px;
+    color: var(--accent); letter-spacing: 0.04em; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* Text / select inputs */
+  .ced-input {
+    width: 100%; background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
+    padding: 11px 13px; font-family: var(--font-main);
+    font-size: 14px; font-weight: 500; color: var(--text);
+    outline: none; transition: var(--transition); caret-color: var(--accent);
+  }
+  .ced-input::placeholder { color: var(--text-dim); font-size: 13px; }
+  .ced-input:focus {
+    border-color: var(--accent); background: rgba(204,255,0,0.04);
+    box-shadow: 0 0 0 3px rgba(204,255,0,0.09);
+  }
+  .ced-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237b7d96' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    padding-right: 32px; cursor: pointer;
+  }
+
+  /* ── Coordinate readout panel ── */
+  .ced-coords {
+    background: rgba(204,255,0,0.06);
+    border: 1px solid rgba(204,255,0,0.20);
+    border-radius: var(--radius-sm);
+    padding: 13px 14px;
+  }
+  .ced-coords-hd {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    color: var(--text-muted); letter-spacing: 0.14em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+  }
+  .ced-coords-hd::before {
+    content: ''; display: inline-block;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); animation: pulse 1.6s ease-in-out infinite;
+  }
+  .ced-coord-row {
+    display: flex; align-items: baseline; gap: 7px;
+    font-family: var(--font-mono); font-size: 13px;
+    margin-bottom: 5px;
+  }
+  .ced-coord-row:last-child { margin-bottom: 0; }
+  .ced-axis { font-size: 10px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.08em; width: 14px; }
+  .ced-coord-val { font-weight: 700; color: var(--accent); min-width: 40px; }
+  .ced-coord-note { font-size: 10px; color: var(--text-dim); }
+
+  /* ── Save Config button ── */
+  .ced-save-btn {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    padding: 13px 18px;
+    background: var(--accent); color: #0e0f14;
+    border: none; border-radius: var(--radius-md);
+    font-family: var(--font-main); font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: var(--transition);
+    box-shadow: 0 0 28px var(--accent-glow); letter-spacing: 0.01em;
+  }
+  .ced-save-btn:hover { box-shadow: 0 0 44px var(--accent-glow); transform: translateY(-1px); }
+  .ced-save-btn:active { transform: scale(0.98); }
+  .ced-save-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .ced-save-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  .ced-save-status {
+    font-family: var(--font-mono); font-size: 11px; text-align: center;
+    min-height: 18px; letter-spacing: 0.06em; transition: color 0.3s;
+  }
+
+  /* ── Right: canvas preview ── */
+  .ced-preview { display: flex; flex-direction: column; gap: 9px; }
+  .ced-preview-hd {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 6px;
+  }
+  .ced-preview-lbl {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .ced-preview-live {
+    font-family: var(--font-mono); font-size: 10px;
+    color: rgba(204,255,0,0.60); letter-spacing: 0.06em;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .ced-preview-live::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); animation: pulse 1.6s ease-in-out infinite;
+  }
+
+  /* Responsive wrapper: preserves 900:636 = 70.67% aspect ratio */
+  .ced-canvas-wrap {
+    position: relative; width: 100%; padding-top: 70.67%;
+    border-radius: var(--radius-md); overflow: hidden;
+    border: 1px solid rgba(204,255,0,0.16);
+    background: #08090f; cursor: crosshair;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.55);
+  }
+  .ced-canvas-wrap canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  }
+
+  /* Horizontal guide line (CSS overlay) — appears on canvas click */
+  .ced-guideline {
+    position: absolute; left: 0; right: 0; height: 1px;
+    background: rgba(204,255,0,0.65);
+    box-shadow: 0 0 8px rgba(204,255,0,0.50);
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .ced-guideline.show { opacity: 1; }
+
 </style>
 </head>
 <body>
@@ -1310,12 +1514,14 @@
           </svg>
           📽 Projector Mode
         </button>
-        <button class="btn-admin btn-admin-outline" onclick="adminRefreshTable()">
+        <button class="btn-admin btn-admin-outline" id="btn-ecert" onclick="toggleCertEditor()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="9" y1="13" x2="15" y2="13"/>
+            <line x1="9" y1="17" x2="11" y2="17"/>
           </svg>
-          Refresh
+          E-Certificate
         </button>
         <button class="btn-admin btn-admin-danger" onclick="adminLockDashboard()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1382,6 +1588,124 @@
     </div>
   </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════════════
+     CERTIFICATE VISUAL EDITOR PANEL
+     Hidden by default. Toggled by the E-Certificate button.
+══════════════════════════════════════════════════════════ -->
+<div id="cert-editor-panel">
+  <div class="ced-card">
+
+    <!-- Title bar -->
+    <div class="ced-titlebar">
+      <div class="ced-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0e0f14" stroke-width="2.2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="13" x2="15" y2="13"/>
+          <line x1="9" y1="17" x2="11" y2="17"/>
+        </svg>
+      </div>
+      <div class="ced-title-wrap">
+        <div class="ced-title">Certificate Visual Editor</div>
+        <div class="ced-subtitle">Live Canvas · Click-to-Position · Firestore Sync</div>
+      </div>
+      <button class="ced-close" onclick="toggleCertEditor()" title="Close editor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div><!-- /.ced-titlebar -->
+
+    <div class="ced-body">
+
+      <!-- ── LEFT: Controls ─────────────────────────────────── -->
+      <div class="ced-controls">
+
+        <!-- 1. Template image upload -->
+        <div class="ced-field">
+          <label class="ced-label">Certificate Template Image</label>
+          <div class="ced-upload" id="ced-upload-zone">
+            <input type="file" id="ced-file-input" accept="image/*" onchange="cedHandleUpload(event)" />
+            <svg class="ced-upload-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <div class="ced-upload-lbl">Upload Template</div>
+            <div class="ced-upload-sub">PNG · JPG · WEBP — reads directly from disk, no hosting needed</div>
+            <div class="ced-upload-name" id="ced-upload-name"></div>
+          </div>
+        </div>
+
+        <!-- 2. Live test name -->
+        <div class="ced-field">
+          <label class="ced-label" for="ced-name-input">Preview Name (auto-scales)</label>
+          <input
+            class="ced-input"
+            id="ced-name-input"
+            type="text"
+            placeholder="e.g. Alex belo boavida ximenes da costa soares"
+            value="Alex belo boavida ximenes da costa soares"
+            oninput="cedRedraw()"
+          />
+        </div>
+
+        <!-- 3. Font selector -->
+        <div class="ced-field">
+          <label class="ced-label" for="ced-font-select">Font Family</label>
+          <select class="ced-input ced-select" id="ced-font-select" onchange="cedRedraw()">
+            <option value="Alex Brush">Alex Brush — Calligraphy</option>
+            <option value="Space Grotesk">Space Grotesk — Modern</option>
+            <option value="Playfair Display">Playfair Display — Elegant Serif</option>
+            <option value="Montserrat">Montserrat — Clean Sans-serif</option>
+          </select>
+        </div>
+
+        <!-- 4. Coordinate readout (req #3) -->
+        <div class="ced-coords">
+          <div class="ced-coords-hd">Click Canvas to Set Name Y Position</div>
+          <div class="ced-coord-row">
+            <span class="ced-axis">X</span>
+            <span class="ced-coord-val" id="ced-coord-x">450</span>
+            <span class="ced-coord-note">px (always centred at W/2)</span>
+          </div>
+          <div class="ced-coord-row">
+            <span class="ced-axis">Y</span>
+            <span class="ced-coord-val" id="ced-coord-y">310</span>
+            <span class="ced-coord-note">px (click canvas to change)</span>
+          </div>
+        </div>
+
+        <!-- 5. Save to Firestore (req #4) -->
+        <button class="ced-save-btn" id="ced-save-btn" onclick="cedSaveConfig()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          Save Configuration to Firestore
+        </button>
+
+        <div class="ced-save-status" id="ced-save-status"></div>
+
+      </div><!-- /.ced-controls -->
+
+      <!-- ── RIGHT: Live canvas preview ────────────────────── -->
+      <div class="ced-preview">
+        <div class="ced-preview-hd">
+          <span class="ced-preview-lbl">Live Preview · 900 × 636 px</span>
+          <span class="ced-preview-live">Click canvas to reposition name</span>
+        </div>
+        <div class="ced-canvas-wrap" id="ced-canvas-wrap">
+          <canvas id="ced-canvas" width="900" height="636"></canvas>
+          <div class="ced-guideline" id="ced-guideline"></div>
+        </div>
+      </div><!-- /.ced-preview -->
+
+    </div><!-- /.ced-body -->
+  </div><!-- /.ced-card -->
+</div><!-- /#cert-editor-panel -->
 
 <!-- ── PROJECTOR MODAL ────────────────────────────────────── -->
 <div id="projector-modal">
@@ -1739,50 +2063,62 @@ function loadTemplateImage(src) {
   });
 }
 
-// ── Draw certificate template + name on <canvas> (VERSI KUSTOM CANVA) ──
+// ── Draw certificate template + name on <canvas> ──────────────────
+// Dynamically fetches settings/certificate_config from Firestore.
+// Falls back gracefully to built-in defaults when no config exists.
 async function drawCertificateOnCanvas(canvas, name) {
   const ctx = canvas.getContext('2d');
-  const W   = canvas.width;  // 900
-  const H   = canvas.height; // 636
+  const W   = canvas.width;   // 900
+  const H   = canvas.height;  // 636
 
-  // 1. Bersihkan dan muat template
+  // ── Fetch saved configuration from Firestore ──────────────────
+  let cfgSrc  = 'sertifikat-template.png'; // default image path
+  let cfgFont = 'Alex Brush';              // default font
+  let cfgY    = 309.7;                     // default name Y position
+
+  try {
+    const snap = await db.collection('settings').doc('certificate_config').get();
+    if (snap.exists) {
+      const d = snap.data();
+      if (d.templateBase64) cfgSrc  = d.templateBase64;
+      if (d.fontFamily)     cfgFont = d.fontFamily;
+      if (d.nameY != null)  cfgY    = d.nameY;
+    }
+  } catch (e) {
+    console.warn('[CertDraw] Firestore config fetch failed, using defaults:', e.message);
+  }
+
+  // ── 1. Clear + draw template ──────────────────────────────────
   ctx.clearRect(0, 0, W, H);
   try {
-    const template = await loadTemplateImage('sertifikat-template.png');
-    ctx.drawImage(template, 0, 0, W, H);
+    const tpl = await loadTemplateImage(cfgSrc);
+    ctx.drawImage(tpl, 0, 0, W, H);
   } catch (e) {
-    console.error("Gagal memuat template, pastikan file ada!");
+    console.error('[CertDraw] Template load failed, using dark fallback.');
     ctx.fillStyle = '#1b1c27';
     ctx.fillRect(0, 0, W, H);
   }
 
-  // 2. ── PENGATURAN NAMA SISWA (Sistem Pintar) ────────
-  const maxWidth = 593; // Batas lebar area nama di Canva Anda
-  const centerY = 309.7; // Titik Y target
-  
+  // ── 2. Smart auto-scaling name (LOOP PINTAR) ──────────────────
+  const MAX_NAME_W = 593; // maximum safe name width in px
   ctx.save();
-  ctx.textAlign = 'center';
+  ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#d09e3b';
-  
-  // Memulai dengan ukuran font maksimal (68px)
+  ctx.fillStyle    = '#d09e3b';
+
   let fontSize = 68;
-  ctx.font = `${fontSize}px "Alex Brush"`;
-  
-  // LOOP PINTAR: Mengecilkan font jika teks melebihi 593px
-  while (ctx.measureText(name).width > maxWidth && fontSize > 20) {
-    fontSize -= 1; // Kurangi ukuran font sedikit demi sedikit
-    ctx.font = `${fontSize}px "Alex Brush"`;
+  ctx.font = `${fontSize}px "${cfgFont}"`;
+  while (ctx.measureText(name).width > MAX_NAME_W && fontSize > 20) {
+    fontSize -= 1;
+    ctx.font = `${fontSize}px "${cfgFont}"`;
   }
-  
-  // Mencetak nama di tengah canvas (W/2 = 450)
-  ctx.fillText(name, W / 2, centerY); 
+  ctx.fillText(name, W / 2, cfgY); // X always centred at W/2 = 450
   ctx.restore();
 
-  // 3. ── UID CODE (Tetap ada tapi samar) ────────
+  // ── 3. Faint UID watermark ────────────────────────────────────
   ctx.save();
   ctx.font      = '400 10px "JetBrains Mono", monospace';
-  ctx.fillStyle = 'rgba(204,204,204,0.3)'; // Dibuat lebih transparan agar tidak mengganggu
+  ctx.fillStyle = 'rgba(204,204,204,0.28)';
   ctx.textAlign = 'left';
   const uid = currentUser ? currentUser.uid.slice(-8).toUpperCase() : 'UNKNOWN';
   ctx.fillText('UID: ' + uid, 84, H - 30);
@@ -2261,6 +2597,293 @@ function projectorEscHandler(e) {
 // Run to remove admin status:
 //   removeAdminDevice()  →  then refresh
 // ════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════
+// CERTIFICATE VISUAL EDITOR — JAVASCRIPT (Req #1 – #4)
+// ════════════════════════════════════════════════════════════════
+
+// ── Editor runtime state ─────────────────────────────────────────
+const ced = {
+  templateBase64: null,   // Base64 dataURL of uploaded image (Req #1)
+  fontFamily:     'Alex Brush',
+  nameX:          450,    // Always W/2 — stored for Firestore record (Req #3)
+  nameY:          309.7,  // Y position — updated by canvas click (Req #3)
+};
+
+// ── Toggle panel open / closed ───────────────────────────────────
+function toggleCertEditor() {
+  const panel = document.getElementById('cert-editor-panel');
+  const btn   = document.getElementById('btn-ecert');
+  if (!panel) return;
+
+  const open  = panel.classList.toggle('is-open');
+
+  // 🚀 Tetap pertahankan Mode Workspace Penuh agar anti-tabrakan dengan scanner
+  if (open) {
+    panel.style.position = 'fixed';
+    panel.style.top = '0';
+    panel.style.left = '0';
+    panel.style.width = '100vw';
+    panel.style.height = '100vh';
+    panel.style.zIndex = '999999'; // Kasta tertinggi agar scanner mengalah di belakang
+    panel.style.background = 'rgba(11, 12, 16, 0.98)'; // Gelap pekat sinematik
+    panel.style.backdropFilter = 'blur(20px)';
+    panel.style.overflowY = 'auto';
+    panel.style.padding = '40px';
+    panel.style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Kunci scroll layar belakang saat editor aktif
+  } else {
+    // Kembalikan ke setelan semula saat ditutup via tombol bawaan Anda
+    panel.style.display = 'none';
+    document.body.style.overflow = ''; // Aktifkan kembali scroll utama aplikasi
+  }
+
+  // Highlight tombol indikator menu utama
+  if (btn) {
+    btn.style.borderColor = open ? 'var(--accent)' : '';
+    btn.style.color       = open ? 'var(--accent)' : '';
+  }
+
+  if (open) {
+    // Sinkronisasi data dari Firestore
+    cedLoadFromFirestore();
+    // Beri jeda DOM render untuk menggambar ulang Canvas preview
+    requestAnimationFrame(() => requestAnimationFrame(cedRedraw));
+  }
+}
+
+// ── Load existing Firestore config into editor UI on open ────────
+async function cedLoadFromFirestore() {
+  try {
+    const snap = await db.collection('settings').doc('certificate_config').get();
+    if (!snap.exists) return;
+    const d = snap.data();
+
+    if (d.fontFamily) {
+      document.getElementById('ced-font-select').value = d.fontFamily;
+      ced.fontFamily = d.fontFamily;
+    }
+    if (d.nameY != null) {
+      ced.nameY = d.nameY;
+      document.getElementById('ced-coord-y').textContent = Math.round(d.nameY);
+    }
+    if (d.templateBase64) {
+      ced.templateBase64 = d.templateBase64;
+      const nm = document.getElementById('ced-upload-name');
+      nm.textContent  = '✓ Template loaded from Firestore';
+      nm.style.display = 'block';
+    }
+    cedRedraw();
+  } catch (e) {
+    console.warn('[CED] cedLoadFromFirestore failed:', e.message);
+  }
+}
+
+// ── Req #1: Handle local file upload → instant Base64 preview ────
+function cedHandleUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    ced.templateBase64 = e.target.result;   // store Base64 data URL
+
+    const nm = document.getElementById('ced-upload-name');
+    nm.textContent   = '✓ ' + file.name;
+    nm.style.display = 'block';
+
+    cedRedraw();   // render immediately onto canvas
+  };
+  reader.readAsDataURL(file);   // reads file as data:image/... base64 string
+}
+
+// ── Req #2: Debounced redraw on name / font change ───────────────
+let _cedTimer = null;
+function cedRedraw() {
+  clearTimeout(_cedTimer);
+  _cedTimer = setTimeout(_cedDraw, 25);
+}
+
+async function _cedDraw() {
+  const canvas = document.getElementById('ced-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W   = canvas.width;    // 900
+  const H   = canvas.height;   // 636
+  const MAX_W = 593;           // maximum safe width for name text
+
+  // Sync font from selector
+  ced.fontFamily = document.getElementById('ced-font-select').value;
+
+  // 1. Clear
+  ctx.clearRect(0, 0, W, H);
+
+  // 2. Draw template background
+  if (ced.templateBase64) {
+    try {
+      const img = await _cedLoadImg(ced.templateBase64);
+      ctx.drawImage(img, 0, 0, W, H);
+    } catch { _cedDrawPlaceholder(ctx, W, H); }
+  } else {
+    _cedDrawPlaceholder(ctx, W, H);
+  }
+
+  // 3. Smart auto-scaling name (Req #2 — uses ctx.measureText loop)
+  const name = document.getElementById('ced-name-input').value
+               || 'Alex belo boavida ximenes da costa soares';
+  ctx.save();
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle    = '#d09e3b';
+
+  let fontSize = 68;
+  ctx.font = `${fontSize}px "${ced.fontFamily}"`;
+  // LOOP PINTAR: shrink font until text fits within 593 px
+  while (ctx.measureText(name).width > MAX_W && fontSize > 20) {
+    fontSize -= 1;
+    ctx.font = `${fontSize}px "${ced.fontFamily}"`;
+  }
+  // X always centred; Y from click-to-position state (Req #3)
+  ctx.fillText(name, W / 2, ced.nameY);
+  ctx.restore();
+
+  // 4. Dashed vertical centreline guide
+  ctx.save();
+  ctx.strokeStyle = 'rgba(204,255,0,0.10)';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
+  ctx.restore();
+
+  // 5. Debug overlay (font size + Y position info)
+  ctx.save();
+  ctx.font      = '400 9px "JetBrains Mono",monospace';
+  ctx.fillStyle = 'rgba(204,255,0,0.28)';
+  ctx.textAlign = 'left';
+  ctx.fillText(
+    `Font: ${ced.fontFamily}  |  Size: ${fontSize}px  |  Y: ${Math.round(ced.nameY)}px`,
+    10, H - 10
+  );
+  ctx.restore();
+}
+
+// ── Promise-based image loader ────────────────────────────────────
+function _cedLoadImg(src) {
+  return new Promise((res, rej) => {
+    const i = new Image();
+    i.onload  = () => res(i);
+    i.onerror = rej;
+    i.src     = src;
+  });
+}
+
+// ── Dark placeholder canvas when no template is uploaded yet ─────
+function _cedDrawPlaceholder(ctx, W, H) {
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0,   '#1b1c27');
+  g.addColorStop(0.5, '#22243a');
+  g.addColorStop(1,   '#1b1c27');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // subtle grid
+  ctx.save();
+  ctx.strokeStyle = 'rgba(204,255,0,0.035)';
+  ctx.lineWidth   = 1;
+  for (let x = 0; x < W; x += 48) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 48) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  ctx.restore();
+
+  // centred hint text
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255,255,255,0.11)';
+  ctx.font      = '600 15px "Space Grotesk",sans-serif';
+  ctx.fillText('Upload a certificate template image to begin', W / 2, H / 2 - 13);
+  ctx.fillStyle = 'rgba(204,255,0,0.28)';
+  ctx.font      = '400 11px "JetBrains Mono",monospace';
+  ctx.fillText('PNG · JPG · WEBP — instant Base64 preview, no hosting required', W / 2, H / 2 + 13);
+  ctx.restore();
+}
+
+// ── Req #3: Canvas click → capture Y coordinate ──────────────────
+(function attachCanvasClick() {
+  // Use event delegation: the canvas wrap may not exist until panel opens
+  document.addEventListener('click', function (e) {
+    const wrap = document.getElementById('ced-canvas-wrap');
+    if (!wrap || !wrap.contains(e.target)) return;
+
+    const rect   = wrap.getBoundingClientRect();
+    const scaleY = 636 / rect.height;   // CSS px → canvas px
+    const scaleX = 900 / rect.width;
+
+    // Capture exact canvas-coordinate click position
+    const canvasX = Math.round((e.clientX - rect.left) * scaleX);
+    const canvasY = Math.round((e.clientY - rect.top)  * scaleY * 10) / 10;
+
+    // Snap name Y to click point; X is always locked to W/2 = 450 (Req #3)
+    ced.nameY = canvasY;
+    ced.nameX = 450;
+
+    // Update live coordinate readout (Req #3)
+    document.getElementById('ced-coord-x').textContent = '450';
+    document.getElementById('ced-coord-y').textContent = Math.round(canvasY);
+
+    // Show & auto-fade the horizontal guideline overlay
+    const line = document.getElementById('ced-guideline');
+    if (line) {
+      const pct = (canvasY / 636) * 100;
+      line.style.top = pct + '%';
+      line.classList.add('show');
+      clearTimeout(line._fadeTimer);
+      line._fadeTimer = setTimeout(() => line.classList.remove('show'), 1600);
+    }
+
+    cedRedraw();
+  });
+})();
+
+// ── Req #4: Save Configuration to Firestore ──────────────────────
+async function cedSaveConfig() {
+  const btn    = document.getElementById('ced-save-btn');
+  const status = document.getElementById('ced-save-status');
+
+  // Sync latest font selection before saving
+  ced.fontFamily = document.getElementById('ced-font-select').value;
+
+  const payload = {
+    fontFamily: ced.fontFamily,
+    nameX:      450,          // always centred — stored for reference
+    nameY:      ced.nameY,    // Y coordinate set by click-to-position
+    updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  // Include template only when one has been uploaded (avoids overwriting
+  // an existing Firestore template with nothing on a font-only edit)
+  if (ced.templateBase64) {
+    payload.templateBase64 = ced.templateBase64;
+  }
+
+  btn.disabled = true;
+  status.textContent = '';
+  status.style.color = 'var(--text-muted)';
+
+  try {
+    // merge:true keeps any unrelated keys (e.g. old templateBase64) intact
+    await db.collection('settings').doc('certificate_config').set(payload, { merge: true });
+    status.textContent = '✓ Saved! All future certificates will use this configuration.';
+    status.style.color = 'var(--success)';
+    setTimeout(() => { status.textContent = ''; }, 5000);
+  } catch (err) {
+    status.textContent = '✗ Save failed: ' + err.message;
+    status.style.color = 'var(--danger)';
+    console.error('[CED Save]', err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── END CERTIFICATE VISUAL EDITOR ────────────────────────────────
 window.setupAdminDevice = function() {
   sessionStorage.setItem(ADMIN_DEVICE_KEY, ADMIN_FINGERPRINT);
   console.log('%c✅ This device is now marked as the Admin device. Refresh the page.', 'color:#ccff00;font-weight:bold;font-size:14px;');

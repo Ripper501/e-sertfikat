@@ -2765,6 +2765,9 @@ function cedHandleUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
+  // Reset input value so selecting the same file again still triggers onchange
+  event.target.value = '';
+
   const nm = document.getElementById('ced-upload-name');
   nm.textContent = '⏳ Membaca foto...';
   nm.style.display = 'block';
@@ -3010,8 +3013,8 @@ async function cedSaveConfig() {
     fontFamily: ced.fontFamily,
     nameX:      450,
     nameY:      ced.nameY,
-    bboxX:      ced.x,
-    bboxWidth:  ced.width,
+    bboxX:      isFinite(ced.x)     ? ced.x     : 153,
+    bboxWidth:  isFinite(ced.width) ? ced.width  : 594,
     updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
   };
 

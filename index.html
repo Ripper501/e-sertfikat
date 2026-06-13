@@ -1737,16 +1737,16 @@
 
         <!-- 4. Coordinate readout (req #3) -->
         <div class="ced-coords">
-          <div class="ced-coords-hd">Click Canvas to Set Name Y Position</div>
+          <div class="ced-coords-hd">Bbox Position — Drag box to reposition</div>
           <div class="ced-coord-row">
             <span class="ced-axis">X</span>
-            <span class="ced-coord-val" id="ced-coord-x">450</span>
-            <span class="ced-coord-note">px (always centred at W/2)</span>
+            <span class="ced-coord-val" id="ced-coord-x">522</span>
+            <span class="ced-coord-note">px (centre of text box)</span>
           </div>
           <div class="ced-coord-row">
             <span class="ced-axis">Y</span>
-            <span class="ced-coord-val" id="ced-coord-y">310</span>
-            <span class="ced-coord-note">px (click canvas to change)</span>
+            <span class="ced-coord-val" id="ced-coord-y">309</span>
+            <span class="ced-coord-note">px (centre of text box)</span>
           </div>
         </div>
 
@@ -1835,7 +1835,7 @@ const FIREBASE_CONFIG = {
 const GEO_TARGET = {
   lat:    -8.545971253827894,   // <-- PERBAIKAN: Wajib ada tanda koma di sini!
   lng:    125.5431727032313,
-  radius: 50000          // Meters – max allowed distance from venue center -8.545971253827894, 125.5431727032313
+  radius: 1000          // Meters – max allowed distance from venue center -8.545971253827894, 125.5431727032313
 };
 
 // ── EVENT METADATA (used on the certificate) ───────────────────────
@@ -2157,20 +2157,31 @@ async function drawCertificateOnCanvas(canvas, name) {
   const H   = canvas.height;  // 636
 
   // ── Fetch saved configuration from Firestore ──────────────────
-  let cfgSrc  = 'sertifikat-template.png'; // default image path
-  let cfgFont = 'Alex Brush';              // default font
-  let cfgY    = 309.7;                     // default name Y position
+  let cfgSrc    = 'sertifikat-template.png';
+  let cfgFont   = 'Alex Brush';
+  let cfgX      = 450;    // centre X dari bbox (nameX yang disimpan admin)
+  let cfgY      = 309.7;  // centre Y dari bbox
+  let cfgBboxW  = 594;    // lebar bbox untuk max text width
 
   try {
     const snap = await db.collection('settings').doc('certificate_config').get();
     if (snap.exists) {
       const d = snap.data();
-      if (d.templateBase64) cfgSrc  = d.templateBase64;
-      if (d.fontFamily)     cfgFont = d.fontFamily;
-      if (d.nameY != null)  cfgY    = d.nameY;
+      if (d.templateBase64)  cfgSrc   = d.templateBase64;
+      if (d.fontFamily)      cfgFont  = d.fontFamily;
+      if (d.nameX != null)   cfgX     = d.nameX;   // ← FIX: baca nameX dari Firestore
+      if (d.nameY != null)   cfgY     = d.nameY;
+      if (d.bboxWidth != null) cfgBboxW = d.bboxWidth;
     }
   } catch (e) {
     console.warn('[CertDraw] Firestore config fetch failed, using defaults:', e.message);
+  }
+
+  // ── FIX: Tunggu font ter-load sebelum draw ke canvas ──────────
+  try {
+    await document.fonts.load(`68px "${cfgFont}"`);
+  } catch(e) {
+    console.warn('[CertDraw] Font load wait failed:', e.message);
   }
 
   // ── 1. Clear + draw template ──────────────────────────────────
@@ -2184,8 +2195,7 @@ async function drawCertificateOnCanvas(canvas, name) {
     ctx.fillRect(0, 0, W, H);
   }
 
-  // ── 2. Smart auto-scaling name (LOOP PINTAR) ──────────────────
-  const MAX_NAME_W = 593; // maximum safe name width in px
+  // ── 2. Smart auto-scaling name ────────────────────────────────
   ctx.save();
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
@@ -2193,11 +2203,11 @@ async function drawCertificateOnCanvas(canvas, name) {
 
   let fontSize = 68;
   ctx.font = `${fontSize}px "${cfgFont}"`;
-  while (ctx.measureText(name).width > MAX_NAME_W && fontSize > 20) {
+  while (ctx.measureText(name).width > cfgBboxW && fontSize > 20) {
     fontSize -= 1;
     ctx.font = `${fontSize}px "${cfgFont}"`;
   }
-  ctx.fillText(name, W / 2, cfgY); // X always centred at W/2 = 450
+  ctx.fillText(name, cfgX, cfgY); // ← FIX: pakai cfgX dari Firestore, bukan hardcode W/2
   ctx.restore();
 
   // ── 3. Faint UID watermark ────────────────────────────────────
@@ -2760,6 +2770,15 @@ async function cedLoadFromFirestore() {
     if (d.bboxX      != null) ced.x      = d.bboxX;
     if (d.bboxWidth  != null) ced.width  = d.bboxWidth;
     if (d.bboxHeight != null) ced.height = d.bboxHeight;
+
+    // ← FIX: Update panel readout X setelah bbox di-load dari Firestore
+    // Pakai nameX yang tersimpan (centreX sebenarnya), bukan ced.x + ced.width/2
+    // karena belum tentu semua field bboxX/bboxWidth sudah ter-assign saat ini
+    if (d.nameX != null) {
+      document.getElementById('ced-coord-x').textContent = Math.round(d.nameX);
+    } else if (d.bboxX != null && d.bboxWidth != null) {
+      document.getElementById('ced-coord-x').textContent = Math.round(d.bboxX + d.bboxWidth / 2);
+    }
     if (d.templateBase64) {
       ced.templateBase64 = d.templateBase64;
       ced._imgCache = null;
@@ -2872,6 +2891,13 @@ async function _cedDraw() {
 
   // Sync font from selector
   ced.fontFamily = document.getElementById('ced-font-select').value;
+
+  // ── FIX: Tunggu font ter-load sebelum draw ke canvas ──
+  try {
+    await document.fonts.load(`68px "${ced.fontFamily}"`);
+  } catch(e) {
+    console.warn('[CED] Font load wait failed:', e.message);
+  }
 
   // ── wrapText(): wraps `text` into lines that fit within `ced.width` ──
   function wrapText(ctx, text, maxWidth) {
@@ -3071,12 +3097,13 @@ function _cedDrawPlaceholder(ctx, W, H) {
     const canvasX = Math.round((e.clientX - rect.left) * scaleX);
     const canvasY = Math.round((e.clientY - rect.top)  * scaleY * 10) / 10;
 
-    // Snap name Y to click point; X is always locked to W/2 = 450 (Req #3)
+    // Canvas click hanya update Y. X diatur lewat drag bbox, bukan klik canvas.
     ced.nameY = canvasY;
-    ced.nameX = 450;
+    // ced.nameX TIDAK diubah di sini — dikelola oleh bbox drag
 
-    // Update live coordinate readout (Req #3)
-    document.getElementById('ced-coord-x').textContent = '450';
+    // Update live coordinate readout — X tetap dari bbox centre
+    const curCentreX = Math.round(ced.x + ced.width / 2);
+    document.getElementById('ced-coord-x').textContent = curCentreX;
     document.getElementById('ced-coord-y').textContent = Math.round(canvasY);
 
     // Show & auto-fade the horizontal guideline overlay
@@ -3108,10 +3135,16 @@ async function cedSaveConfig() {
 
   // ALUR SIMPAN: Paket data ini hanya berisi Teks (termasuk URL Cloudinary) dan Angka Koordinat.
   // Tidak ada lagi proses upload file ke Firebase Storage.
+  // centreX = pusat dari bounding box yang admin set
+  // HARUS dihitung dari ced.x + ced.width/2, bukan hardcode 450
+  const centreX = isFinite(ced.x) && isFinite(ced.width)
+    ? Math.round(ced.x + ced.width / 2)
+    : 450;
+
   const payload = {
-    templateBase64: ced.templateBase64 || null, // Ini sekarang berisi URL Link Cloudinary
+    templateBase64: ced.templateBase64 || null,
     fontFamily:     ced.fontFamily,
-    nameX:          450,
+    nameX:          centreX,           // ← FIX: pakai centreX dari bbox, bukan hardcode 450
     nameY:          ced.nameY,
     bboxX:          isFinite(ced.x)      ? ced.x      : 153,
     bboxWidth:      isFinite(ced.width)  ? ced.width  : 594,

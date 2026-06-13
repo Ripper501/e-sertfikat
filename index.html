@@ -1835,7 +1835,7 @@ const FIREBASE_CONFIG = {
 const GEO_TARGET = {
   lat:    -8.545971253827894,   // <-- PERBAIKAN: Wajib ada tanda koma di sini!
   lng:    125.5431727032313,
-  radius: 1000          // Meters – max allowed distance from venue center -8.545971253827894, 125.5431727032313
+  radius: 50000          // Meters – max allowed distance from venue center -8.545971253827894, 125.5431727032313
 };
 
 // ── EVENT METADATA (used on the certificate) ───────────────────────
@@ -2157,35 +2157,20 @@ async function drawCertificateOnCanvas(canvas, name) {
   const H   = canvas.height;  // 636
 
   // ── Fetch saved configuration from Firestore ──────────────────
-  let cfgSrc    = 'sertifikat-template.png'; // default image path
-  let cfgFont   = 'Alex Brush';              // default font
-  let cfgY      = 309.7;                     // default name Y position
-  let cfgBboxX  = 153;                       // default bbox left edge
-  let cfgBboxW  = 594;                       // default bbox width
-  let cfgBboxH  = 115;                       // default bbox height
+  let cfgSrc  = 'sertifikat-template.png'; // default image path
+  let cfgFont = 'Alex Brush';              // default font
+  let cfgY    = 309.7;                     // default name Y position
 
   try {
     const snap = await db.collection('settings').doc('certificate_config').get();
     if (snap.exists) {
       const d = snap.data();
-      if (d.templateBase64)  cfgSrc   = d.templateBase64;
-      if (d.fontFamily)      cfgFont  = d.fontFamily;
-      if (d.nameY != null)   cfgY     = d.nameY;
-      if (d.bboxX != null)   cfgBboxX = d.bboxX;      // ← FIX: baca bboxX dari Firestore
-      if (d.bboxWidth != null)  cfgBboxW = d.bboxWidth;
-      if (d.bboxHeight != null) cfgBboxH = d.bboxHeight;
+      if (d.templateBase64) cfgSrc  = d.templateBase64;
+      if (d.fontFamily)     cfgFont = d.fontFamily;
+      if (d.nameY != null)  cfgY    = d.nameY;
     }
   } catch (e) {
     console.warn('[CertDraw] Firestore config fetch failed, using defaults:', e.message);
-  }
-
-  // ── FIX: Pastikan font sudah ter-load sebelum dipakai di canvas ──
-  // Canvas API tidak bisa pakai Google Font yang belum ter-load.
-  // document.fonts.load() memaksa browser load font tersebut dulu.
-  try {
-    await document.fonts.load(`68px "${cfgFont}"`);
-  } catch(e) {
-    console.warn('[CertDraw] Font load wait failed:', e.message);
   }
 
   // ── 1. Clear + draw template ──────────────────────────────────
@@ -2199,11 +2184,8 @@ async function drawCertificateOnCanvas(canvas, name) {
     ctx.fillRect(0, 0, W, H);
   }
 
-  // ── 2. Smart auto-scaling name — pakai bbox dari Firestore ────
-  // centreX = cfgBboxX + cfgBboxW/2 (pusat dari bounding box yang admin set)
-  const centreX   = cfgBboxX + cfgBboxW / 2;
-  const MAX_NAME_W = cfgBboxW;
-
+  // ── 2. Smart auto-scaling name (LOOP PINTAR) ──────────────────
+  const MAX_NAME_W = 593; // maximum safe name width in px
   ctx.save();
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
@@ -2215,7 +2197,7 @@ async function drawCertificateOnCanvas(canvas, name) {
     fontSize -= 1;
     ctx.font = `${fontSize}px "${cfgFont}"`;
   }
-  ctx.fillText(name, centreX, cfgY); // ← FIX: pakai centreX dari bbox, bukan hardcode W/2
+  ctx.fillText(name, W / 2, cfgY); // X always centred at W/2 = 450
   ctx.restore();
 
   // ── 3. Faint UID watermark ────────────────────────────────────
@@ -2890,15 +2872,6 @@ async function _cedDraw() {
 
   // Sync font from selector
   ced.fontFamily = document.getElementById('ced-font-select').value;
-
-  // ── FIX: Tunggu font ter-load sebelum draw ke canvas ──
-  // Tanpa ini canvas pakai fallback font (sans-serif) karena Google Font
-  // mungkin belum selesai di-load oleh browser saat _cedDraw dipanggil.
-  try {
-    await document.fonts.load(`68px "${ced.fontFamily}"`);
-  } catch(e) {
-    console.warn('[CED] Font load wait failed:', e.message);
-  }
 
   // ── wrapText(): wraps `text` into lines that fit within `ced.width` ──
   function wrapText(ctx, text, maxWidth) {

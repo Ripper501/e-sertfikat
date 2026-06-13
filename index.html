@@ -1102,13 +1102,14 @@
   /* Responsive wrapper: preserves 900:636 = 70.67% aspect ratio */
   .ced-canvas-wrap {
     position: relative; width: 100%; padding-top: 70.67%;
-    border-radius: var(--radius-md); overflow: hidden;
+    border-radius: var(--radius-md); overflow: visible;
     border: 1px solid rgba(204,255,0,0.16);
     background: #08090f; cursor: crosshair;
     box-shadow: 0 8px 40px rgba(0,0,0,0.55);
   }
   .ced-canvas-wrap canvas {
     position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+    border-radius: var(--radius-md);
   }
 
   /* Horizontal guide line (CSS overlay) — appears on canvas click */
@@ -1120,6 +1121,67 @@
     transition: opacity 0.1s;
   }
   .ced-guideline.show { opacity: 1; }
+
+  /* ── Bounding Box Overlay ── */
+  #ced-bbox {
+    position: absolute;
+    border: 2px solid #a855f7;
+    box-shadow: 0 0 0 1px rgba(168,85,247,0.25), 0 0 18px rgba(168,85,247,0.22);
+    border-radius: 3px;
+    cursor: move;
+    user-select: none;
+    touch-action: none;
+    box-sizing: border-box;
+  }
+  /* Dashed inner guide so the border is always visible on any background */
+  #ced-bbox::before {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border: 1px dashed rgba(168,85,247,0.45);
+    border-radius: 1px;
+    pointer-events: none;
+  }
+  /* Corner + side resize handles */
+  .ced-handle {
+    position: absolute;
+    width: 10px; height: 10px;
+    background: #a855f7;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(168,85,247,0.7);
+    z-index: 2;
+  }
+  /* Side handles (flat pill) */
+  .ced-handle[data-h="l"],
+  .ced-handle[data-h="r"] {
+    width: 8px; height: 24px; border-radius: 4px;
+    top: 50%; transform: translateY(-50%);
+  }
+  .ced-handle[data-h="t"],
+  .ced-handle[data-h="b"] {
+    width: 24px; height: 8px; border-radius: 4px;
+    left: 50%; transform: translateX(-50%);
+  }
+  /* Position each handle */
+  .ced-handle[data-h="nw"] { top: -6px;  left: -6px;  cursor: nw-resize; }
+  .ced-handle[data-h="ne"] { top: -6px;  right: -6px; cursor: ne-resize; }
+  .ced-handle[data-h="sw"] { bottom: -6px; left: -6px;  cursor: sw-resize; }
+  .ced-handle[data-h="se"] { bottom: -6px; right: -6px; cursor: se-resize; }
+  .ced-handle[data-h="l"]  { left: -5px;   cursor: ew-resize; }
+  .ced-handle[data-h="r"]  { right: -5px;  cursor: ew-resize; }
+  .ced-handle[data-h="t"]  { top: -5px;    cursor: ns-resize; }
+  .ced-handle[data-h="b"]  { bottom: -5px; cursor: ns-resize; }
+  /* Dim label inside box */
+  #ced-bbox-label {
+    position: absolute;
+    top: 4px; left: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 0.08em;
+    color: rgba(168,85,247,0.85);
+    pointer-events: none; user-select: none;
+    white-space: nowrap;
+  }
 
 </style>
 </head>
@@ -1701,6 +1763,18 @@
         <div class="ced-canvas-wrap" id="ced-canvas-wrap">
           <canvas id="ced-canvas" width="900" height="636"></canvas>
           <div class="ced-guideline" id="ced-guideline"></div>
+          <!-- ── Bounding Box Overlay ── -->
+          <div id="ced-bbox">
+            <span id="ced-bbox-label">text area</span>
+            <div class="ced-handle" data-h="nw"></div>
+            <div class="ced-handle" data-h="ne"></div>
+            <div class="ced-handle" data-h="sw"></div>
+            <div class="ced-handle" data-h="se"></div>
+            <div class="ced-handle" data-h="l"></div>
+            <div class="ced-handle" data-h="r"></div>
+            <div class="ced-handle" data-h="t"></div>
+            <div class="ced-handle" data-h="b"></div>
+          </div>
         </div>
       </div><!-- /.ced-preview -->
 
@@ -2609,6 +2683,10 @@ const ced = {
   fontFamily:     'Alex Brush',
   nameX:          450,    // Always W/2 — stored for Firestore record (Req #3)
   nameY:          309.7,  // Y position — updated by canvas click (Req #3)
+  // ── Bounding box (canvas-space coords, 900×636 grid) ──
+  x:              153,    // left edge of text box in canvas px
+  y:              275,    // top edge of text box in canvas px
+  width:          594,    // text box width in canvas px (≈ MAX_W legacy default)
 };
 
 // ── Toggle panel open / closed ───────────────────────────────────
@@ -2668,6 +2746,8 @@ async function cedLoadFromFirestore() {
       ced.nameY = d.nameY;
       document.getElementById('ced-coord-y').textContent = Math.round(d.nameY);
     }
+    if (d.bboxX     != null) ced.x     = d.bboxX;
+    if (d.bboxWidth != null) ced.width = d.bboxWidth;
     if (d.templateBase64) {
       ced.templateBase64 = d.templateBase64;
       const nm = document.getElementById('ced-upload-name');
@@ -2724,10 +2804,27 @@ async function _cedDraw() {
   const ctx = canvas.getContext('2d');
   const W   = canvas.width;    // 900
   const H   = canvas.height;   // 636
-  const MAX_W = 593;           // maximum safe width for name text
 
   // Sync font from selector
   ced.fontFamily = document.getElementById('ced-font-select').value;
+
+  // ── wrapText(): wraps `text` into lines that fit within `ced.width` ──
+  function wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let current = '';
+    for (let i = 0; i < words.length; i++) {
+      const test = current ? current + ' ' + words[i] : words[i];
+      if (ctx.measureText(test).width > maxWidth && current) {
+        lines.push(current);
+        current = words[i];
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  }
 
   // 1. Clear
   ctx.clearRect(0, 0, W, H);
@@ -2742,7 +2839,7 @@ async function _cedDraw() {
     _cedDrawPlaceholder(ctx, W, H);
   }
 
-  // 3. Smart auto-scaling name (Req #2 — uses ctx.measureText loop)
+  // 3. Smart auto-scaling name with wrapText (uses ced.width)
   const name = document.getElementById('ced-name-input').value
                || 'Alex belo boavida ximenes da costa soares';
   ctx.save();
@@ -2752,13 +2849,19 @@ async function _cedDraw() {
 
   let fontSize = 68;
   ctx.font = `${fontSize}px "${ced.fontFamily}"`;
-  // LOOP PINTAR: shrink font until text fits within 593 px
-  while (ctx.measureText(name).width > MAX_W && fontSize > 20) {
+  // Shrink font until the longest word fits within ced.width
+  while (ctx.measureText(name.split(' ').reduce((a,w)=>ctx.measureText(w).width>ctx.measureText(a).width?w:a,'')).width > ced.width && fontSize > 14) {
     fontSize -= 1;
     ctx.font = `${fontSize}px "${ced.fontFamily}"`;
   }
-  // X always centred; Y from click-to-position state (Req #3)
-  ctx.fillText(name, W / 2, ced.nameY);
+  // Use wrapText to split name into lines, centred on ced.x + ced.width/2
+  const lines     = wrapText(ctx, name, ced.width);
+  const lineH     = fontSize * 1.28;
+  const totalH    = lines.length * lineH;
+  const centreX   = ced.x + ced.width / 2;
+  // ced.y is the top of the box; vertically centre the block inside the box
+  const startY    = ced.nameY - (totalH / 2) + (lineH / 2);
+  lines.forEach((ln, i) => ctx.fillText(ln, centreX, startY + i * lineH));
   ctx.restore();
 
   // 4. Dashed vertical centreline guide
@@ -2775,10 +2878,41 @@ async function _cedDraw() {
   ctx.fillStyle = 'rgba(204,255,0,0.28)';
   ctx.textAlign = 'left';
   ctx.fillText(
-    `Font: ${ced.fontFamily}  |  Size: ${fontSize}px  |  Y: ${Math.round(ced.nameY)}px`,
+    `Font: ${ced.fontFamily}  |  Size: ${fontSize}px  |  Y: ${Math.round(ced.nameY)}px  |  W: ${Math.round(ced.width)}px  |  X: ${Math.round(ced.x)}px`,
     10, H - 10
   );
   ctx.restore();
+
+  // 6. Sync bbox overlay position to canvas-space coords
+  _cedSyncBbox();
+}
+
+// ── Map canvas-space coords → CSS px on the overlay div ──────────
+function _cedSyncBbox() {
+  const wrap = document.getElementById('ced-canvas-wrap');
+  const bbox = document.getElementById('ced-bbox');
+  const lbl  = document.getElementById('ced-bbox-label');
+  if (!wrap || !bbox) return;
+
+  const rect   = wrap.getBoundingClientRect();
+  const scaleX = rect.width  / 900;
+  const scaleY = rect.height / 636;
+
+  // Derive a sensible box height from ced.nameY ± line estimate
+  const boxH_canvas = Math.max(80, 636 * 0.18);   // ~18% of canvas height
+
+  const cssLeft   = ced.x     * scaleX;
+  const cssTop    = (ced.nameY - boxH_canvas / 2) * scaleY;
+  const cssWidth  = ced.width * scaleX;
+  const cssHeight = boxH_canvas * scaleY;
+
+  bbox.style.left   = cssLeft   + 'px';
+  bbox.style.top    = cssTop    + 'px';
+  bbox.style.width  = cssWidth  + 'px';
+  bbox.style.height = cssHeight + 'px';
+
+  if (lbl) lbl.textContent =
+    `x:${Math.round(ced.x)}  y:${Math.round(ced.nameY)}  w:${Math.round(ced.width)}`;
 }
 
 // ── Promise-based image loader ────────────────────────────────────
@@ -2827,6 +2961,9 @@ function _cedDrawPlaceholder(ctx, W, H) {
     const wrap = document.getElementById('ced-canvas-wrap');
     if (!wrap || !wrap.contains(e.target)) return;
 
+    // Ignore clicks that originated from the bbox overlay or its handles
+    if (e.target.closest('#ced-bbox')) return;
+
     const rect   = wrap.getBoundingClientRect();
     const scaleY = 636 / rect.height;   // CSS px → canvas px
     const scaleX = 900 / rect.width;
@@ -2873,6 +3010,8 @@ async function cedSaveConfig() {
     fontFamily: ced.fontFamily,
     nameX:      450,
     nameY:      ced.nameY,
+    bboxX:      ced.x,
+    bboxWidth:  ced.width,
     updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
   };
 
@@ -2930,6 +3069,115 @@ async function cedSaveConfig() {
     btn.disabled = false;
   }
 }
+
+// ── Bounding Box: drag + resize controller ───────────────────────
+(function initBbox() {
+  // Wait for DOM
+  document.addEventListener('DOMContentLoaded', _attachBbox);
+  // Also attach when the editor panel opens (it may not exist at DOMContentLoaded)
+  const origToggle = window.toggleCertEditor;
+  window.toggleCertEditor = function() {
+    origToggle && origToggle();
+    requestAnimationFrame(() => requestAnimationFrame(_attachBbox));
+  };
+
+  let _attached = false;
+  function _attachBbox() {
+    const bbox = document.getElementById('ced-bbox');
+    if (!bbox || _attached) return;
+    _attached = true;
+
+    const CANVAS_W = 900, CANVAS_H = 636;
+    const MIN_W    = 80;
+
+    let drag   = null;   // { type:'move'|'resize', handle, startMouse, startState }
+
+    function getScale() {
+      const wrap = document.getElementById('ced-canvas-wrap');
+      if (!wrap) return { sx: 1, sy: 1 };
+      const r = wrap.getBoundingClientRect();
+      return { sx: CANVAS_W / r.width, sy: CANVAS_H / r.height };
+    }
+
+    // ── Pointer down ────────────────────────────────────────────
+    bbox.addEventListener('pointerdown', function(e) {
+      e.stopPropagation();
+
+      const handle = e.target.closest('[data-h]');
+      const { sx, sy } = getScale();
+
+      drag = {
+        type:    handle ? 'resize' : 'move',
+        handle:  handle ? handle.dataset.h : null,
+        startMX: e.clientX,
+        startMY: e.clientY,
+        startX:  ced.x,
+        startY:  ced.nameY,
+        startW:  ced.width,
+      };
+      bbox.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    // ── Pointer move ─────────────────────────────────────────────
+    bbox.addEventListener('pointermove', function(e) {
+      if (!drag) return;
+      const { sx, sy } = getScale();
+      const dx = (e.clientX - drag.startMX) * sx;   // in canvas px
+      const dy = (e.clientY - drag.startMY) * sy;
+
+      if (drag.type === 'move') {
+        // Clamp so box stays within canvas
+        ced.x     = Math.max(0, Math.min(CANVAS_W - ced.width, drag.startX + dx));
+        ced.nameY = Math.max(0, Math.min(CANVAS_H, drag.startY + dy));
+
+      } else {
+        // Resize — only horizontal handles change ced.width; all move ced.x/ced.nameY
+        const h = drag.handle;
+
+        if (h === 'l' || h === 'nw' || h === 'sw') {
+          const newW = Math.max(MIN_W, drag.startW - dx);
+          const newX = drag.startX + (drag.startW - newW);
+          ced.width = newW;
+          ced.x     = Math.max(0, newX);
+        }
+        if (h === 'r' || h === 'ne' || h === 'se') {
+          ced.width = Math.max(MIN_W, Math.min(CANVAS_W - ced.x, drag.startW + dx));
+        }
+        if (h === 't' || h === 'nw' || h === 'ne') {
+          ced.nameY = Math.max(0, drag.startY + dy);
+        }
+        if (h === 'b' || h === 'sw' || h === 'se') {
+          ced.nameY = Math.min(CANVAS_H, drag.startY + dy);
+        }
+      }
+
+      // Update coord readout
+      const coordX = document.getElementById('ced-coord-x');
+      const coordY = document.getElementById('ced-coord-y');
+      if (coordX) coordX.textContent = Math.round(ced.x + ced.width / 2);
+      if (coordY) coordY.textContent = Math.round(ced.nameY);
+
+      // Sync bbox overlay position immediately (no canvas redraw needed for CSS)
+      _cedSyncBbox();
+      // Trigger canvas redraw (debounced)
+      cedRedraw();
+      e.preventDefault();
+    });
+
+    // ── Pointer up ───────────────────────────────────────────────
+    bbox.addEventListener('pointerup',    () => { drag = null; });
+    bbox.addEventListener('pointercancel',() => { drag = null; });
+
+    // Initial position sync once the panel is visible
+    requestAnimationFrame(_cedSyncBbox);
+  }
+
+  // Also re-sync on window resize so overlay tracks CSS canvas scaling
+  window.addEventListener('resize', () => {
+    requestAnimationFrame(_cedSyncBbox);
+  });
+})();
 
 // ── END CERTIFICATE VISUAL EDITOR ────────────────────────────────
 window.setupAdminDevice = function() {

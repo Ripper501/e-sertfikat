@@ -1183,7 +1183,18 @@
     white-space: nowrap;
   }
 
+
+  /* ─── CLOUDINARY WIDGET Z-INDEX OVERRIDE ────────────────────────────── */
+  /* Must appear ABOVE the cert-editor-panel (z-index: 999999) */
+  .cloudinary-widget,
+  .cloudinary-overlay,
+  div[class*="cloudinary"],
+  iframe[src*="cloudinary"] {
+    z-index: 9999999 !important;
+  }
+
 </style>
+<script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
 </head>
 <body>
 
@@ -1689,14 +1700,13 @@
         <div class="ced-field">
           <label class="ced-label">Certificate Template Image</label>
           <div class="ced-upload" id="ced-upload-zone">
-            <input type="file" id="ced-file-input" accept="image/*" onchange="cedHandleUpload(event)" />
             <svg class="ced-upload-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
             <div class="ced-upload-lbl">Upload Template</div>
-            <div class="ced-upload-sub">PNG · JPG · WEBP — reads directly from disk, no hosting needed</div>
+            <div class="ced-upload-sub">PNG · JPG · WEBP — via Cloudinary</div>
             <div class="ced-upload-name" id="ced-upload-name"></div>
           </div>
         </div>
@@ -2131,7 +2141,7 @@ await drawCertificateOnCanvas(canvas, certName);
 function loadTemplateImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    // Baris img.crossOrigin kita hapus agar tidak diblokir saat buka file lokal
+    img.crossOrigin = "anonymous"; // WAJIB ADA UNTUK CLOUDINARY
     img.onload = () => resolve(img);
     img.onerror = (err) => reject(err);
     img.src = src;
@@ -2775,47 +2785,76 @@ async function cedLoadFromFirestore() {
 }
 
 // ── Req #1: Handle local file upload → instant Base64 preview (no Storage upload) ────
-function cedHandleUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
+const CLOUD_NAME = "djpubosw0"; 
+const UPLOAD_PRESET = "sertifikat_preset";
 
-  const nm = document.getElementById('ced-upload-name');
-  nm.textContent = '⏳ Membaca foto...';
-  nm.style.display = 'block';
-  nm.style.color = 'var(--accent)';
+const myWidget = cloudinary.createUploadWidget({
+    cloudName: CLOUD_NAME,
+    uploadPreset: UPLOAD_PRESET,
+    sources: ['local'], 
+    multiple: false,
+    clientAllowedFormats: ['jpg', 'png', 'jpeg', 'webp'],
+    styles: {
+      palette: {
+        window: "#22243A",
+        windowBorder: "#CCFF00",
+        tabIcon: "#CCFF00",
+        menuIcons: "#CCFF00",
+        textDark: "#FFFFFF",
+        textLight: "#1b1c27",
+        link: "#CCFF00",
+        action: "#CCFF00",
+        inactiveTabIcon: "#7b7d96",
+        error: "#ff4d6d",
+        inProgress: "#CCFF00",
+        complete: "#00e5a0",
+        sourceBg: "#1b1c27"
+      }
+    },
+    inlineContainer: null,
+    // Ensure widget z-index is above the editor panel (z-index: 999999)
+    // by appending it to body and overriding z-index via CSS injection
+  }, (error, result) => {
+    if (!error && result && result.event === "success") {
+      console.log('Upload berhasil! URL: ', result.info.secure_url);
+      
+      const nm = document.getElementById('ced-upload-name');
+      nm.textContent = '⏳ Memuat gambar dari Cloudinary...';
+      nm.style.display = 'block';
+      nm.style.color = 'var(--accent)';
 
-  // Baca file langsung sebagai Base64 — tidak perlu internet, tidak perlu Storage
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    // Simpan Base64 ke variabel sistem
-    ced.templateBase64 = e.target.result;
-    ced._imgCache = null;   // invalidate cache
-    // Simpan nama file untuk referensi saat Save
-    ced._pendingFileName = file.name;
+      // Update data aplikasi dengan URL dari Cloudinary
+      ced.templateBase64 = result.info.secure_url; 
+      ced._pendingFileName = result.info.original_filename + "." + result.info.format;
+      
+      try {
+        localStorage.setItem('ced_templateBase64', result.info.secure_url);
+        localStorage.setItem('ced_templateName', ced._pendingFileName);
+      } catch(ex) {}
 
-    // Cache Base64 ke localStorage supaya tetap ada setelah navigasi/refresh
-    try {
-      localStorage.setItem('ced_templateBase64', e.target.result);
-      localStorage.setItem('ced_templateName', file.name);
-    } catch(ex) { /* localStorage penuh — skip cache, tidak masalah */ }
+      // Preload gambar dengan anonymous CORS agar canvas tidak error
+      const img = new Image();
+      img.crossOrigin = "anonymous"; 
+      img.onload = () => {
+        ced._imgCache = img; // Simpan ke cache internal
+        nm.textContent = '✓ Foto siap: ' + ced._pendingFileName;
+        nm.style.color = 'var(--success)';
+        cedRedraw(); // Update canvas
+      };
+      img.onerror = () => {
+        nm.textContent = '✗ Gagal memuat gambar ke canvas';
+        nm.style.color = 'var(--danger)';
+      }
+      img.src = result.info.secure_url;
+    }
+  }
+);
 
-    // Reset input SETELAH FileReader selesai — aman untuk semua browser
-    event.target.value = '';
-
-    nm.textContent = '✓ Foto siap: ' + file.name + ' (belum disimpan ke Firestore)';
-    nm.style.color = 'var(--success)';
-
-    // Langsung tampilkan di canvas editor
-    cedRedraw();
-  };
-  reader.onerror = function() {
-    nm.textContent = '✗ Gagal membaca file.';
-    nm.style.color = 'var(--danger)';
-    // Reset input supaya user bisa coba lagi
-    event.target.value = '';
-  };
-  reader.readAsDataURL(file);
-}
+// Event Listener: Klik area upload akan membuka Cloudinary Widget
+document.getElementById('ced-upload-zone').addEventListener('click', (e) => {
+  e.stopPropagation(); // Cegah event bubbling ke canvas click handler di document level
+  myWidget.open();
+});
 
 // ── Req #2: Debounced redraw on name / font change ───────────────
 let _cedTimer = null;
@@ -2974,6 +3013,7 @@ function _cedSyncBbox() {
 function _cedLoadImg(src) {
   return new Promise((res, rej) => {
     const i   = new Image();
+    i.crossOrigin = "anonymous"; // WAJIB ADA UNTUK CLOUDINARY
     const tid = setTimeout(() => rej(new Error('img timeout')), 8000);
     i.onload  = () => { clearTimeout(tid); res(i); };
     i.onerror = (e) => { clearTimeout(tid); rej(e); };
@@ -3020,6 +3060,9 @@ function _cedDrawPlaceholder(ctx, W, H) {
     // Ignore clicks that originated from the bbox overlay or its handles
     if (e.target.closest('#ced-bbox')) return;
 
+    // Ignore clicks on the upload zone — those are handled by Cloudinary widget
+    if (e.target.closest('#ced-upload-zone')) return;
+
     const rect   = wrap.getBoundingClientRect();
     const scaleY = 636 / rect.height;   // CSS px → canvas px
     const scaleX = 900 / rect.width;
@@ -3051,73 +3094,42 @@ function _cedDrawPlaceholder(ctx, W, H) {
 })();
 
 // ── Req #4: Save Configuration to Firestore (upload gambar saat Save) ──────────────────
+// ── Req #4: Save Configuration to Firestore (Hanya Simpan Teks/URL) ──
 async function cedSaveConfig() {
   const btn    = document.getElementById('ced-save-btn');
   const status = document.getElementById('ced-save-status');
 
-  // Sync latest font selection before saving
+  // Sinkronisasi pilihan font terakhir
   ced.fontFamily = document.getElementById('ced-font-select').value;
 
   btn.disabled = true;
-  status.textContent = '';
-  status.style.color = 'var(--text-muted)';
+  status.textContent = '⏳ Menyimpan konfigurasi ke Firestore...';
+  status.style.color = 'var(--accent)';
 
+  // ALUR SIMPAN: Paket data ini hanya berisi Teks (termasuk URL Cloudinary) dan Angka Koordinat.
+  // Tidak ada lagi proses upload file ke Firebase Storage.
   const payload = {
-    fontFamily: ced.fontFamily,
-    nameX:      450,
-    nameY:      ced.nameY,
-    bboxX:      isFinite(ced.x)      ? ced.x      : 153,
-    bboxWidth:  isFinite(ced.width)  ? ced.width  : 594,
-    bboxHeight: isFinite(ced.height) ? ced.height : 115,
-    updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
+    templateBase64: ced.templateBase64 || null, // Ini sekarang berisi URL Link Cloudinary
+    fontFamily:     ced.fontFamily,
+    nameX:          450,
+    nameY:          ced.nameY,
+    bboxX:          isFinite(ced.x)      ? ced.x      : 153,
+    bboxWidth:      isFinite(ced.width)  ? ced.width  : 594,
+    bboxHeight:     isFinite(ced.height) ? ced.height : 115,
+    updatedAt:      firebase.firestore.FieldValue.serverTimestamp(),
   };
 
-  // Jika ada gambar baru (Base64), upload ke Firebase Storage dulu
-  if (ced.templateBase64 && ced.templateBase64.startsWith('data:')) {
-    try {
-      status.textContent = '⏳ Mengunggah template ke Storage...';
-      status.style.color = 'var(--accent)';
-
-      // Konversi Base64 → Blob
-      const res  = await fetch(ced.templateBase64);
-      const blob = await res.blob();
-
-      // Upload ke Firebase Storage
-      const fileName  = ced._pendingFileName || ('template_' + Date.now() + '.png');
-      const storageRef = firebase.storage().ref('templates/' + Date.now() + '_' + fileName);
-      const snapshot   = await storageRef.put(blob);
-      const downloadURL = await snapshot.ref.getDownloadURL();
-
-      // Simpan URL (bukan Base64) ke Firestore
-      payload.templateBase64 = downloadURL;
-      // Update variabel lokal supaya tidak re-upload kalau Save lagi
-      ced.templateBase64 = downloadURL;
-      ced._imgCache = null;
-      ced._pendingFileName = null;
-      // Hapus localStorage cache — sekarang pakai URL dari Storage
-      try { localStorage.removeItem('ced_templateBase64'); localStorage.removeItem('ced_templateName'); } catch(ex) {}
-
-    } catch (err) {
-      status.textContent = '✗ Gagal upload gambar: ' + err.message;
-      status.style.color = 'var(--danger)';
-      btn.disabled = false;
-      return;
-    }
-  } else if (ced.templateBase64) {
-    // Sudah URL Firebase, cukup simpan ulang
-    payload.templateBase64 = ced.templateBase64;
-  }
-
   try {
-    status.textContent = '⏳ Menyimpan konfigurasi...';
+    // Kirim paket data (Teks & Koordinat) ke Firestore
     await db.collection('settings').doc('certificate_config').set(payload, { merge: true });
-    status.textContent = '✓ Tersimpan! Semua sertifikat akan menggunakan konfigurasi ini.';
+    
+    status.textContent = '✓ Tersimpan! Template & koordinat berhasil diperbarui.';
     status.style.color = 'var(--success)';
 
-    // Update nama file indicator
+    // Update indikator UI
     const nm = document.getElementById('ced-upload-name');
     if (nm && nm.style.display !== 'none') {
-      nm.textContent = '✓ Template tersimpan di Firestore';
+      nm.textContent = '✓ Template aktif dari Cloudinary';
     }
 
     setTimeout(() => { status.textContent = ''; }, 5000);

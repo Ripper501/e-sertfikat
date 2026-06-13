@@ -2686,7 +2686,8 @@ const ced = {
   // ── Bounding box (canvas-space coords, 900×636 grid) ──
   x:              153,    // left edge of text box in canvas px
   y:              275,    // top edge of text box in canvas px
-  width:          594,    // text box width in canvas px (≈ MAX_W legacy default)
+  width:          594,    // text box width in canvas px
+  height:         115,    // text box height in canvas px — font shrinks to fit this
 };
 
 // ── Toggle panel open / closed ───────────────────────────────────
@@ -2746,12 +2747,25 @@ async function cedLoadFromFirestore() {
       ced.nameY = d.nameY;
       document.getElementById('ced-coord-y').textContent = Math.round(d.nameY);
     }
-    if (d.bboxX     != null) ced.x     = d.bboxX;
-    if (d.bboxWidth != null) ced.width = d.bboxWidth;
+    if (d.bboxX      != null) ced.x      = d.bboxX;
+    if (d.bboxWidth  != null) ced.width  = d.bboxWidth;
+    if (d.bboxHeight != null) ced.height = d.bboxHeight;
     if (d.templateBase64) {
       ced.templateBase64 = d.templateBase64;
+      ced._imgCache = null;
       const nm = document.getElementById('ced-upload-name');
       nm.textContent  = '✓ Template loaded from Firestore';
+      nm.style.display = 'block';
+    }
+    // Prioritaskan localStorage Base64 (lokal, selalu bisa load, tidak butuh CORS)
+    // Override Firestore URL jika localStorage punya Base64 yang lebih baru
+    const lsBase64 = localStorage.getItem('ced_templateBase64');
+    const lsName   = localStorage.getItem('ced_templateName');
+    if (lsBase64 && lsBase64.startsWith('data:')) {
+      ced.templateBase64 = lsBase64;
+      ced._imgCache = null;
+      const nm = document.getElementById('ced-upload-name');
+      nm.textContent  = '✓ Template: ' + (lsName || 'cached') + ' (dari cache lokal)';
       nm.style.display = 'block';
     }
     cedRedraw();
@@ -2765,9 +2779,6 @@ function cedHandleUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  // Reset input value so selecting the same file again still triggers onchange
-  event.target.value = '';
-
   const nm = document.getElementById('ced-upload-name');
   nm.textContent = '⏳ Membaca foto...';
   nm.style.display = 'block';
@@ -2778,8 +2789,18 @@ function cedHandleUpload(event) {
   reader.onload = function(e) {
     // Simpan Base64 ke variabel sistem
     ced.templateBase64 = e.target.result;
+    ced._imgCache = null;   // invalidate cache
     // Simpan nama file untuk referensi saat Save
     ced._pendingFileName = file.name;
+
+    // Cache Base64 ke localStorage supaya tetap ada setelah navigasi/refresh
+    try {
+      localStorage.setItem('ced_templateBase64', e.target.result);
+      localStorage.setItem('ced_templateName', file.name);
+    } catch(ex) { /* localStorage penuh — skip cache, tidak masalah */ }
+
+    // Reset input SETELAH FileReader selesai — aman untuk semua browser
+    event.target.value = '';
 
     nm.textContent = '✓ Foto siap: ' + file.name + ' (belum disimpan ke Firestore)';
     nm.style.color = 'var(--success)';
@@ -2790,6 +2811,8 @@ function cedHandleUpload(event) {
   reader.onerror = function() {
     nm.textContent = '✗ Gagal membaca file.';
     nm.style.color = 'var(--danger)';
+    // Reset input supaya user bisa coba lagi
+    event.target.value = '';
   };
   reader.readAsDataURL(file);
 }
@@ -2835,35 +2858,66 @@ async function _cedDraw() {
   // 2. Draw template background
   if (ced.templateBase64) {
     try {
-      const img = await _cedLoadImg(ced.templateBase64);
-      ctx.drawImage(img, 0, 0, W, H);
-    } catch { _cedDrawPlaceholder(ctx, W, H); }
+      // Use cached image object when src hasn't changed — avoids re-fetching on every redraw
+      if (!ced._imgCache || ced._imgCache.src !== ced.templateBase64) {
+        ced._imgCache = await _cedLoadImg(ced.templateBase64);
+        ced._imgCache.src = ced.templateBase64;  // tag for cache comparison
+      }
+      ctx.drawImage(ced._imgCache, 0, 0, W, H);
+    } catch (err) {
+      console.warn('[CED] Image load failed:', err.message);
+      ced._imgCache = null;   // clear cache so next redraw retries
+      _cedDrawPlaceholder(ctx, W, H);
+    }
   } else {
     _cedDrawPlaceholder(ctx, W, H);
   }
 
-  // 3. Smart auto-scaling name with wrapText (uses ced.width)
-  const name = document.getElementById('ced-name-input').value
-               || 'Alex belo boavida ximenes da costa soares';
+  // 3. Smart auto-scaling: shrink font until text block truly fits the box.
+  //    Uses ctx.measureText actual bounds (not estimates) for every font/size combo.
+  //    SAFE_RATIO reserves space for decorative ascenders/descenders of script fonts.
+  const name       = document.getElementById('ced-name-input').value
+                     || 'Alex belo boavida ximenes da costa soares';
+  const BOX_W      = ced.width;
+  const BOX_H      = ced.height;
+  const SAFE_RATIO = 0.72;   // use only 72% of box height — generous room for script descenders
+
   ctx.save();
   ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.textBaseline = 'alphabetic';
   ctx.fillStyle    = '#d09e3b';
 
   let fontSize = 68;
-  ctx.font = `${fontSize}px "${ced.fontFamily}"`;
-  // Shrink font until the longest word fits within ced.width
-  while (ctx.measureText(name.split(' ').reduce((a,w)=>ctx.measureText(w).width>ctx.measureText(a).width?w:a,'')).width > ced.width && fontSize > 14) {
-    fontSize -= 1;
+  let lines, lineH, ascent, descent, totalH;
+
+  while (fontSize >= 10) {
     ctx.font = `${fontSize}px "${ced.fontFamily}"`;
+
+    // Wrap words to fit box width (no horizontal padding needed — SAFE_RATIO handles slack)
+    lines = wrapText(ctx, name, BOX_W);
+
+    // Measure the tallest actual glyph bounds across all lines
+    ascent  = 0;
+    descent = 0;
+    lines.forEach(ln => {
+      const m = ctx.measureText(ln);
+      ascent  = Math.max(ascent,  m.actualBoundingBoxAscent  || fontSize * 0.80);
+      descent = Math.max(descent, m.actualBoundingBoxDescent || fontSize * 0.30);
+    });
+
+    lineH  = ascent + descent + fontSize * 0.18;   // line gap proportional to font size
+    totalH = lines.length * lineH;
+
+    if (totalH <= BOX_H * SAFE_RATIO) break;   // fits within safe zone → done
+    fontSize -= 1;
   }
-  // Use wrapText to split name into lines, centred on ced.x + ced.width/2
-  const lines     = wrapText(ctx, name, ced.width);
-  const lineH     = fontSize * 1.28;
-  const totalH    = lines.length * lineH;
-  const centreX   = ced.x + ced.width / 2;
-  // ced.y is the top of the box; vertically centre the block inside the box
-  const startY    = ced.nameY - (totalH / 2) + (lineH / 2);
+
+  // Vertically centre the whole text block inside the box
+  const boxTop  = ced.nameY - BOX_H / 2;
+  const blockH  = totalH;
+  const offsetY = (BOX_H - blockH) / 2;          // centre block in box
+  const startY  = boxTop + offsetY + ascent;      // alphabetic baseline of first line
+  const centreX = ced.x + BOX_W / 2;
   lines.forEach((ln, i) => ctx.fillText(ln, centreX, startY + i * lineH));
   ctx.restore();
 
@@ -2901,13 +2955,11 @@ function _cedSyncBbox() {
   const scaleX = rect.width  / 900;
   const scaleY = rect.height / 636;
 
-  // Derive a sensible box height from ced.nameY ± line estimate
-  const boxH_canvas = Math.max(80, 636 * 0.18);   // ~18% of canvas height
-
-  const cssLeft   = ced.x     * scaleX;
-  const cssTop    = (ced.nameY - boxH_canvas / 2) * scaleY;
-  const cssWidth  = ced.width * scaleX;
-  const cssHeight = boxH_canvas * scaleY;
+  // Use ced.height directly — the single source of truth for box height
+  const cssLeft   = ced.x                          * scaleX;
+  const cssTop    = (ced.nameY - ced.height / 2)   * scaleY;
+  const cssWidth  = ced.width                      * scaleX;
+  const cssHeight = ced.height                     * scaleY;
 
   bbox.style.left   = cssLeft   + 'px';
   bbox.style.top    = cssTop    + 'px';
@@ -2915,16 +2967,17 @@ function _cedSyncBbox() {
   bbox.style.height = cssHeight + 'px';
 
   if (lbl) lbl.textContent =
-    `x:${Math.round(ced.x)}  y:${Math.round(ced.nameY)}  w:${Math.round(ced.width)}`;
+    `x:${Math.round(ced.x)}  y:${Math.round(ced.nameY)}  w:${Math.round(ced.width)}  h:${Math.round(ced.height)}`;
 }
 
 // ── Promise-based image loader ────────────────────────────────────
 function _cedLoadImg(src) {
   return new Promise((res, rej) => {
-    const i = new Image();
-    i.onload  = () => res(i);
-    i.onerror = rej;
-    i.src     = src;
+    const i   = new Image();
+    const tid = setTimeout(() => rej(new Error('img timeout')), 8000);
+    i.onload  = () => { clearTimeout(tid); res(i); };
+    i.onerror = (e) => { clearTimeout(tid); rej(e); };
+    i.src = src;
   });
 }
 
@@ -3013,8 +3066,9 @@ async function cedSaveConfig() {
     fontFamily: ced.fontFamily,
     nameX:      450,
     nameY:      ced.nameY,
-    bboxX:      isFinite(ced.x)     ? ced.x     : 153,
-    bboxWidth:  isFinite(ced.width) ? ced.width  : 594,
+    bboxX:      isFinite(ced.x)      ? ced.x      : 153,
+    bboxWidth:  isFinite(ced.width)  ? ced.width  : 594,
+    bboxHeight: isFinite(ced.height) ? ced.height : 115,
     updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
   };
 
@@ -3038,7 +3092,10 @@ async function cedSaveConfig() {
       payload.templateBase64 = downloadURL;
       // Update variabel lokal supaya tidak re-upload kalau Save lagi
       ced.templateBase64 = downloadURL;
+      ced._imgCache = null;
       ced._pendingFileName = null;
+      // Hapus localStorage cache — sekarang pakai URL dari Storage
+      try { localStorage.removeItem('ced_templateBase64'); localStorage.removeItem('ced_templateName'); } catch(ex) {}
 
     } catch (err) {
       status.textContent = '✗ Gagal upload gambar: ' + err.message;
@@ -3117,6 +3174,7 @@ async function cedSaveConfig() {
         startX:  ced.x,
         startY:  ced.nameY,
         startW:  ced.width,
+        startH:  ced.height,
       };
       bbox.setPointerCapture(e.pointerId);
       e.preventDefault();
@@ -3148,10 +3206,14 @@ async function cedSaveConfig() {
           ced.width = Math.max(MIN_W, Math.min(CANVAS_W - ced.x, drag.startW + dx));
         }
         if (h === 't' || h === 'nw' || h === 'ne') {
-          ced.nameY = Math.max(0, drag.startY + dy);
+          // Dragging top edge: shrink/grow height, keep bottom edge fixed
+          const newH = Math.max(40, drag.startH - dy);
+          ced.height = newH;
+          ced.nameY  = drag.startY + (drag.startH - newH) / 2;
         }
         if (h === 'b' || h === 'sw' || h === 'se') {
-          ced.nameY = Math.min(CANVAS_H, drag.startY + dy);
+          // Dragging bottom edge: grow/shrink height, keep top edge (nameY) fixed
+          ced.height = Math.max(40, drag.startH + dy);
         }
       }
 

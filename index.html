@@ -1183,6 +1183,16 @@
     white-space: nowrap;
   }
 
+
+  /* ─── CLOUDINARY WIDGET Z-INDEX OVERRIDE ────────────────────────────── */
+  /* Must appear ABOVE the cert-editor-panel (z-index: 999999) */
+  .cloudinary-widget,
+  .cloudinary-overlay,
+  div[class*="cloudinary"],
+  iframe[src*="cloudinary"] {
+    z-index: 9999999 !important;
+  }
+
 </style>
 <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
 </head>
@@ -1689,8 +1699,6 @@
         <!-- 1. Template image upload -->
         <div class="ced-field">
           <label class="ced-label">Certificate Template Image</label>
-      <div class="ced-field">
-          <label class="ced-label">Certificate Template Image</label>
           <div class="ced-upload" id="ced-upload-zone">
             <svg class="ced-upload-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1727,18 +1735,28 @@
           </select>
         </div>
 
-        <!-- 4. Coordinate readout (req #3) -->
+        <!-- 4. Coordinate readout — 1 sumber kebenaran: BBOX -->
         <div class="ced-coords">
-          <div class="ced-coords-hd">Click Canvas to Set Name Y Position</div>
+          <div class="ced-coords-hd">Text Box Position (drag box to move)</div>
           <div class="ced-coord-row">
-            <span class="ced-axis">X</span>
-            <span class="ced-coord-val" id="ced-coord-x">450</span>
-            <span class="ced-coord-note">px (always centred at W/2)</span>
+            <span class="ced-axis">L</span>
+            <span class="ced-coord-val" id="ced-coord-x">228</span>
+            <span class="ced-coord-note">px — left edge of box</span>
           </div>
           <div class="ced-coord-row">
-            <span class="ced-axis">Y</span>
-            <span class="ced-coord-val" id="ced-coord-y">310</span>
-            <span class="ced-coord-note">px (click canvas to change)</span>
+            <span class="ced-axis">T</span>
+            <span class="ced-coord-val" id="ced-coord-y">240</span>
+            <span class="ced-coord-note">px — top edge of box</span>
+          </div>
+          <div class="ced-coord-row">
+            <span class="ced-axis">W</span>
+            <span class="ced-coord-val" id="ced-coord-w">594</span>
+            <span class="ced-coord-note">px — width of box</span>
+          </div>
+          <div class="ced-coord-row">
+            <span class="ced-axis">H</span>
+            <span class="ced-coord-val" id="ced-coord-h">115</span>
+            <span class="ced-coord-note">px — height of box</span>
           </div>
         </div>
 
@@ -1827,7 +1845,7 @@ const FIREBASE_CONFIG = {
 const GEO_TARGET = {
   lat:    -8.545971253827894,   // <-- PERBAIKAN: Wajib ada tanda koma di sini!
   lng:    125.5431727032313,
-  radius: 500000          // Meters – max allowed distance from venue center -8.545971253827894, 125.5431727032313
+  radius: 5000          // Meters – max allowed distance from venue center -8.545971253827894, 125.5431727032313
 };
 
 // ── EVENT METADATA (used on the certificate) ───────────────────────
@@ -2148,22 +2166,34 @@ async function drawCertificateOnCanvas(canvas, name) {
   const W   = canvas.width;   // 900
   const H   = canvas.height;  // 636
 
-  // ── Fetch saved configuration from Firestore ──────────────────
-  let cfgSrc  = 'sertifikat-template.png'; // default image path
-  let cfgFont = 'Alex Brush';              // default font
-  let cfgY    = 309.7;                     // default name Y position
+  // ── Fetch config dari Firestore — SATU SUMBER KEBENARAN: bbox ──
+  let cfgSrc    = 'sertifikat-template.png';
+  let cfgFont   = 'Alex Brush';
+  // Default bbox (persis default ced state)
+  let bboxX = 153, bboxY = 240, bboxW = 594, bboxH = 115;
 
   try {
     const snap = await db.collection('settings').doc('certificate_config').get();
     if (snap.exists) {
       const d = snap.data();
-      if (d.templateBase64) cfgSrc  = d.templateBase64;
-      if (d.fontFamily)     cfgFont = d.fontFamily;
-      if (d.nameY != null)  cfgY    = d.nameY;
+      if (d.templateBase64)  cfgSrc = d.templateBase64;
+      if (d.fontFamily)      cfgFont = d.fontFamily;
+      // Baca 4 nilai bbox — inilah satu-satunya sumber posisi
+      if (d.bboxX      != null) bboxX = d.bboxX;
+      if (d.bboxY      != null) bboxY = d.bboxY;
+      if (d.bboxWidth  != null) bboxW = d.bboxWidth;
+      if (d.bboxHeight != null) bboxH = d.bboxHeight;
     }
   } catch (e) {
     console.warn('[CertDraw] Firestore config fetch failed, using defaults:', e.message);
   }
+
+  // Hitung posisi teks dari bbox — persis sama dengan editor preview
+  const centreX = bboxX + bboxW / 2;
+  const centreY = bboxY + bboxH / 2;
+
+  // ── Tunggu font ter-load sebelum draw ─────────────────────────
+  try { await document.fonts.load(`68px "${cfgFont}"`); } catch(e) {}
 
   // ── 1. Clear + draw template ──────────────────────────────────
   ctx.clearRect(0, 0, W, H);
@@ -2176,8 +2206,7 @@ async function drawCertificateOnCanvas(canvas, name) {
     ctx.fillRect(0, 0, W, H);
   }
 
-  // ── 2. Smart auto-scaling name (LOOP PINTAR) ──────────────────
-  const MAX_NAME_W = 593; // maximum safe name width in px
+  // ── 2. Smart auto-scaling name ────────────────────────────────
   ctx.save();
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
@@ -2185,11 +2214,12 @@ async function drawCertificateOnCanvas(canvas, name) {
 
   let fontSize = 68;
   ctx.font = `${fontSize}px "${cfgFont}"`;
-  while (ctx.measureText(name).width > MAX_NAME_W && fontSize > 20) {
+  while (ctx.measureText(name).width > bboxW && fontSize > 20) {
     fontSize -= 1;
     ctx.font = `${fontSize}px "${cfgFont}"`;
   }
-  ctx.fillText(name, W / 2, cfgY); // X always centred at W/2 = 450
+  // centreX & centreY dihitung dari bbox — sama persis dengan editor preview
+  ctx.fillText(name, centreX, centreY);
   ctx.restore();
 
   // ── 3. Faint UID watermark ────────────────────────────────────
@@ -2680,16 +2710,17 @@ function projectorEscHandler(e) {
 // ════════════════════════════════════════════════════════════════
 
 // ── Editor runtime state ─────────────────────────────────────────
+// SATU SUMBER KEBENARAN: semua posisi diambil dari bbox saja.
+// centreX = ced.x + ced.width/2
+// centreY = ced.y + ced.height/2
 const ced = {
-  templateBase64: null,   // Base64 dataURL of uploaded image (Req #1)
+  templateBase64: null,
   fontFamily:     'Alex Brush',
-  nameX:          450,    // Always W/2 — stored for Firestore record (Req #3)
-  nameY:          309.7,  // Y position — updated by canvas click (Req #3)
   // ── Bounding box (canvas-space coords, 900×636 grid) ──
-  x:              153,    // left edge of text box in canvas px
-  y:              275,    // top edge of text box in canvas px
-  width:          594,    // text box width in canvas px
-  height:         115,    // text box height in canvas px — font shrinks to fit this
+  x:      153,   // left edge px
+  y:      240,   // top edge px  (bukan nameY — ini top edge bbox)
+  width:  594,   // box width px
+  height: 115,   // box height px
 };
 
 // ── Toggle panel open / closed ───────────────────────────────────
@@ -2745,13 +2776,17 @@ async function cedLoadFromFirestore() {
       document.getElementById('ced-font-select').value = d.fontFamily;
       ced.fontFamily = d.fontFamily;
     }
-    if (d.nameY != null) {
-      ced.nameY = d.nameY;
-      document.getElementById('ced-coord-y').textContent = Math.round(d.nameY);
-    }
+    // Satu sumber kebenaran: semua dari bbox
     if (d.bboxX      != null) ced.x      = d.bboxX;
+    if (d.bboxY      != null) ced.y      = d.bboxY;
     if (d.bboxWidth  != null) ced.width  = d.bboxWidth;
     if (d.bboxHeight != null) ced.height = d.bboxHeight;
+
+    // Update panel readout
+    document.getElementById('ced-coord-x').textContent = Math.round(ced.x);
+    document.getElementById('ced-coord-y').textContent = Math.round(ced.y);
+    document.getElementById('ced-coord-w').textContent = Math.round(ced.width);
+    document.getElementById('ced-coord-h').textContent = Math.round(ced.height);
     if (d.templateBase64) {
       ced.templateBase64 = d.templateBase64;
       ced._imgCache = null;
@@ -2786,6 +2821,26 @@ const myWidget = cloudinary.createUploadWidget({
     sources: ['local'], 
     multiple: false,
     clientAllowedFormats: ['jpg', 'png', 'jpeg', 'webp'],
+    styles: {
+      palette: {
+        window: "#22243A",
+        windowBorder: "#CCFF00",
+        tabIcon: "#CCFF00",
+        menuIcons: "#CCFF00",
+        textDark: "#FFFFFF",
+        textLight: "#1b1c27",
+        link: "#CCFF00",
+        action: "#CCFF00",
+        inactiveTabIcon: "#7b7d96",
+        error: "#ff4d6d",
+        inProgress: "#CCFF00",
+        complete: "#00e5a0",
+        sourceBg: "#1b1c27"
+      }
+    },
+    inlineContainer: null,
+    // Ensure widget z-index is above the editor panel (z-index: 999999)
+    // by appending it to body and overriding z-index via CSS injection
   }, (error, result) => {
     if (!error && result && result.event === "success") {
       console.log('Upload berhasil! URL: ', result.info.secure_url);
@@ -2823,7 +2878,8 @@ const myWidget = cloudinary.createUploadWidget({
 );
 
 // Event Listener: Klik area upload akan membuka Cloudinary Widget
-document.getElementById('ced-upload-zone').addEventListener('click', () => {
+document.getElementById('ced-upload-zone').addEventListener('click', (e) => {
+  e.stopPropagation(); // Cegah event bubbling ke canvas click handler di document level
   myWidget.open();
 });
 
@@ -2843,6 +2899,9 @@ async function _cedDraw() {
 
   // Sync font from selector
   ced.fontFamily = document.getElementById('ced-font-select').value;
+
+  // ── Tunggu font ter-load sebelum draw ──────────────────────────
+  try { await document.fonts.load(`68px "${ced.fontFamily}"`); } catch(e) {}
 
   // ── wrapText(): wraps `text` into lines that fit within `ced.width` ──
   function wrapText(ctx, text, maxWidth) {
@@ -2923,11 +2982,12 @@ async function _cedDraw() {
   }
 
   // Vertically centre the whole text block inside the box
-  const boxTop  = ced.nameY - BOX_H / 2;
-  const blockH  = totalH;
-  const offsetY = (BOX_H - blockH) / 2;          // centre block in box
-  const startY  = boxTop + offsetY + ascent;      // alphabetic baseline of first line
+  // centreX & centreY dihitung dari bbox — SATU SUMBER KEBENARAN
   const centreX = ced.x + BOX_W / 2;
+  const boxTop  = ced.y;                          // top edge langsung dari ced.y
+  const blockH  = totalH;
+  const offsetY = (BOX_H - blockH) / 2;
+  const startY  = boxTop + offsetY + ascent;
   lines.forEach((ln, i) => ctx.fillText(ln, centreX, startY + i * lineH));
   ctx.restore();
 
@@ -2945,7 +3005,7 @@ async function _cedDraw() {
   ctx.fillStyle = 'rgba(204,255,0,0.28)';
   ctx.textAlign = 'left';
   ctx.fillText(
-    `Font: ${ced.fontFamily}  |  Size: ${fontSize}px  |  Y: ${Math.round(ced.nameY)}px  |  W: ${Math.round(ced.width)}px  |  X: ${Math.round(ced.x)}px`,
+    `Font: ${ced.fontFamily}  |  Size: ${fontSize}px  |  L: ${Math.round(ced.x)}  T: ${Math.round(ced.y)}  W: ${Math.round(ced.width)}  H: ${Math.round(ced.height)}`,
     10, H - 10
   );
   ctx.restore();
@@ -2966,10 +3026,11 @@ function _cedSyncBbox() {
   const scaleY = rect.height / 636;
 
   // Use ced.height directly — the single source of truth for box height
-  const cssLeft   = ced.x                          * scaleX;
-  const cssTop    = (ced.nameY - ced.height / 2)   * scaleY;
-  const cssWidth  = ced.width                      * scaleX;
-  const cssHeight = ced.height                     * scaleY;
+  // Pakai ced.y langsung sebagai top edge — satu sumber kebenaran
+  const cssLeft   = ced.x        * scaleX;
+  const cssTop    = ced.y        * scaleY;
+  const cssWidth  = ced.width    * scaleX;
+  const cssHeight = ced.height   * scaleY;
 
   bbox.style.left   = cssLeft   + 'px';
   bbox.style.top    = cssTop    + 'px';
@@ -2977,7 +3038,7 @@ function _cedSyncBbox() {
   bbox.style.height = cssHeight + 'px';
 
   if (lbl) lbl.textContent =
-    `x:${Math.round(ced.x)}  y:${Math.round(ced.nameY)}  w:${Math.round(ced.width)}  h:${Math.round(ced.height)}`;
+    `x:${Math.round(ced.x)}  y:${Math.round(ced.y)}  w:${Math.round(ced.width)}  h:${Math.round(ced.height)}`;
 }
 
 // ── Promise-based image loader ────────────────────────────────────
@@ -3031,33 +3092,12 @@ function _cedDrawPlaceholder(ctx, W, H) {
     // Ignore clicks that originated from the bbox overlay or its handles
     if (e.target.closest('#ced-bbox')) return;
 
-    const rect   = wrap.getBoundingClientRect();
-    const scaleY = 636 / rect.height;   // CSS px → canvas px
-    const scaleX = 900 / rect.width;
+    // Ignore clicks on the upload zone — those are handled by Cloudinary widget
+    if (e.target.closest('#ced-upload-zone')) return;
 
-    // Capture exact canvas-coordinate click position
-    const canvasX = Math.round((e.clientX - rect.left) * scaleX);
-    const canvasY = Math.round((e.clientY - rect.top)  * scaleY * 10) / 10;
-
-    // Snap name Y to click point; X is always locked to W/2 = 450 (Req #3)
-    ced.nameY = canvasY;
-    ced.nameX = 450;
-
-    // Update live coordinate readout (Req #3)
-    document.getElementById('ced-coord-x').textContent = '450';
-    document.getElementById('ced-coord-y').textContent = Math.round(canvasY);
-
-    // Show & auto-fade the horizontal guideline overlay
-    const line = document.getElementById('ced-guideline');
-    if (line) {
-      const pct = (canvasY / 636) * 100;
-      line.style.top = pct + '%';
-      line.classList.add('show');
-      clearTimeout(line._fadeTimer);
-      line._fadeTimer = setTimeout(() => line.classList.remove('show'), 1600);
-    }
-
-    cedRedraw();
+    // Klik canvas tidak lagi mengubah posisi teks.
+    // Posisi dikelola sepenuhnya oleh bbox drag.
+    // (Kode ini sengaja dikosongkan — canvas click hanya untuk info)
   });
 })();
 
@@ -3076,15 +3116,15 @@ async function cedSaveConfig() {
 
   // ALUR SIMPAN: Paket data ini hanya berisi Teks (termasuk URL Cloudinary) dan Angka Koordinat.
   // Tidak ada lagi proses upload file ke Firebase Storage.
+  // Satu sumber kebenaran: simpan semua 4 nilai bbox saja
   const payload = {
-    templateBase64: ced.templateBase64 || null, // Ini sekarang berisi URL Link Cloudinary
+    templateBase64: ced.templateBase64 || null,
     fontFamily:     ced.fontFamily,
-    nameX:          450,
-    nameY:          ced.nameY,
-    bboxX:          isFinite(ced.x)      ? ced.x      : 153,
-    bboxWidth:      isFinite(ced.width)  ? ced.width  : 594,
-    bboxHeight:     isFinite(ced.height) ? ced.height : 115,
-    updatedAt:      firebase.firestore.FieldValue.serverTimestamp(),
+    bboxX:      isFinite(ced.x)      ? Math.round(ced.x)      : 153,
+    bboxY:      isFinite(ced.y)      ? Math.round(ced.y)      : 240,
+    bboxWidth:  isFinite(ced.width)  ? Math.round(ced.width)  : 594,
+    bboxHeight: isFinite(ced.height) ? Math.round(ced.height) : 115,
+    updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
   };
 
   try {
@@ -3152,7 +3192,7 @@ async function cedSaveConfig() {
         startMX: e.clientX,
         startMY: e.clientY,
         startX:  ced.x,
-        startY:  ced.nameY,
+        startY:  ced.y,       // ← pakai ced.y (top edge)
         startW:  ced.width,
         startH:  ced.height,
       };
@@ -3169,11 +3209,11 @@ async function cedSaveConfig() {
 
       if (drag.type === 'move') {
         // Clamp so box stays within canvas
-        ced.x     = Math.max(0, Math.min(CANVAS_W - ced.width, drag.startX + dx));
-        ced.nameY = Math.max(0, Math.min(CANVAS_H, drag.startY + dy));
+        ced.x = Math.max(0, Math.min(CANVAS_W - ced.width,  drag.startX + dx));
+        ced.y = Math.max(0, Math.min(CANVAS_H - ced.height, drag.startY + dy));
 
       } else {
-        // Resize — only horizontal handles change ced.width; all move ced.x/ced.nameY
+        // Resize — horizontal handles ubah ced.width; vertikal ubah ced.y/ced.height
         const h = drag.handle;
 
         if (h === 'l' || h === 'nw' || h === 'sw') {
@@ -3186,10 +3226,10 @@ async function cedSaveConfig() {
           ced.width = Math.max(MIN_W, Math.min(CANVAS_W - ced.x, drag.startW + dx));
         }
         if (h === 't' || h === 'nw' || h === 'ne') {
-          // Dragging top edge: shrink/grow height, keep bottom edge fixed
+          // Dragging top edge: move top edge, keep bottom fixed
           const newH = Math.max(40, drag.startH - dy);
           ced.height = newH;
-          ced.nameY  = drag.startY + (drag.startH - newH) / 2;
+          ced.y      = drag.startY + (drag.startH - newH); // top edge bergerak
         }
         if (h === 'b' || h === 'sw' || h === 'se') {
           // Dragging bottom edge: grow/shrink height, keep top edge (nameY) fixed
@@ -3197,11 +3237,15 @@ async function cedSaveConfig() {
         }
       }
 
-      // Update coord readout
+      // Update panel readout — satu sumber kebenaran: L/T/W/H dari bbox
       const coordX = document.getElementById('ced-coord-x');
       const coordY = document.getElementById('ced-coord-y');
-      if (coordX) coordX.textContent = Math.round(ced.x + ced.width / 2);
-      if (coordY) coordY.textContent = Math.round(ced.nameY);
+      const coordW = document.getElementById('ced-coord-w');
+      const coordH = document.getElementById('ced-coord-h');
+      if (coordX) coordX.textContent = Math.round(ced.x);
+      if (coordY) coordY.textContent = Math.round(ced.y);
+      if (coordW) coordW.textContent = Math.round(ced.width);
+      if (coordH) coordH.textContent = Math.round(ced.height);
 
       // Sync bbox overlay position immediately (no canvas redraw needed for CSS)
       _cedSyncBbox();

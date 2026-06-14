@@ -2295,25 +2295,26 @@ function showSuccessScreen() {
 
 // ── Download PDF ──────────────────────────────────────────────────
 // ── Secure Single-Attempt Download & WhatsApp Lead Capture ─────────────────────────────
+// ── Secure Single-Attempt Download & WhatsApp Conversion (Frictionless) ─────────
 async function downloadAndReportCertificate() {
   if (!generatedPDF) {
     return showToast('error', 'No PDF found', 'Please reload and try again.');
   }
 
-  // 1. DUAL ATTEMPT LOCK: Cek jika sudah pernah download
+  // 1. DUAL ATTEMPT LOCK: Check if already downloaded
   if (localStorage.getItem('is_downloaded') === 'true') {
     return Swal.fire({
       icon: 'error',
-      title: 'Akses Terbatas',
-      text: 'Anda sudah melakukan download sertifikat sebelumnya.',
+      title: 'Access Restricted',
+      text: 'Certificate already downloaded. You can only download this document once.',
       customClass: { popup: 'swal2-dark-custom' }
     });
   }
 
-  // 2. GENERATION PROGRESS BAR (Langsung ke proses loading)
+  // 2. GENERATION PROGRESS BAR & LOCK (Input step completely removed!)
   let progress = 0;
   Swal.fire({
-    title: 'Perparing Certificate...',
+    title: 'Preparing Secure Download...',
     html: '<b>Status: <span id="sec-progress" style="color: var(--accent);">0%</span></b>',
     allowOutsideClick: false,
     allowEscapeKey: false,
@@ -2337,15 +2338,16 @@ async function downloadAndReportCertificate() {
           const pdfBlob = generatedPDF.output('blob');
           let finalBlob = pdfBlob;
 
-          // Deteksi iOS
+          // Detect iOS devices
           const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
           if (isIOS) {
+            // Repackage Blob to bypass Safari's inline PDF viewer
             finalBlob = new Blob([pdfBlob], { type: 'application/octet-stream' });
           }
 
-          const safeName = certName ? certName.replace(/[^a-z0-9]/gi, '_') : 'Sertifikat';
+          const safeName = certName ? certName.replace(/[^a-z0-9]/gi, '_') : 'User';
           const url = window.URL.createObjectURL(finalBlob);
           const a = document.createElement('a');
           a.style.display = 'none';
@@ -2360,29 +2362,33 @@ async function downloadAndReportCertificate() {
             document.body.removeChild(a);
           }, 1000);
 
-          // 4. MANDATORY POST-DOWNLOAD REPORTING (Tanpa input nomor)
+          // 4. MANDATORY POST-DOWNLOAD REPORTING
           Swal.fire({
             icon: 'success',
-            title: 'Download Done!',
+            title: 'Download Triggered!',
             html: `<p style="font-size:14px; line-height:1.6; color:var(--text-muted);">
-                     File sudah tersimpan di folder <b>Downloads</b> perangkat Anda.<br><br>
-                     Klik tombol di bawah untuk melapor ke Admin.
+                     Your certificate is now in your device's File Manager / Downloads folder.<br><br>
+                     You <b>must</b> report successful receipt to the Admin to activate your record.
                    </p>`,
             allowOutsideClick: false,
+            allowEscapeKey: false,
             showConfirmButton: true,
-            confirmButtonText: 'Report to WhatsApp Admin',
+            confirmButtonText: '✅ Report to WhatsApp Admin',
             confirmButtonColor: '#25D366',
             customClass: { popup: 'swal2-dark-custom' }
           }).then(() => {
-            // Admin akan menerima pesan dan melihat nomor WA peserta dari chat tersebut
+            // Update this to your actual Admin Number
             const adminNumber = "67078486500"; 
-            const message = `Halo Admin, saya *${certName}*. Saya sudah berhasil mengunduh sertifikat saya. Terima kasih!`;
+            
+            // Cleaned up message without the redundant phone number variable
+            const message = `Halo Admin, saya *${certName}*. Saya sudah berhasil menerima sertifikat saya dari portal. Terima kasih!`;
             const waUrl = `https://wa.me/${adminNumber}?text=${encodeURIComponent(message)}`;
             
+            // Redirect to WA Deep Link
             window.open(waUrl, '_blank');
           });
         }
-      }, 200);
+      }, 150); // Slightly faster progress bar for better UX
     }
   });
 }

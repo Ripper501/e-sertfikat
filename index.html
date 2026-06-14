@@ -2300,42 +2300,20 @@ async function downloadAndReportCertificate() {
     return showToast('error', 'No PDF found', 'Please reload and try again.');
   }
 
-  // 1. DUAL ATTEMPT LOCK: Check if already downloaded
+  // 1. DUAL ATTEMPT LOCK: Cek jika sudah pernah download
   if (localStorage.getItem('is_downloaded') === 'true') {
     return Swal.fire({
       icon: 'error',
-      title: 'Access Restricted',
-      text: 'Certificate already downloaded. You can only download this document once.',
+      title: 'Akses Terbatas',
+      text: 'Anda sudah melakukan download sertifikat sebelumnya.',
       customClass: { popup: 'swal2-dark-custom' }
     });
   }
 
-  // 2. LEAD CAPTURE & VALIDATION
-  const { value: waNumber, isDismissed } = await Swal.fire({
-    title: 'Enter WhatsApp Number',
-    html: '<p style="font-size: 13px; color: var(--text-muted);">Required for verification. Admin will use this to activate your record.</p>',
-    input: 'text',
-    inputPlaceholder: 'e.g., 77548452...',
-    showCancelButton: true,
-    confirmButtonText: 'Next &nbsp;➔',
-    confirmButtonColor: 'var(--accent)',
-    customClass: { popup: 'swal2-dark-custom' },
-    inputValidator: (value) => {
-      if (!value) return 'WhatsApp number is required!';
-      // Strips non-digits and validates: Must start with 08 or 628, length 10-14
-      const cleanVal = value.replace(/\D/g, '');
-      const isValid = /^(670|7|08|628)\d{7,12}$/.test(cleanVal);
-      if (!isValid) return 'Must be valid number.';
-    }
-  });
-
-  if (isDismissed || !waNumber) return; // Exit if user cancels
-  const cleanWaNumber = waNumber.replace(/\D/g, ''); // Captured Lead
-
-  // 3. GENERATION PROGRESS BAR & LOCK
+  // 2. GENERATION PROGRESS BAR (Langsung ke proses loading)
   let progress = 0;
   Swal.fire({
-    title: 'Preparing Secure Download...',
+    title: 'Perparing Certificate...',
     html: '<b>Status: <span id="sec-progress" style="color: var(--accent);">0%</span></b>',
     allowOutsideClick: false,
     allowEscapeKey: false,
@@ -2355,20 +2333,19 @@ async function downloadAndReportCertificate() {
           // LOCK ACCESS PERMANENTLY
           localStorage.setItem('is_downloaded', 'true');
 
-          // 4. FORCED IOS FILE-MANAGER DOWNLOAD (OCTET-STREAM TRICK)
+          // 3. FORCED IOS FILE-MANAGER DOWNLOAD (OCTET-STREAM TRICK)
           const pdfBlob = generatedPDF.output('blob');
           let finalBlob = pdfBlob;
 
-          // Detect iOS devices
+          // Deteksi iOS
           const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
           if (isIOS) {
-            // Repackage Blob to bypass Safari's inline PDF viewer
             finalBlob = new Blob([pdfBlob], { type: 'application/octet-stream' });
           }
 
-          const safeName = certName ? certName.replace(/[^a-z0-9]/gi, '_') : 'User';
+          const safeName = certName ? certName.replace(/[^a-z0-9]/gi, '_') : 'Sertifikat';
           const url = window.URL.createObjectURL(finalBlob);
           const a = document.createElement('a');
           a.style.display = 'none';
@@ -2383,31 +2360,29 @@ async function downloadAndReportCertificate() {
             document.body.removeChild(a);
           }, 1000);
 
-          // 5. MANDATORY POST-DOWNLOAD REPORTING
+          // 4. MANDATORY POST-DOWNLOAD REPORTING (Tanpa input nomor)
           Swal.fire({
             icon: 'success',
-            title: 'Download Triggered!',
+            title: 'Download Done!',
             html: `<p style="font-size:14px; line-height:1.6; color:var(--text-muted);">
-                     Your certificate is now in your device's File Manager / Downloads folder.<br><br>
-                     You <b>must</b> report successful receipt to the Admin to activate your record.
+                     File sudah tersimpan di folder <b>Downloads</b> perangkat Anda.<br><br>
+                     Klik tombol di bawah untuk melapor ke Admin.
                    </p>`,
             allowOutsideClick: false,
-            allowEscapeKey: false,
             showConfirmButton: true,
-            confirmButtonText: '✅ Report to WhatsApp Admin',
+            confirmButtonText: 'Report to WhatsApp Admin',
             confirmButtonColor: '#25D366',
             customClass: { popup: 'swal2-dark-custom' }
           }).then(() => {
-            // Update this to your actual Admin Number
+            // Admin akan menerima pesan dan melihat nomor WA peserta dari chat tersebut
             const adminNumber = "67078486500"; 
-            const message = `Halo Admin, saya *${certName}*. Saya sudah berhasil menerima sertifikat saya dari portal. Terima kasih!\n\n(No. Peserta: ${cleanWaNumber})`;
+            const message = `Halo Admin, saya *${certName}*. Saya sudah berhasil mengunduh sertifikat saya. Terima kasih!`;
             const waUrl = `https://wa.me/${adminNumber}?text=${encodeURIComponent(message)}`;
             
-            // Redirect to WA Deep Link
             window.open(waUrl, '_blank');
           });
         }
-      }, 200); // Speed of the fake progress bar
+      }, 200);
     }
   });
 }

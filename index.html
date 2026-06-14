@@ -2315,7 +2315,7 @@ async function downloadAndReportCertificate() {
     title: 'Enter WhatsApp Number',
     html: '<p style="font-size: 13px; color: var(--text-muted);">Required for verification. Admin will use this to activate your record.</p>',
     input: 'text',
-    inputPlaceholder: 'e.g., 081234567890 or 628...',
+    inputPlaceholder: 'e.g., 77548452...',
     showCancelButton: true,
     confirmButtonText: 'Next &nbsp;➔',
     confirmButtonColor: 'var(--accent)',
@@ -2324,8 +2324,8 @@ async function downloadAndReportCertificate() {
       if (!value) return 'WhatsApp number is required!';
       // Strips non-digits and validates: Must start with 08 or 628, length 10-14
       const cleanVal = value.replace(/\D/g, '');
-      const isValid = /^(08|628)\d{8,12}$/.test(cleanVal);
-      if (!isValid) return 'Must be 10-14 digits starting with 08 or 628.';
+      const isValid = /^(670|7|08|628)\d{7,12}$/.test(cleanVal);
+      if (!isValid) return 'Must be valid number.';
     }
   });
 

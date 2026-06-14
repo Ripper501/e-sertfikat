@@ -1865,6 +1865,7 @@ const auth      = firebase.auth();
 const db        = firebase.firestore();
 const functions = firebase.functions();
 
+
 // ══════════════════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════════════════
@@ -2406,7 +2407,7 @@ let adminQrLargeInstance = null;
 //   sessionStorage.setItem('cert_admin_device', 'ADMIN_LAPTOP_2025')
 // Then refresh.
 // ════════════════════════════════════════════════════════════════
-(function detectDevice() {
+function detectDevice() {
   const urlParams = new URLSearchParams(window.location.search);
   const isStudentView = urlParams.get('view') === 'student';
 
@@ -2424,7 +2425,7 @@ let adminQrLargeInstance = null;
       showAdminLock();
     }
   }
-})();
+}
 
 // ════════════════════════════════════════════════════════════════
 // ADMIN LOCK SCREEN
@@ -2599,49 +2600,83 @@ function adminRefreshTable() {
   if (adminTableListener) adminTableListener();
 
   try {
-    // Gunakan onSnapshot untuk data REAL-TIME
+    // Query tanpa orderBy dulu — hindari kebutuhan Composite Index
+    // Sort dilakukan di client-side setelah data diterima
     adminTableListener = db.collection(USERS_COLLECTION)
       .where('cert_claimed', '==', true)
-      .orderBy('issued_at', 'desc')
       .limit(200)
       .onSnapshot(async (snapshot) => {
-        const rows = [];
-        snapshot.forEach(doc => {
-          rows.push({ id: doc.id, ...doc.data() });
-        });
+        try {
+          const rows = [];
+          snapshot.forEach(doc => rows.push({ id: doc.id, ...doc.data() }));
 
-        // Ambil jumlah pelanggaran geofence (sekali ambil untuk efisiensi)
-        const vSnap = await db.collection(VIOLATIONS_COLLECTION).get();
-        violEl.textContent = vSnap.size;
+          // Sort by issued_at di client-side (tidak butuh Firestore index)
+          rows.sort((a, b) => {
+            const ta = a.issued_at ? a.issued_at.seconds : 0;
+            const tb = b.issued_at ? b.issued_at.seconds : 0;
+            return tb - ta; // desc
+          });
 
-        claimedEl.textContent  = rows.length;
-        countEl.textContent    = `${rows.length} participant${rows.length !== 1 ? 's' : ''}`;
+          claimedEl.textContent = rows.length;
+          countEl.textContent   = `${rows.length} participant${rows.length !== 1 ? 's' : ''}`;
 
-        if (rows.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">No certificates claimed yet.</td></tr>`;
-          return;
+          // Ambil violations secara terpisah — error violations tidak ganggu table
+          try {
+            const vSnap = await db.collection(VIOLATIONS_COLLECTION).get();
+            violEl.textContent = vSnap.size;
+          } catch(ve) {
+            violEl.textContent = '—';
+            console.warn('[Admin] Violations fetch failed:', ve.message);
+          }
+
+          if (rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">No certificates claimed yet.</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = rows.map((r, i) => {
+            const name  = escapeHtml(r.cert_name || '—');
+            const email = escapeHtml(r.email || r.id);
+            const ts    = r.issued_at
+              ? new Date(r.issued_at.seconds * 1000).toLocaleString('id-ID')
+              : '—';
+            const badge = `<span class="tbl-badge claimed">✓ Claimed</span>`;
+            return `<tr>
+              <td style="color:var(--text-muted);font-family:var(--font-mono);font-size:11px;">${i + 1}</td>
+              <td><div class="tbl-cert-name">${name}</div></td>
+              <td><div class="tbl-email">${email}</div></td>
+              <td>${badge}</td>
+              <td><div class="tbl-time">${ts}</div></td>
+            </tr>`;
+          }).join('');
+
+        } catch(innerErr) {
+          tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty" style="color:var(--danger);">
+            Error rendering data: ${escapeHtml(innerErr.message)}
+          </td></tr>`;
+          console.error('[Admin] onSnapshot render error:', innerErr);
         }
-
-        tbody.innerHTML = rows.map((r, i) => {
-          const name    = escapeHtml(r.cert_name || '—');
-          const email   = escapeHtml(r.email || r.id);
-          // PERBAIKAN: Gunakan issued_at sesuai data yang dikirim siswa
-          const ts      = r.issued_at ? new Date(r.issued_at.seconds * 1000).toLocaleString('id-ID') : '—';
-          const badge   = `<span class="tbl-badge claimed">✓ Claimed</span>`;
-          return `<tr>
-            <td style="color:var(--text-muted);font-family:var(--font-mono);font-size:11px;">${i + 1}</td>
-            <td><div class="tbl-cert-name">${name}</div></td>
-            <td><div class="tbl-email">${email}</div></td>
-            <td>${badge}</td>
-            <td><div class="tbl-time">${ts}</div></td>
-          </tr>`;
-        }).join('');
-    });
+      }, (err) => {
+        // onSnapshot error handler (permission denied, network, dll)
+        claimedEl.textContent = '—';
+        violEl.textContent    = '—';
+        countEl.textContent   = '0 participants';
+        tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty" style="color:var(--danger);">
+          <b>Firestore error:</b> ${escapeHtml(err.message)}<br><br>
+          <span style="color:var(--text-muted);font-size:12px;">
+            Kemungkinan penyebab:<br>
+            1. Firestore Security Rules belum mengizinkan admin baca collection <code>${USERS_COLLECTION}</code><br>
+            2. Composite Index belum dibuat (buka link error di console untuk buat otomatis)<br>
+            3. Koneksi internet terputus
+          </span>
+        </td></tr>`;
+        console.error('[Admin] onSnapshot listener error:', err);
+      });
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty" style="color:var(--danger);">
-      Firestore error: ${escapeHtml(err.message)}<br>
-      <small style="color:var(--text-muted);">Ensure Firestore rules allow admin reads and Indexes are created.</small>
+      Gagal setup listener: ${escapeHtml(err.message)}
     </td></tr>`;
+    console.error('[Admin] adminRefreshTable setup error:', err);
   }
 }
 
@@ -2758,15 +2793,20 @@ function toggleCertEditor() {
   }
 
   if (open) {
-    // Sinkronisasi data dari Firestore
-    cedLoadFromFirestore();
-    // Beri jeda DOM render untuk menggambar ulang Canvas preview
-    requestAnimationFrame(() => requestAnimationFrame(cedRedraw));
+    // Sinkronisasi data dari Firestore DULU, baru redraw
+    // (jangan fire cedRedraw sebelum template ter-load — canvas jadi hitam)
+    cedLoadFromFirestore().then(() => {
+      requestAnimationFrame(() => requestAnimationFrame(cedRedraw));
+    }).catch(() => {
+      requestAnimationFrame(() => requestAnimationFrame(cedRedraw));
+    });
   }
 }
 
 // ── Load existing Firestore config into editor UI on open ────────
 async function cedLoadFromFirestore() {
+  // Returns a Promise (async functions auto-return Promise)
+  // Caller can .then(cedRedraw) to ensure redraw after load
   try {
     const snap = await db.collection('settings').doc('certificate_config').get();
     if (!snap.exists) return;
@@ -3278,6 +3318,9 @@ window.removeAdminDevice = function() {
   sessionStorage.removeItem(ADMIN_SESSION_KEY);
   console.log('%c🔓 Admin device marking removed. Refresh to see student view.', 'color:#ff4d6d;font-weight:bold;font-size:14px;');
 };
+
+// PANGGIL FUNGSI DETEKSI DI SINI, SETELAH SEMUA VARIABEL SIAP
+detectDevice();
 </script>
 </body>
 </html>

@@ -1461,18 +1461,6 @@
           <div class="cert-badge-name" id="success-cert-filename">certificate.pdf</div>
         </div>
       </div>
-
-      <div class="btn-row" style="grid-template-columns: 1fr;">
-        <button class="btn btn-primary" id="btn-secure-download" onclick="downloadAndReportCertificate()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Download Certificate
-        </button>
-      </div>
-
       <div class="footer-note" style="margin-top:20px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -2079,63 +2067,83 @@ async function submitName() {
 // STEP 5: GENERATE FLATTENED PDF
 // ══════════════════════════════════════════════════════════════════
 async function generateAndStore() {
-  // Show loading state
+  // 1. Tampilkan Spinner Asli (Sangat cepat, menghindari HP hang)
   Swal.fire({
-    title: 'Generating certificate…',
-    html:  '<p style="color:var(--text-muted);font-size:13px;">Drawing canvas · Flattening · Encoding PDF</p>',
+    title: 'Memproses...',
+    html: '<p style="color:var(--text-muted);font-size:13px;">Sertifikat sedang dicetak...</p>',
     allowOutsideClick: false,
-    allowEscapeKey:    false,
+    allowEscapeKey: false,
     showConfirmButton: false,
-    didOpen: () => Swal.showLoading()
+    didOpen: () => Swal.showLoading(),
+    customClass: { popup: 'swal2-dark-custom' }
   });
 
   try {
-   // ── Render certificate on <canvas> ──────────────────────
-const canvas = document.getElementById('cert-canvas');
-await drawCertificateOnCanvas(canvas, certName);
-
-    // ── Convert canvas → PNG blob → base64 ──────────────────
+    // 2. Render Certificate ke Canvas
+    const canvas = document.getElementById('cert-canvas');
+    await drawCertificateOnCanvas(canvas, certName);
     const imgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
 
-    // ── Build flattened PDF (image only — NO text layer) ─────
+    // 3. Build Flattened PDF
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({
-      orientation: 'landscape',
-      unit:         'px',
-      format:       [900, 636],
-      hotfixes:     ['px_scaling']
-    });
-
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [900, 636], hotfixes: ['px_scaling'] });
     pdf.addImage(imgDataUrl, 'JPEG', 0, 0, 900, 636);
 
-    // Embed metadata (non-extractable for content but honest for readers)
-    pdf.setProperties({
-      title:    `Certificate of Participation — ${certName}`,
-      subject:  EVENT_NAME,
-      author:   'CertPortal · Anti-Cheat Issuance System',
-      creator:  'CertPortal',
-      keywords: 'certificate, event, official, secure'
-    });
-
-    generatedPDF = pdf;
-
-    // ── Write claim to Firestore + localStorage ──────────────
+    // 4. Simpan ke Firestore & Kunci Akun (Anti-Cheat)
     const lsKey = `cert_claimed_${currentUser.uid}`;
     await db.collection(USERS_COLLECTION).doc(currentUser.uid).set({
-      cert_claimed:  true,
-      cert_name:     certName,
-      uid:           currentUser.uid,
-      email:         currentUser.email,
-      issued_at:     firebase.firestore.FieldValue.serverTimestamp()
+      cert_claimed: true, cert_name: certName, uid: currentUser.uid, email: currentUser.email, issued_at: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
     localStorage.setItem(lsKey, 'true');
 
-    Swal.close();
+    // 5. Ubah UI belakang layar menjadi "Berhasil"
     showSuccessScreen();
 
+    // 6. EKSEKUSI DOWNLOAD OTOMATIS (TRIK OCTET-STREAM iOS)
+    const pdfBlob = pdf.output('blob');
+    let finalBlob = pdfBlob;
+    
+    // Deteksi cerdas Apple Device
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+      finalBlob = new Blob([pdfBlob], { type: 'application/octet-stream' });
+    }
+
+    const safeName = certName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const url = window.URL.createObjectURL(finalBlob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = `Sertifikat_${safeName}.pdf`;
+    document.body.appendChild(a);
+    a.click(); // Unduhan terpicu secara gaib di belakang!
+    
+    // Bersihkan memori HP
+    setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 1000);
+
+    // 7. LANGSUNG MUNCULKAN POP-UP WA (Tanpa loading bar bohongan)
+    Swal.fire({
+      icon: 'success',
+      title: 'Sertifikat Selesai!',
+      html: `<p style="font-size:14px; line-height:1.6; color:var(--text-muted);">
+               File sertifikat langsung tersimpan ke folder <b>Downloads</b> Anda.<br><br>
+               Langkah Terakhir: Klik tombol di bawah untuk lapor ke Admin.
+             </p>`,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: true,
+      confirmButtonText: '✅ Lapor ke WhatsApp Admin',
+      confirmButtonColor: '#25D366',
+      customClass: { popup: 'swal2-dark-custom' }
+    }).then(() => {
+      // Buka WA saat diklik
+      const adminNumber = "67078486500"; 
+      const message = `Halo Admin, saya *${certName}*. Saya sudah berhasil menerima sertifikat saya dari portal. Terima kasih!`;
+      window.open(`https://wa.me/${adminNumber}?text=${encodeURIComponent(message)}`, '_blank');
+    });
+
   } catch (err) {
-    Swal.close();
-    showToast('error', 'Generation failed', err.message || 'An unexpected error occurred. Please try again.');
+    Swal.fire('Error', 'Gagal memproses sertifikat: ' + err.message, 'error');
     console.error('[CertGen]', err);
   }
 }

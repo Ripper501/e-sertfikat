@@ -2135,19 +2135,35 @@ async function generateAndStore() {
     // ─── AMBIL CONTEXT CANVAS UNTUK PROSES GAMBAR QR CODE ───
     const ctx = canvas.getContext('2d');
 
-    // HANYA GENERATE QR CODE ASLI JIKA ADMIN AKTIFKAN MODE QR
-    if (window.ced && ced.showQR) {
+    // ── Baca ulang QR config dari Firestore (independent dari ced Admin state) ──
+    let cfgShowQR = false, cfgQrX = 760, cfgQrY = 500, cfgQrW = 100, cfgQrH = 100;
+    try {
+      const qrSnap = await db.collection('settings').doc('certificate_config').get();
+      if (qrSnap.exists) {
+        const qd = qrSnap.data();
+        if (qd.showQR   != null) cfgShowQR = qd.showQR;
+        if (qd.qrX      != null) cfgQrX    = qd.qrX;
+        if (qd.qrY      != null) cfgQrY    = qd.qrY;
+        if (qd.qrWidth  != null) cfgQrW    = qd.qrWidth;
+        if (qd.qrHeight != null) cfgQrH    = qd.qrHeight;
+      }
+    } catch(e) {
+      console.warn('[QR Config] Gagal baca Firestore, QR tidak akan digenerate:', e.message);
+    }
+
+    // HANYA GENERATE QR CODE ASLI JIKA ADMIN AKTIFKAN MODE QR (dibaca dari Firestore)
+    if (cfgShowQR) {
       const uniqueID = currentUser.uid;
       const verificationUrl = `https://ripper501.github.io/e-sertfikat/?id=${uniqueID}`;
       
       const qrHelper = document.getElementById('qrcode-helper');
       qrHelper.innerHTML = "";
       
-      // Ukuran QR otomatis membaca lebar hasil resize Admin
+      // Ukuran & posisi QR berdasarkan setting Admin yang tersimpan di Firestore
       const qrcode = new QRCode(qrHelper, {
         text: verificationUrl,
-        width: ced.qrWidth,
-        height: ced.qrHeight,
+        width: cfgQrW,
+        height: cfgQrH,
         colorDark : "#000000",
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.H
@@ -2161,8 +2177,8 @@ async function generateAndStore() {
         qrImage.src = qrImgElement.src;
         await new Promise(resolve => qrImage.onload = resolve);
         
-        // MENEMPELKAN QR CODE ASLI BERDASARKAN KOORDINAT DAN UKURAN DRAG & RESIZE ADMIN
-        ctx.drawImage(qrImage, ced.qrX, ced.qrY, ced.qrWidth, ced.qrHeight);
+        // MENEMPELKAN QR CODE BERDASARKAN KOORDINAT YANG DISIMPAN ADMIN DI FIRESTORE
+        ctx.drawImage(qrImage, cfgQrX, cfgQrY, cfgQrW, cfgQrH);
       }
     }
 
@@ -2261,6 +2277,12 @@ async function drawCertificateOnCanvas(canvas, name) {
   let cfgFont   = 'Alex Brush';
   // Default bbox (persis default ced state)
   let bboxX = 153, bboxY = 240, bboxW = 594, bboxH = 115;
+  // Default QR config (diambil dari Firestore saat generate)
+  let cfgShowQR = false;
+  let cfgQrX    = 760;
+  let cfgQrY    = 500;
+  let cfgQrW    = 100;
+  let cfgQrH    = 100;
 
   try {
     const snap = await db.collection('settings').doc('certificate_config').get();
@@ -2273,17 +2295,12 @@ async function drawCertificateOnCanvas(canvas, name) {
       if (d.bboxY      != null) bboxY = d.bboxY;
       if (d.bboxWidth  != null) bboxW = d.bboxWidth;
       if (d.bboxHeight != null) bboxH = d.bboxHeight;
-      // Sinkronkan tampilan tombol QR setelah load
-const btn = document.getElementById('btn-toggle-qr');
-const qrBbox = document.getElementById('qr-bbox');
-if (ced.showQR && qrBbox) qrBbox.style.display = 'block';
-if (btn && ced.showQR) {
-  btn.innerHTML = '❌ Hapus QR Code Placeholder';
-  btn.style.background = 'rgba(255, 77, 109, 0.1)';
-  btn.style.borderColor = '#ff4d6d';
-  btn.style.color = '#ff4d6d';
-}
-      
+      // ── Baca QR config yang disimpan Admin ──────────────────
+      if (d.showQR   != null) cfgShowQR = d.showQR;
+      if (d.qrX      != null) cfgQrX    = d.qrX;
+      if (d.qrY      != null) cfgQrY    = d.qrY;
+      if (d.qrWidth  != null) cfgQrW    = d.qrWidth;
+      if (d.qrHeight != null) cfgQrH    = d.qrHeight;
     }
   } catch (e) {
     console.warn('[CertDraw] Firestore config fetch failed, using defaults:', e.message);
@@ -2984,6 +3001,30 @@ async function cedLoadFromFirestore() {
     if (d.bboxY      != null) ced.y      = d.bboxY;
     if (d.bboxWidth  != null) ced.width  = d.bboxWidth;
     if (d.bboxHeight != null) ced.height = d.bboxHeight;
+
+    // ── Load QR config dari Firestore ke state editor ────────────
+    if (d.showQR   != null) ced.showQR   = d.showQR;
+    if (d.qrX      != null) ced.qrX      = d.qrX;
+    if (d.qrY      != null) ced.qrY      = d.qrY;
+    if (d.qrWidth  != null) ced.qrWidth  = d.qrWidth;
+    if (d.qrHeight != null) ced.qrHeight = d.qrHeight;
+    // Sync tombol toggle & bbox overlay QR sesuai state Firestore
+    const qrBbox = document.getElementById('qr-bbox');
+    const qrBtn  = document.getElementById('btn-toggle-qr');
+    if (qrBbox) qrBbox.style.display = ced.showQR ? 'block' : 'none';
+    if (qrBtn) {
+      if (ced.showQR) {
+        qrBtn.innerHTML = '❌ Hapus QR Code Placeholder';
+        qrBtn.style.background  = 'rgba(255, 77, 109, 0.1)';
+        qrBtn.style.borderColor = '#ff4d6d';
+        qrBtn.style.color       = '#ff4d6d';
+      } else {
+        qrBtn.innerHTML = '➕ QR Code';
+        qrBtn.style.background  = 'rgba(0, 229, 160, 0.1)';
+        qrBtn.style.borderColor = '#00e5a0';
+        qrBtn.style.color       = '#00e5a0';
+      }
+    }
 
     // Update panel readout
     document.getElementById('ced-coord-x').textContent = Math.round(ced.x);

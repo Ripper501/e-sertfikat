@@ -1207,6 +1207,8 @@
   <canvas id="cert-canvas" width="900" height="636"></canvas>
 </div>
 
+<div id="qrcode-helper" style="display: none;"></div>
+
 <div id="app">
 
   <!-- ══════════════════════════════════════════
@@ -1715,7 +1717,12 @@
             <option value="Montserrat">Montserrat — Clean Sans-serif</option>
           </select>
         </div>
-
+      <div class="control-group" style="margin-top: 15px;">
+  <label style="display: block; margin-bottom: 8px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">QR Code Verifikasi</label>
+  <button type="button" class="btn" id="btn-toggle-qr" onclick="toggleQRBox()" style="width: 100%; justify-content: center; background: rgba(0, 229, 160, 0.1); border: 1px dashed #00e5a0; color: #00e5a0; padding: 10px; font-weight: 600; border-radius: 6px; transition: all 0.2s;">
+    ➕ QR Code
+  </button>
+</div>
         <!-- 4. Coordinate readout — 1 sumber kebenaran: BBOX -->
         <div class="ced-coords">
           <div class="ced-coords-hd">Text Box Position (drag box to move)</div>
@@ -1764,7 +1771,12 @@
         <div class="ced-canvas-wrap" id="ced-canvas-wrap">
           <canvas id="ced-canvas" width="900" height="636"></canvas>
           <div class="ced-guideline" id="ced-guideline"></div>
-          <!-- ── Bounding Box Overlay ── -->
+          
+          <div id="qr-bbox" style="display: none; position: absolute; border: 2px dashed #00e5a0; background: rgba(0, 229, 160, 0.15); cursor: move; box-sizing: border-box; z-index: 10;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00e5a0; font-family: var(--font-mono); font-size: 10px; font-weight: bold; text-align: center; pointer-events: none; text-shadow: 0 0 4px #000; letter-spacing: 0.05em;">[ QR CODE ]</div>
+            <div class="qr-handle" style="position: absolute; width: 12px; height: 12px; background: #00e5a0; right: -6px; bottom: -6px; cursor: se-resize; border-radius: 2px; box-shadow: 0 0 8px rgba(0,229,160,0.8);"></div>
+          </div>
+
           <div id="ced-bbox">
             <span id="ced-bbox-label">text area</span>
             <div class="ced-handle" data-h="nw"></div>
@@ -2067,43 +2079,120 @@ async function submitName() {
 // STEP 5: GENERATE FLATTENED PDF
 // ══════════════════════════════════════════════════════════════════
 async function generateAndStore() {
-  // 1. Tampilkan Spinner Asli (Sangat cepat, menghindari HP hang)
-  Swal.fire({
-    title: 'Memproses...',
-    html: '<p style="color:var(--text-muted);font-size:13px;">Sertifikat sedang dicetak...</p>',
+  // 1. Tampilkan Progress Bar Modern Elegan (Simulasi 1.5 Detik)
+  await Swal.fire({
+    title: '⚡ Menyusun Sertifikat',
+    html: `
+      <p style="color:var(--text-muted); font-size:13px; text-align:left; margin-bottom:15px; line-height:1.5;">
+        Mengamankan kunci kriptografi identitas dan merender berkas PDF cetak beresolusi tinggi...
+      </p>
+      <div style="margin-top: 15px;">
+        <div style="width: 100%; background: rgba(255,255,255,0.05); height: 6px; border-radius: 99px; overflow: hidden; border: 1px solid rgba(255,255,255,0.07); position: relative;">
+          <div id="swal-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ccff00, #00e5a0); box-shadow: 0 0 14px rgba(204,255,0,0.5); transition: width 0.08s ease-out;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-family: var(--font-mono); font-size: 11px;">
+          <span style="color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase;">Vector Engine v2.4</span>
+          <span id="swal-progress-text" style="color: var(--accent); font-weight: 700;">0%</span>
+        </div>
+      </div>
+    `,
     allowOutsideClick: false,
     allowEscapeKey: false,
     showConfirmButton: false,
-    didOpen: () => Swal.showLoading(),
-    customClass: { popup: 'swal2-dark-custom' }
+    customClass: { popup: 'swal2-dark-custom' },
+    didOpen: () => {
+      // Sembunyikan spinner bawaan Swal yang berputar biasa
+      const defaultLoader = Swal.getLoader();
+      if (defaultLoader) defaultLoader.style.display = 'none';
+
+      const progressBar = document.getElementById('swal-progress-bar');
+      const progressText = document.getElementById('swal-progress-text');
+      let progress = 0;
+
+      // Hitung cepat menuju 100% dengan lompatan acak yang organik
+      const interval = setInterval(() => {
+        progress += Math.floor(Math.random() * 8) + 5; 
+        if (progress >= 100) {
+          progress = 100;
+          clearInterval(interval);
+          setTimeout(() => {
+            Swal.close(); // Tutup setelah menyentuh 100%
+          }, 150);
+        }
+        
+        if (progressBar) progressBar.style.width = progress + '%';
+        if (progressText) progressText.textContent = progress + '%';
+      }, 50); // Kecepatan update frame per mili-detik
+    }
   });
 
+  // 2. Eksekusi Pembuatan PDF & Penyimpanan (Berjalan Instan Setelah Loading Selesai)
   try {
-    // 2. Render Certificate ke Canvas
+    // Render Certificate ke Canvas
     const canvas = document.getElementById('cert-canvas');
     await drawCertificateOnCanvas(canvas, certName);
+
+    // ─── AMBIL CONTEXT CANVAS UNTUK PROSES GAMBAR QR CODE ───
+    const ctx = canvas.getContext('2d');
+
+    // HANYA GENERATE QR CODE ASLI JIKA ADMIN AKTIFKAN MODE QR
+    if (window.ced && ced.showQR) {
+      const uniqueID = currentUser.uid;
+      const verificationUrl = `https://ripper501.github.io/e-sertfikat/?id=${uniqueID}`;
+      
+      const qrHelper = document.getElementById('qrcode-helper');
+      qrHelper.innerHTML = "";
+      
+      // Ukuran QR otomatis membaca lebar hasil resize Admin
+      const qrcode = new QRCode(qrHelper, {
+        text: verificationUrl,
+        width: ced.qrWidth,
+        height: ced.qrHeight,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 250));
+      const qrImgElement = qrHelper.querySelector('img');
+
+      if (qrImgElement && qrImgElement.src) {
+        const qrImage = new Image();
+        qrImage.src = qrImgElement.src;
+        await new Promise(resolve => qrImage.onload = resolve);
+        
+        // MENEMPELKAN QR CODE ASLI BERDASARKAN KOORDINAT DAN UKURAN DRAG & RESIZE ADMIN
+        ctx.drawImage(qrImage, ced.qrX, ced.qrY, ced.qrWidth, ced.qrHeight);
+      }
+    }
+
+    // Ambil hasil akhir gambar canvas setelah ditempeli QR Code (jika ada)
     const imgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
 
-    // 3. Build Flattened PDF
+    // Build Flattened PDF
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [900, 636], hotfixes: ['px_scaling'] });
     pdf.addImage(imgDataUrl, 'JPEG', 0, 0, 900, 636);
 
-    // 4. Simpan ke Firestore & Kunci Akun (Anti-Cheat)
+    // Simpan ke Firestore & Kunci Akun (Anti-Cheat)
     const lsKey = `cert_claimed_${currentUser.uid}`;
     await db.collection(USERS_COLLECTION).doc(currentUser.uid).set({
-      cert_claimed: true, cert_name: certName, uid: currentUser.uid, email: currentUser.email, issued_at: firebase.firestore.FieldValue.serverTimestamp()
+      cert_claimed: true, 
+      cert_name: certName, 
+      uid: currentUser.uid, 
+      email: currentUser.email, 
+      issued_at: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
     localStorage.setItem(lsKey, 'true');
 
-    // 5. Ubah UI belakang layar menjadi "Berhasil"
+    // Ubah UI utama di belakang layar menjadi "Berhasil"
     showSuccessScreen();
 
-    // 6. EKSEKUSI DOWNLOAD OTOMATIS (TRIK OCTET-STREAM iOS)
+    // 3. EKSEKUSI DOWNLOAD OTOMATIS (Memicu Pop-up Unduhan Bawaan iOS/Android)
     const pdfBlob = pdf.output('blob');
     let finalBlob = pdfBlob;
     
-    // Deteksi cerdas Apple Device
+    // Deteksi cerdas Apple Device (Trik Octet-Stream agar Safari iOS langsung tanya "Mau Unduh?")
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (isIOS) {
       finalBlob = new Blob([pdfBlob], { type: 'application/octet-stream' });
@@ -2116,18 +2205,18 @@ async function generateAndStore() {
     a.href = url;
     a.download = `Sertifikat_${safeName}.pdf`;
     document.body.appendChild(a);
-    a.click(); // Unduhan terpicu secara gaib di belakang!
+    a.click(); // Unduhan terpicu di belakang layar!
     
-    // Bersihkan memori HP
+    // Bersihkan memori penampung objek tautan
     setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 1000);
 
-    // 7. LANGSUNG MUNCULKAN POP-UP WA (Tanpa loading bar bohongan)
+    // 4. LANGSUNG MUNCULKAN POP-UP WA UTAMA
     Swal.fire({
       icon: 'success',
       title: 'Sertifikat Selesai!',
       html: `<p style="font-size:14px; line-height:1.6; color:var(--text-muted);">
-               File sertifikat langsung tersimpan ke folder <b>Downloads</b> Anda.<br><br>
-               Langkah Terakhir: Klik tombol di bawah untuk lapor ke Admin.
+                File sertifikat langsung disimpan ke folder <b>Downloads</b> perangkat Anda.<br><br>
+                Langkah Terakhir: Klik tombol di bawah ini untuk melapor ke Admin.
              </p>`,
       allowOutsideClick: false,
       allowEscapeKey: false,
@@ -2136,7 +2225,7 @@ async function generateAndStore() {
       confirmButtonColor: '#25D366',
       customClass: { popup: 'swal2-dark-custom' }
     }).then(() => {
-      // Buka WA saat diklik
+      // Buka WA saat tombol diklik
       const adminNumber = "67078486500"; 
       const message = `Halo Admin, saya *${certName}*. Saya sudah berhasil menerima sertifikat saya dari portal. Terima kasih!`;
       window.open(`https://wa.me/${adminNumber}?text=${encodeURIComponent(message)}`, '_blank');
@@ -2147,7 +2236,6 @@ async function generateAndStore() {
     console.error('[CertGen]', err);
   }
 }
-
 // ── Fungsi Pembantu: Memastikan gambar Canva selesai di-load sebelum dicetak ──
 // ── Fungsi Pembantu (VERSI BARU) ──
 function loadTemplateImage(src) {
@@ -2185,6 +2273,17 @@ async function drawCertificateOnCanvas(canvas, name) {
       if (d.bboxY      != null) bboxY = d.bboxY;
       if (d.bboxWidth  != null) bboxW = d.bboxWidth;
       if (d.bboxHeight != null) bboxH = d.bboxHeight;
+      // Sinkronkan tampilan tombol QR setelah load
+const btn = document.getElementById('btn-toggle-qr');
+const qrBbox = document.getElementById('qr-bbox');
+if (ced.showQR && qrBbox) qrBbox.style.display = 'block';
+if (btn && ced.showQR) {
+  btn.innerHTML = '❌ Hapus QR Code Placeholder';
+  btn.style.background = 'rgba(255, 77, 109, 0.1)';
+  btn.style.borderColor = '#ff4d6d';
+  btn.style.color = '#ff4d6d';
+}
+      
     }
   } catch (e) {
     console.warn('[CertDraw] Firestore config fetch failed, using defaults:', e.message);
@@ -2290,6 +2389,9 @@ function generateCertId() {
   const ts  = Date.now().toString(36).toUpperCase();
   return `CP-${ts}-${uid}`;
 }
+
+// MENGGAMBAR DUMMY QR CODE PADA KANVAS PREVIEW ADMIN
+  
 
 // ══════════════════════════════════════════════════════════════════
 // STEP 6: SUCCESS SCREEN
@@ -3099,6 +3201,29 @@ async function _cedDraw() {
   ctx.setLineDash([6, 6]);
   ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
   ctx.restore();
+  // MENGGAMBAR DUMMY QR CODE PADA KANVAS PREVIEW ADMIN
+  if (window.ced && ced.showQR) {
+    ctx.fillStyle = "rgba(0, 229, 160, 0.08)";
+    ctx.fillRect(ced.qrX, ced.qrY, ced.qrWidth, ced.qrHeight);
+    ctx.strokeStyle = "#00e5a0";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ced.qrX, ced.qrY, ced.qrWidth, ced.qrHeight);
+    
+    ctx.fillStyle = "#00e5a0";
+    const pSize = Math.round(ced.qrWidth * 0.24);
+    
+    ctx.fillRect(ced.qrX + 6, ced.qrY + 6, pSize, pSize);
+    ctx.clearRect(ced.qrX + 9, ced.qrY + 9, pSize - 6, pSize - 6);
+    ctx.fillRect(ced.qrX + 11, ced.qrY + 11, pSize - 10, pSize - 10);
+    
+    ctx.fillRect(ced.qrX + ced.qrWidth - pSize - 6, ced.qrY + 6, pSize, pSize);
+    ctx.clearRect(ced.qrX + ced.qrWidth - pSize - 3, ced.qrY + 9, pSize - 6, pSize - 6);
+    ctx.fillRect(ced.qrX + ced.qrWidth - pSize - 1, ced.qrY + 11, pSize - 10, pSize - 10);
+    
+    ctx.fillRect(ced.qrX + 6, ced.qrY + ced.qrHeight - pSize - 6, pSize, pSize);
+    ctx.clearRect(ced.qrX + 9, ced.qrY + ced.qrHeight - pSize - 3, pSize - 6, pSize - 6);
+    ctx.fillRect(ced.qrX + 11, ced.qrY + ced.qrHeight - pSize - 1, pSize - 10, pSize - 10);
+  }
 
   // 5. Debug overlay (font size + Y position info)
   ctx.save();
@@ -3225,8 +3350,13 @@ async function cedSaveConfig() {
     bboxY:      isFinite(ced.y)      ? Math.round(ced.y)      : 240,
     bboxWidth:  isFinite(ced.width)  ? Math.round(ced.width)  : 594,
     bboxHeight: isFinite(ced.height) ? Math.round(ced.height) : 115,
-    updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
-  };
+    showQR:         ced.showQR  === true,
+  qrX:            isFinite(ced.qrX)    ? Math.round(ced.qrX)    : 760,
+  qrY:            isFinite(ced.qrY)    ? Math.round(ced.qrY)    : 500,
+  qrWidth:        isFinite(ced.qrWidth)  ? Math.round(ced.qrWidth)  : 100,
+  qrHeight:       isFinite(ced.qrHeight) ? Math.round(ced.qrHeight) : 100,
+  updatedAt:      firebase.firestore.FieldValue.serverTimestamp(),
+};
 
   try {
     // Kirim paket data (Teks & Koordinat) ke Firestore
@@ -3369,6 +3499,131 @@ async function cedSaveConfig() {
   });
 })();
 
+// ── LOGIKA VISUAL MANIPULATOR QR CODE ─────────────────────────────
+// ── LOGIKA VISUAL MANIPULATOR QR CODE ─────────────────────────────
+(function initQRVisualEditor() {
+  window.ced = window.ced || {};
+  ced.showQR = false;
+  ced.qrX = 760;      
+  ced.qrY = 500;      
+  ced.qrWidth = 100;  
+  ced.qrHeight = 100; 
+
+  window.toggleQRBox = function() {
+    ced.showQR = !ced.showQR;
+    const qrBbox = document.getElementById('qr-bbox');
+    const btn = document.getElementById('btn-toggle-qr');
+    if (!qrBbox || !btn) return;
+
+    if (ced.showQR) {
+      qrBbox.style.display = 'block';
+      btn.innerHTML = '❌ Hapus QR Code Placeholder';
+      btn.style.background = 'rgba(255, 77, 109, 0.1)';
+      btn.style.borderColor = '#ff4d6d';
+      btn.style.color = '#ff4d6d';
+    } else {
+      qrBbox.style.display = 'none';
+      btn.innerHTML = '➕ QR Code';
+      btn.style.background = 'rgba(0, 229, 160, 0.1)';
+      btn.style.borderColor = '#00e5a0';
+      btn.style.color = '#00e5a0';
+    }
+    if (typeof cedRedraw === 'function') cedRedraw();
+    syncQRBbox();
+  };
+
+  function syncQRBbox() {
+    // FIX: Targetnya harus ced-canvas (Preview Editor) bukan cert-canvas!
+    const canvas = document.getElementById('ced-canvas');
+    const qrBbox = document.getElementById('qr-bbox');
+    if (!canvas || !qrBbox || !ced.showQR) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width / canvas.width;
+    const scaleY = rect.height / canvas.height;
+    
+    qrBbox.style.left = (ced.qrX * scaleX) + 'px';
+    qrBbox.style.top = (ced.qrY * scaleY) + 'px';
+    qrBbox.style.width = (ced.qrWidth * scaleX) + 'px';
+    qrBbox.style.height = (ced.qrHeight * scaleY) + 'px';
+  }
+
+  window.addEventListener('resize', syncQRBbox);
+  window.syncQRBbox = syncQRBbox; 
+
+  // Agar sinkron saat font/nama diubah di panel:
+  const origSync = window._cedSyncBbox;
+  window._cedSyncBbox = function() {
+    if (origSync) origSync();
+    syncQRBbox();
+  };
+
+  const qrBbox = document.getElementById('qr-bbox');
+  if (!qrBbox) return;
+
+  let isDragging = false;
+  let isResizing = false;
+  let startX, startY, startQrX, startQrY, startWidth;
+
+  qrBbox.addEventListener('pointerdown', (e) => {
+    const canvas = document.getElementById('ced-canvas');
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+
+    if (e.target.classList.contains('qr-handle')) {
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = ced.qrWidth;
+    } else {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startQrX = ced.qrX;
+      startQrY = ced.qrY;
+    }
+    qrBbox.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  qrBbox.addEventListener('pointermove', (e) => {
+    if (!isDragging && !isResizing) return;
+    const canvas = document.getElementById('ced-canvas');
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    if (isDragging) {
+      const dx = (e.clientX - startX) * scaleX;
+      const dy = (e.clientY - startY) * scaleY;
+      ced.qrX = Math.round(startQrX + dx);
+      ced.qrY = Math.round(startQrY + dy);
+    } else if (isResizing) {
+      const dx = (e.clientX - startX) * scaleX;
+      const size = Math.max(40, Math.round(startWidth + dx));
+      ced.qrWidth = size;
+      ced.qrHeight = size; 
+    }
+
+    syncQRBbox();
+    if (typeof cedRedraw === 'function') cedRedraw();
+    e.preventDefault();
+  });
+
+  const stopAction = (e) => {
+    if (isDragging || isResizing) {
+      isDragging = false;
+      isResizing = false;
+      qrBbox.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  qrBbox.addEventListener('pointerup', stopAction);
+  qrBbox.addEventListener('pointercancel', stopAction);
+})();
 // ── END CERTIFICATE VISUAL EDITOR ────────────────────────────────
 window.setupAdminDevice = function() {
   sessionStorage.setItem(ADMIN_DEVICE_KEY, ADMIN_FINGERPRINT);

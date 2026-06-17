@@ -2798,8 +2798,8 @@ async function surveyFinishAndGenerate() {
       value: studentSurveyAnswers[q.id] || ""   // Menjadi isi jawaban siswa
     }));
 
-    // Ambil nama atau ID event/seminar saat ini untuk nama tab
-    const eventId = currentEvent?.title || currentEvent?.name || currentEvent?.id || "General_Event";
+    // PERBAIKAN: Menggunakan variabel EVENT_NAME yang sudah terdaftar di atas file
+    const eventId = typeof EVENT_NAME !== 'undefined' ? EVENT_NAME : "General_Event";
 
     // Susun payload agar pas dengan variabel di Google Apps Script Anda
     const payload = {
@@ -2810,7 +2810,8 @@ async function surveyFinishAndGenerate() {
     };
 
     // Tautkan ke Web App Apps Script Anda
-    const urlAppsScript = "https://script.google.com/macros/s/AKfycbySDGHr9QY1D2cLS9Jhy85Oxwi9jAqNXONLKRwX8ER0O_yeQd2MkqIHYourmNzJeBliDQ/exec";
+    // PENTING: Pastikan URL di bawah ini adalah URL Web App Apps Script Anda yang valid
+    const urlAppsScript = "https://script.google.com/macros/library/d/1k736C5bXs1D7gEAyc7XJir3O4LADlvI6Bn9cek3qq6udVIGxNzwRoIga/5";
 
     // PENTING: Gunakan text/plain untuk membungkus JSON agar bypass CORS (Anti-Blokir Browser)
     await fetch(urlAppsScript, {
@@ -2833,7 +2834,7 @@ async function surveyFinishAndGenerate() {
       questionText: q.text,
       answer:       studentSurveyAnswers[q.id] || '',
     }));
-    await db.collection(USERS_COLLECTION).doc(currentUser.uid).set({
+    await db.collection('cert_users').doc(currentUser.uid).set({
       survey_answers:    answersForFirestore,
       survey_updated_at: firebase.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });

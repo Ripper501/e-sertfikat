@@ -2252,7 +2252,7 @@
           class="ced-input"
           id="survey-action-url"
           type="text"
-          placeholder="https://docs.google.com/spreadsheets/d/1FiXftZvcHVDYUkbfxFuqNlzWCrEf7_mGChvm-I3AAmw/edit?gid=1637897450#gid=1637897450"
+          placeholder="https://docs.google.com/spreadsheets/d/1k0BHEvoMg1nltOTLeJorZqgP4-DxXLgCVgH9QqDN1u0/edit?gid=0#gid=0"
           spellcheck="false"
           autocomplete="off"
         />
@@ -2754,22 +2754,31 @@ async function surveyFinishAndGenerate() {
   const nextBtn = document.getElementById('btn-survey-next');
   if (nextBtn) nextBtn.disabled = true;
 
-  // ── 1. Kirim ke Google Form (best-effort, browser tidak bisa baca hasilnya
-  //       karena kebijakan CORS Google Forms — lihat penjelasan ke pengguna).
-  if (studentSurveyConfig.actionUrl) {
-    try {
-      const formData = new FormData();
-      studentSurveyConfig.questions.forEach(q => {
-        const ans = studentSurveyAnswers[q.id];
-        if (q.entryId && ans != null) formData.append(q.entryId, ans);
-      });
-      // mode 'no-cors': permintaan tetap terkirim ke Google, tapi kita tidak
-      // pernah bisa membaca status berhasil/gagalnya dari sisi browser.
-      await fetch(studentSurveyConfig.actionUrl, { method: 'POST', mode: 'no-cors', body: formData });
-    } catch (e) {
-      // Diam-diam saja — ini bukan alasan untuk menghentikan student dari dapat sertifikatnya.
-      console.warn('[Survey] Gagal kirim ke Google Form (fire-and-forget):', e.message);
-    }
+  // ── 1. KIRIM OTOMATIS KE GOOGLE SHEET (MENGGUNAKAN APPS SCRIPT ARRAY)
+  try {
+    // Susun jawaban secara berurutan: Kolom A = Nama, Kolom B = Pertanyaan 1, Kolom C = Pertanyaan 2, dst.
+    const kumpulanJawaban = [certName]; 
+    
+    studentSurveyConfig.questions.forEach(q => {
+      kumpulanJawaban.push(studentSurveyAnswers[q.id] || '');
+    });
+
+    const formData = new FormData();
+    formData.append("kumpulan_jawaban", JSON.stringify(kumpulanJawaban));
+
+    // ⚠️ GANTI URL DI BAWAH INI DENGAN URL DEPLOYMENT WEB APP APPS SCRIPT KAMU
+    const urlAppsScript = "https://script.google.com/macros/s/AKfycbwUdDlgnPT76wdDz1F3oXuQlD-ZZ0X1CaV_ILan6o9tXny6h7Lom-2hTC1F1Ec5mS0LTw/execc";
+
+    // Kirim data menggunakan mode no-cors agar tidak terblock browser
+    await fetch(urlAppsScript, { 
+      method: 'POST', 
+      mode: 'no-cors', 
+      body: formData 
+    });
+    
+    console.log('[Survey] Data berhasil dikirim ke Google Sheet via Apps Script.');
+  } catch (e) {
+    console.warn('[Survey] Gagal kirim ke Apps Script:', e.message);
   }
 
   // ── 2. Simpan cadangan jawaban ke Firestore — supaya jawaban tetap ada

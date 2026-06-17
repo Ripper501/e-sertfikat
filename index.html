@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-<link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Allura&family=Cormorant+Garamond:wght@400;600;700&family=Great+Vibes&family=Montserrat:wght@400;500;600;700&family=Mr+De+Haviland&family=Parisienne&family=Pinyon+Script&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Tangerine:wght@400;700&display=swap" rel="stylesheet" />
 
 <!-- SweetAlert2 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" />
@@ -21,9 +21,6 @@
 
 <!-- QRCode.js for Admin QR generation -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-<!-- qrcode-generator: clean matrix-level QR, used for styled canvas rendering -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -822,121 +819,8 @@
     background: #fff; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden; flex-shrink: 0;
-    cursor: pointer;
-    transition: transform .18s, box-shadow .18s;
-    position: relative;
   }
-  #admin-qr-box:hover {
-    transform: scale(1.06);
-    box-shadow: 0 0 0 3px var(--accent), 0 8px 30px rgba(0,0,0,0.4);
-  }
-  #admin-qr-box::after {
-    content: '⛶ Expand';
-    position: absolute; bottom: 0; left: 0; right: 0;
-    background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
-    color: #fff; font-size: 10px; font-weight: 600;
-    letter-spacing: .06em; text-align: center;
-    padding: 4px 0; opacity: 0;
-    transition: opacity .18s;
-    font-family: var(--font-mono);
-  }
-  #admin-qr-box:hover::after { opacity: 1; }
-
-  /* ── QR Popup Modal ─────────────────────────────────── */
-  #qr-popup-overlay {
-    display: none;
-    position: fixed; inset: 0; z-index: 9999;
-    background: rgba(4, 4, 6, 0.96);
-    backdrop-filter: blur(20px);
-    align-items: center; justify-content: center;
-  }
-  #qr-popup-overlay.open {
-    display: flex;
-    animation: qrOverlayIn .25s ease forwards;
-  }
-  @keyframes qrOverlayIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  #qr-popup-card {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 24px;
-    animation: qrCardIn .32s cubic-bezier(0.22,1,0.36,1) forwards;
-  }
-  @keyframes qrCardIn {
-    from { opacity: 0; transform: scale(0.9) translateY(24px); }
-    to   { opacity: 1; transform: scale(1)   translateY(0); }
-  }
-
-  /* QR canvas frame */
-  #qr-popup-frame {
-    position: relative;
-    background: #fff;
-    border-radius: 28px;
-    padding: 28px;
-    box-shadow:
-      0 0 0 1px rgba(255,255,255,0.06),
-      0 0 80px rgba(208,158,59,0.12),
-      0 60px 120px rgba(0,0,0,0.8);
-  }
-  /* Gold corner accents */
-  #qr-popup-frame::before,
-  #qr-popup-frame::after {
-    content: '';
-    position: absolute;
-    width: 36px; height: 36px;
-    border-color: var(--accent, #d09e3b);
-    border-style: solid;
-  }
-  #qr-popup-frame::before {
-    top: -2px; left: -2px;
-    border-width: 3px 0 0 3px;
-    border-radius: 6px 0 0 0;
-  }
-  #qr-popup-frame::after {
-    bottom: -2px; right: -2px;
-    border-width: 0 3px 3px 0;
-    border-radius: 0 0 6px 0;
-  }
-  #qr-popup-canvas-wrap canvas { display: block; border-radius: 8px; }
-
-  /* Bottom info */
-  #qr-popup-label {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 11px; font-weight: 600;
-    letter-spacing: .18em; text-transform: uppercase;
-    color: rgba(255,255,255,0.3);
-    margin-bottom: 6px; text-align: center;
-  }
-  #qr-popup-url {
-    font-family: var(--font-mono, 'JetBrains Mono', monospace);
-    font-size: 13px; color: var(--accent, #d09e3b);
-    text-align: center;
-    background: rgba(208,158,59,0.08);
-    border: 1px solid rgba(208,158,59,0.2);
-    border-radius: 8px; padding: 8px 20px;
-    max-width: 560px; word-break: break-all;
-  }
-  #qr-popup-hint {
-    font-size: 11px; color: rgba(255,255,255,0.2);
-    letter-spacing: .1em; text-transform: uppercase;
-    text-align: center;
-  }
-  #qr-popup-close {
-    position: fixed; top: 20px; right: 24px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.6);
-    width: 44px; height: 44px; border-radius: 50%;
-    font-size: 18px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: background .15s, color .15s, transform .15s;
-    line-height: 1;
-  }
-  #qr-popup-close:hover {
-    background: rgba(255,255,255,0.12);
-    color: #fff; transform: scale(1.1);
-  }
+  #admin-qr-box canvas, #admin-qr-box img { width: 100%; height: 100%; }
   .admin-qr-info { min-width: 0; }
   .admin-qr-url {
     font-family: var(--font-mono); font-size: 11px; color: var(--accent);
@@ -992,51 +876,33 @@
   #projector-modal {
     display: none;
     position: fixed; inset: 0; z-index: 9999;
-    background: #0a0a0a;
+    background: #000;
     flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 0;
     animation: fadeUp 0.3s ease both;
   }
   #projector-modal.open { display: flex; }
-
-  /* White card wrapping the QR */
-  #projector-qr-card {
-    background: #ffffff;
-    border-radius: 28px;
-    padding: 36px 36px 28px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
-  }
-
   #projector-qr-giant {
-    width: min(62vw, 62vh);
-    height: min(62vw, 62vh);
+    width: min(80vw, 80vh);
+    height: min(80vw, 80vh);
     background: #fff;
+    border-radius: 24px;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden;
-    border-radius: 8px;
+    box-shadow: 0 0 120px rgba(204,255,0,0.25);
   }
-  #projector-qr-giant canvas, #projector-qr-giant img {
-    width: 100%; height: 100%;
-    display: block;
-  }
-
-  /* Labels inside the white card */
+  #projector-qr-giant canvas, #projector-qr-giant img { width: 100%; height: 100%; }
   .projector-label {
-    font-family: var(--font-main); font-size: 15px;
-    font-weight: 600; letter-spacing: 0.02em;
-    color: #1a1a1a; text-align: center;
+    margin-top: 32px;
+    font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.5); text-transform: uppercase; text-align: center;
   }
   .projector-url {
-    font-family: var(--font-mono); font-size: 12px;
-    color: #888; text-align: center;
-    word-break: break-all; max-width: 56vw;
+    margin-top: 10px;
+    font-family: var(--font-mono); font-size: 16px; letter-spacing: 0.06em;
+    color: #ccff00; text-align: center; word-break: break-all;
+    max-width: 90vw;
   }
-
   .projector-close {
     position: fixed; top: 24px; right: 24px;
     background: rgba(255,255,255,0.08);
@@ -1742,25 +1608,10 @@
 
     <!-- QR Row -->
     <div class="admin-qr-row">
-      <div id="admin-qr-box" onclick="openQRPopup()" title="Click to expand"></div>
+      <div id="admin-qr-box"></div>
       <div class="admin-qr-info">
         <div class="admin-qr-url" id="admin-qr-url-text">—</div>
-        <p class="admin-qr-hint">Students scan this QR code with their phone camera. The code opens the student authentication flow. <strong style="color:var(--accent);cursor:pointer;" onclick="openQRPopup()">Click the QR code</strong> to display it fullscreen for the whole room to scan.</p>
-      </div>
-    </div>
-
-    <!-- QR Popup Modal -->
-    <div id="qr-popup-overlay" onclick="closeQRPopup(event)">
-      <button id="qr-popup-close" onclick="closeQRPopup()" aria-label="Close">✕</button>
-      <div id="qr-popup-card">
-        <div id="qr-popup-frame">
-          <div id="qr-popup-canvas-wrap"></div>
-        </div>
-        <div>
-          <div id="qr-popup-label">Scan to access portal</div>
-          <div id="qr-popup-url">—</div>
-        </div>
-        <div id="qr-popup-hint">Press ESC or click anywhere to close</div>
+        <p class="admin-qr-hint">Students scan this QR code with their phone camera. The code opens the student authentication flow. Click <strong style="color:var(--accent)">Projector Mode</strong> to display it full-screen for the whole room to scan.</p>
       </div>
     </div>
 
@@ -1856,15 +1707,156 @@
           />
         </div>
 
-        <!-- 3. Font selector -->
+        <!-- 3. Font selector — custom dropdown (native select tidak bisa di-style) -->
         <div class="ced-field">
-          <label class="ced-label" for="ced-font-select">Font Family</label>
-          <select class="ced-input ced-select" id="ced-font-select" onchange="cedRedraw()">
-            <option value="Alex Brush">Alex Brush — Calligraphy</option>
-            <option value="Space Grotesk">Space Grotesk — Modern</option>
-            <option value="Playfair Display">Playfair Display — Elegant Serif</option>
-            <option value="Montserrat">Montserrat — Clean Sans-serif</option>
-          </select>
+          <label class="ced-label">Font Family</label>
+
+          <!-- Hidden input yang dibaca oleh cedRedraw() -->
+          <input type="hidden" id="ced-font-select" value="Alex Brush" />
+
+          <!-- Trigger button -->
+          <button type="button" id="ced-font-trigger" onclick="cedToggleFontPicker()" style="
+            display:flex; align-items:center; justify-content:space-between; gap:8px;
+            width:100%; padding:9px 13px; border-radius:8px;
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+            color:#e8e8f0; font-size:13px; cursor:pointer; text-align:left;
+            transition:border-color .2s, background .2s;
+          ">
+            <span id="ced-font-label" style="font-family:'Alex Brush',cursive; font-size:16px; line-height:1.2;">Alex Brush — Signature Script</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" style="flex-shrink:0;transition:transform .2s;" id="ced-font-chevron"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+
+          <!-- Dropdown panel -->
+          <div id="ced-font-picker" style="
+            display:none; margin-top:6px;
+            background:#16172b; border:1px solid rgba(204,255,0,0.18);
+            border-radius:10px; overflow:hidden;
+            box-shadow:0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
+            max-height:340px; overflow-y:auto;
+          ">
+            <!-- Scrollbar style inside shadow DOM workaround -->
+            <style>
+              #ced-font-picker::-webkit-scrollbar { width:4px; }
+              #ced-font-picker::-webkit-scrollbar-track { background:transparent; }
+              #ced-font-picker::-webkit-scrollbar-thumb { background:rgba(204,255,0,0.2); border-radius:4px; }
+              .ced-font-group-label {
+                padding:8px 14px 4px;
+                font-size:9px; font-weight:700; letter-spacing:.14em;
+                text-transform:uppercase; color:rgba(204,255,0,0.5);
+                background:rgba(204,255,0,0.04);
+                border-top:1px solid rgba(204,255,0,0.1);
+                font-family:'Space Grotesk',sans-serif;
+              }
+              .ced-font-group-label:first-child { border-top:none; }
+              .ced-font-opt {
+                display:flex; align-items:center; gap:12px;
+                padding:10px 14px; cursor:pointer;
+                transition:background .15s;
+                border:none; background:transparent; width:100%;
+                text-align:left; color:#e8e8f0;
+              }
+              .ced-font-opt:hover { background:rgba(204,255,0,0.06); }
+              .ced-font-opt.active { background:rgba(204,255,0,0.1); }
+              .ced-font-opt-preview {
+                font-size:18px; line-height:1.1;
+                color:#f0f0f5; flex:1; white-space:nowrap;
+                overflow:hidden; text-overflow:ellipsis;
+              }
+              .ced-font-opt-tag {
+                font-size:10px; color:rgba(255,255,255,0.25);
+                font-family:'Space Grotesk',sans-serif;
+                flex-shrink:0;
+              }
+              .ced-font-opt-check {
+                width:14px; height:14px; flex-shrink:0;
+                color:rgba(204,255,0,0.9);
+                opacity:0; transition:opacity .15s;
+              }
+              .ced-font-opt.active .ced-font-opt-check { opacity:1; }
+            </style>
+
+            <!-- Group: Script & Calligraphy -->
+            <div class="ced-font-group-label">Script &amp; Calligraphy</div>
+            <button class="ced-font-opt active" data-value="Alex Brush" data-label="Alex Brush — Signature Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Alex Brush',cursive;">Alex Brush</span>
+              <span class="ced-font-opt-tag">Signature Script</span>
+            </button>
+            <button class="ced-font-opt" data-value="Allura" data-label="Allura — Flowing Calligraphy" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Allura',cursive;">Allura</span>
+              <span class="ced-font-opt-tag">Flowing Calligraphy</span>
+            </button>
+            <button class="ced-font-opt" data-value="Great Vibes" data-label="Great Vibes — Elegant Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Great Vibes',cursive;">Great Vibes</span>
+              <span class="ced-font-opt-tag">Elegant Script</span>
+            </button>
+            <button class="ced-font-opt" data-value="Parisienne" data-label="Parisienne — French Romantic" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Parisienne',cursive;">Parisienne</span>
+              <span class="ced-font-opt-tag">French Romantic</span>
+            </button>
+            <button class="ced-font-opt" data-value="Pinyon Script" data-label="Pinyon Script — Formal Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Pinyon Script',cursive;">Pinyon Script</span>
+              <span class="ced-font-opt-tag">Formal Script</span>
+            </button>
+            <button class="ced-font-opt" data-value="Mr De Haviland" data-label="Mr De Haviland — Vintage Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Mr De Haviland',cursive;">Mr De Haviland</span>
+              <span class="ced-font-opt-tag">Vintage Script</span>
+            </button>
+            <button class="ced-font-opt" data-value="Tangerine" data-label="Tangerine — Thin Calligraphy" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Tangerine',cursive; font-size:22px;">Tangerine</span>
+              <span class="ced-font-opt-tag">Thin Calligraphy</span>
+            </button>
+
+            <!-- Group: Serif & Display -->
+            <div class="ced-font-group-label">Serif &amp; Display</div>
+            <button class="ced-font-opt" data-value="Cormorant Garamond" data-label="Cormorant Garamond — Luxury Serif" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Cormorant Garamond',serif; font-weight:600;">Cormorant Garamond</span>
+              <span class="ced-font-opt-tag">Luxury Serif</span>
+            </button>
+            <button class="ced-font-opt" data-value="Playfair Display" data-label="Playfair Display — Elegant Serif" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Playfair Display',serif;">Playfair Display</span>
+              <span class="ced-font-opt-tag">Elegant Serif</span>
+            </button>
+
+            <!-- Group: System Fonts (Windows) -->
+            <div class="ced-font-group-label">System Fonts (Windows only)</div>
+            <button class="ced-font-opt" data-value="'Edwardian Script ITC', Allura, cursive" data-label="Edwardian Script ITC — Classic Formal" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Edwardian Script ITC',Allura,cursive;">Edwardian Script ITC</span>
+              <span class="ced-font-opt-tag">Classic Formal</span>
+            </button>
+            <button class="ced-font-opt" data-value="'Monotype Corsiva', 'Pinyon Script', cursive" data-label="Monotype Corsiva — Italic Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Monotype Corsiva','Pinyon Script',cursive;">Monotype Corsiva</span>
+              <span class="ced-font-opt-tag">Italic Script</span>
+            </button>
+            <button class="ced-font-opt" data-value="'Lucida Calligraphy', 'Mr De Haviland', cursive" data-label="Lucida Calligraphy — Brush Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Lucida Calligraphy','Mr De Haviland',cursive;">Lucida Calligraphy</span>
+              <span class="ced-font-opt-tag">Brush Script</span>
+            </button>
+
+            <!-- Group: Sans-serif -->
+            <div class="ced-font-group-label">Sans-serif</div>
+            <button class="ced-font-opt" data-value="Space Grotesk" data-label="Space Grotesk — Modern" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Space Grotesk',sans-serif;">Space Grotesk</span>
+              <span class="ced-font-opt-tag">Modern</span>
+            </button>
+            <button class="ced-font-opt" data-value="Montserrat" data-label="Montserrat — Clean Sans-serif" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Montserrat',sans-serif;">Montserrat</span>
+              <span class="ced-font-opt-tag">Clean Sans-serif</span>
+            </button>
+          </div>
         </div>
 
         <!-- 3b. Font Color picker -->
@@ -1970,94 +1962,85 @@
         </style>
       <div class="control-group" style="margin-top: 15px;">
   <label style="display: block; margin-bottom: 8px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">QR Code Verifikasi</label>
-
-  <!-- Toggle on/off -->
-  <button type="button" class="btn" id="btn-toggle-qr" onclick="toggleQRBox()" style="width: 100%; justify-content: center; background: rgba(0, 229, 160, 0.1); border: 1px dashed #00e5a0; color: #00e5a0; padding: 10px; font-weight: 600; border-radius: 6px; transition: all 0.2s; margin-bottom: 10px;">
+  <button type="button" class="btn" id="btn-toggle-qr" onclick="toggleQRBox()" style="width: 100%; justify-content: center; background: rgba(0, 229, 160, 0.1); border: 1px dashed #00e5a0; color: #00e5a0; padding: 10px; font-weight: 600; border-radius: 6px; transition: all 0.2s;">
     ➕ QR Code
   </button>
 
-  <!-- QR Style picker — hidden until QR is active -->
-  <div id="qr-style-section" style="display:none;">
-    <label style="display:block; margin-bottom:6px; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.1em;">QR Style</label>
+  <!-- QR Color picker — custom dropdown, sama pattern dengan Font Family -->
+  <div id="ced-qrcolor-field" style="margin-top: 10px; display: none;">
+    <label class="ced-label" style="display:block; margin-bottom:6px;">Warna QR Code</label>
+
+    <!-- Hidden input dibaca oleh cedRedraw() / cedSaveConfig() -->
+    <input type="hidden" id="ced-qrcolor-select" value="#000000" />
 
     <!-- Trigger button -->
-    <button type="button" id="qr-style-trigger" onclick="qrStyleToggle()" style="
+    <button type="button" id="ced-qrcolor-trigger" onclick="cedToggleQRColorPicker()" style="
       display:flex; align-items:center; justify-content:space-between; gap:8px;
       width:100%; padding:9px 13px; border-radius:8px;
       background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
       color:#e8e8f0; font-size:13px; cursor:pointer; text-align:left;
       transition:border-color .2s, background .2s;
     ">
-      <span id="qr-style-label" style="display:flex;align-items:center;gap:10px;">
-        <span id="qr-style-icon-preview" style="display:inline-block;width:22px;height:22px;flex-shrink:0;"></span>
-        <span id="qr-style-text">Classic — Square modules</span>
+      <span style="display:flex; align-items:center; gap:10px;">
+        <span id="ced-qrcolor-swatch" style="width:16px; height:16px; border-radius:50%; background:#000000; border:2px solid rgba(255,255,255,0.25); flex-shrink:0;"></span>
+        <span id="ced-qrcolor-label">Hitam Klasik</span>
       </span>
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" style="flex-shrink:0;transition:transform .2s;" id="qr-style-chevron"><polyline points="6 9 12 15 18 9"/></svg>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" style="flex-shrink:0;transition:transform .2s;" id="ced-qrcolor-chevron"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
 
-    <!-- Dropdown -->
-    <div id="qr-style-picker" style="
+    <!-- Dropdown panel -->
+    <div id="ced-qrcolor-picker" style="
       display:none; margin-top:6px;
-      background:#16172b; border:1px solid rgba(0,229,160,0.18);
+      background:#16172b; border:1px solid rgba(204,255,0,0.18);
       border-radius:10px; overflow:hidden;
       box-shadow:0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
     ">
-      <style>
-        .qr-style-opt {
-          display:flex; align-items:center; gap:14px;
-          padding:12px 14px; cursor:pointer;
-          border:none; background:transparent; width:100%;
-          text-align:left; color:#e8e8f0;
-          transition:background .15s;
-        }
-        .qr-style-opt:hover { background:rgba(0,229,160,0.06); }
-        .qr-style-opt.active { background:rgba(0,229,160,0.1); }
-        .qr-style-opt + .qr-style-opt { border-top:1px solid rgba(255,255,255,0.05); }
-        .qr-style-preview-wrap {
-          width:40px; height:40px; flex-shrink:0;
-          border-radius:6px; overflow:hidden;
-          border:1px solid rgba(255,255,255,0.08);
-          background:#fff;
-        }
-        .qr-style-preview-wrap canvas { display:block; }
-        .qr-style-info { flex:1; }
-        .qr-style-name { font-size:13px; font-weight:600; color:#f0f0f5; margin-bottom:2px; }
-        .qr-style-desc { font-size:11px; color:rgba(255,255,255,0.3); }
-        .qr-style-check {
-          width:14px; height:14px; color:rgba(0,229,160,0.9);
-          opacity:0; transition:opacity .15s; flex-shrink:0;
-        }
-        .qr-style-opt.active .qr-style-check { opacity:1; }
-      </style>
-
-      <button class="qr-style-opt active" data-style="classic" onclick="qrStylePick(this)">
-        <div class="qr-style-preview-wrap"><canvas id="qr-prev-classic" width="40" height="40"></canvas></div>
-        <div class="qr-style-info">
-          <div class="qr-style-name">Classic</div>
-          <div class="qr-style-desc">Square modules, clean &amp; minimal</div>
-        </div>
-        <svg class="qr-style-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <button class="ced-qrcolor-opt active" data-value="#000000" data-label="Hitam Klasik" onclick="cedPickQRColor(this)">
+        <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="ced-qrcolor-opt-swatch" style="background:#000000;"></span>
+        <span class="ced-font-opt-preview">Hitam Klasik</span>
       </button>
-
-      <button class="qr-style-opt" data-style="rounded" onclick="qrStylePick(this)">
-        <div class="qr-style-preview-wrap"><canvas id="qr-prev-rounded" width="40" height="40"></canvas></div>
-        <div class="qr-style-info">
-          <div class="qr-style-name">Rounded</div>
-          <div class="qr-style-desc">Soft corners, modern feel</div>
-        </div>
-        <svg class="qr-style-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <button class="ced-qrcolor-opt" data-value="#d4af37" data-label="Gold Elegan" onclick="cedPickQRColor(this)">
+        <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="ced-qrcolor-opt-swatch" style="background:#d4af37;"></span>
+        <span class="ced-font-opt-preview">Gold Elegan</span>
       </button>
-
-      <button class="qr-style-opt" data-style="dots" onclick="qrStylePick(this)">
-        <div class="qr-style-preview-wrap"><canvas id="qr-prev-dots" width="40" height="40"></canvas></div>
-        <div class="qr-style-info">
-          <div class="qr-style-name">Dots</div>
-          <div class="qr-style-desc">Circular modules, premium &amp; light</div>
-        </div>
-        <svg class="qr-style-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <button class="ced-qrcolor-opt" data-value="#00e5a0" data-label="Hijau Brand" onclick="cedPickQRColor(this)">
+        <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="ced-qrcolor-opt-swatch" style="background:#00e5a0;"></span>
+        <span class="ced-font-opt-preview">Hijau Brand</span>
+      </button>
+      <button class="ced-qrcolor-opt" data-value="#1a3a8f" data-label="Navy Formal" onclick="cedPickQRColor(this)">
+        <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="ced-qrcolor-opt-swatch" style="background:#1a3a8f;"></span>
+        <span class="ced-font-opt-preview">Navy Formal</span>
+      </button>
+      <button class="ced-qrcolor-opt" data-value="#6b2d8c" data-label="Ungu Premium" onclick="cedPickQRColor(this)">
+        <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="ced-qrcolor-opt-swatch" style="background:#6b2d8c;"></span>
+        <span class="ced-font-opt-preview">Ungu Premium</span>
       </button>
     </div>
+
+    <p style="margin:6px 0 0; font-size:10.5px; line-height:1.4; color:var(--text-muted);">
+      Disarankan tetap pakai warna gelap di atas latar putih/terang agar QR mudah dipindai kamera.
+    </p>
   </div>
+  <style>
+    .ced-qrcolor-opt {
+      display:flex; align-items:center; gap:12px;
+      padding:9px 14px; cursor:pointer;
+      transition:background .15s;
+      border:none; background:transparent; width:100%;
+      text-align:left; color:#e8e8f0;
+    }
+    .ced-qrcolor-opt:hover { background:rgba(204,255,0,0.06); }
+    .ced-qrcolor-opt.active { background:rgba(204,255,0,0.1); }
+    .ced-qrcolor-opt-swatch {
+      width:16px; height:16px; border-radius:50%; flex-shrink:0;
+      border:2px solid rgba(255,255,255,0.2);
+    }
+  </style>
 </div>
         <!-- 4. Coordinate readout — 1 sumber kebenaran: BBOX -->
         <div class="ced-coords">
@@ -2139,11 +2122,9 @@
     </svg>
     Close (Esc)
   </button>
-  <div id="projector-qr-card">
-    <div id="projector-qr-giant"></div>
-    <div class="projector-label" id="projector-event-label">Scan to claim your certificate</div>
-    <div class="projector-url" id="projector-url-label">—</div>
-  </div>
+  <div id="projector-qr-giant"></div>
+  <div class="projector-label">Scan to claim your certificate</div>
+  <div class="projector-url" id="projector-url-label">—</div>
 </div>
 
 
@@ -2474,17 +2455,17 @@ async function generateAndStore() {
     const ctx = canvas.getContext('2d');
 
     // ── Baca ulang QR config dari Firestore (independent dari ced Admin state) ──
-    let cfgShowQR = false, cfgQrStyle = 'classic', cfgQrX = 760, cfgQrY = 500, cfgQrW = 100, cfgQrH = 100;
+    let cfgShowQR = false, cfgQrX = 760, cfgQrY = 500, cfgQrW = 100, cfgQrH = 100, cfgQrColor = '#000000';
     try {
       const qrSnap = await db.collection('settings').doc('certificate_config').get();
       if (qrSnap.exists) {
         const qd = qrSnap.data();
-        if (qd.showQR   != null) cfgShowQR = qd.showQR;
-        if (qd.qrStyle  != null) cfgQrStyle = qd.qrStyle;
-        if (qd.qrX      != null) cfgQrX    = qd.qrX;
-        if (qd.qrY      != null) cfgQrY    = qd.qrY;
-        if (qd.qrWidth  != null) cfgQrW    = qd.qrWidth;
-        if (qd.qrHeight != null) cfgQrH    = qd.qrHeight;
+        if (qd.showQR   != null) cfgShowQR  = qd.showQR;
+        if (qd.qrX      != null) cfgQrX     = qd.qrX;
+        if (qd.qrY      != null) cfgQrY     = qd.qrY;
+        if (qd.qrWidth  != null) cfgQrW     = qd.qrWidth;
+        if (qd.qrHeight != null) cfgQrH     = qd.qrHeight;
+        if (qd.qrColor  != null) cfgQrColor = qd.qrColor;
       }
     } catch(e) {
       console.warn('[QR Config] Gagal baca Firestore, QR tidak akan digenerate:', e.message);
@@ -2494,30 +2475,32 @@ async function generateAndStore() {
     if (cfgShowQR) {
       const uniqueID = currentUser.uid;
       const verificationUrl = `https://ripper501.github.io/e-sertfikat/verify.html?id=${uniqueID}`;
+      
+      const qrHelper = document.getElementById('qrcode-helper');
+      qrHelper.innerHTML = "";
+      
+      // Ukuran, posisi & warna QR berdasarkan setting Admin yang tersimpan di Firestore.
+      // correctLevel M (bukan H): pola QR lebih ringkas/tidak terlalu padat secara visual,
+      // tetap punya toleransi error ~15% sehingga aman untuk kamera HP yang scan agak miring/blur.
+      const qrcode = new QRCode(qrHelper, {
+        text: verificationUrl,
+        width: cfgQrW,
+        height: cfgQrH,
+        colorDark : cfgQrColor,
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.M
+      });
 
-      // Generate QR matrix via qrcodegen library (built-in, no DOM)
-      // Fallback: use QRCode.js if qrcodegen not available
-      try {
-        const qrCanvas = document.createElement('canvas');
-        await drawStyledQR(qrCanvas, verificationUrl, cfgQrW, cfgQrH, cfgQrStyle, '#000000', '#ffffff');
-        ctx.drawImage(qrCanvas, cfgQrX, cfgQrY, cfgQrW, cfgQrH);
-      } catch(qrErr) {
-        console.warn('[QR] Styled render failed, fallback to QRCode.js:', qrErr.message);
-        // Fallback: QRCode.js
-        const qrHelper = document.getElementById('qrcode-helper');
-        qrHelper.innerHTML = '';
-        new QRCode(qrHelper, {
-          text: verificationUrl, width: cfgQrW, height: cfgQrH,
-          colorDark: '#000000', colorLight: '#ffffff',
-          correctLevel: QRCode.CorrectLevel.L
-        });
-        await new Promise(r => setTimeout(r, 250));
-        const qrImg = qrHelper.querySelector('img');
-        if (qrImg && qrImg.src) {
-          const qi = new Image(); qi.src = qrImg.src;
-          await new Promise(r => qi.onload = r);
-          ctx.drawImage(qi, cfgQrX, cfgQrY, cfgQrW, cfgQrH);
-        }
+      await new Promise(resolve => setTimeout(resolve, 250));
+      const qrImgElement = qrHelper.querySelector('img');
+
+      if (qrImgElement && qrImgElement.src) {
+        const qrImage = new Image();
+        qrImage.src = qrImgElement.src;
+        await new Promise(resolve => qrImage.onload = resolve);
+        
+        // MENEMPELKAN QR CODE BERDASARKAN KOORDINAT YANG DISIMPAN ADMIN DI FIRESTORE
+        ctx.drawImage(qrImage, cfgQrX, cfgQrY, cfgQrW, cfgQrH);
       }
     }
 
@@ -3072,54 +3055,36 @@ function showAdminDashboard() {
   );
 }
 
-async function buildAdminQR() {
-  // ── Small QR in dashboard (120×120) ──────────────────────────
+function buildAdminQR() {
+  // Small QR in dashboard
   const smallBox = document.getElementById('admin-qr-box');
-  if (smallBox) {
-    smallBox.innerHTML = '';
-    try {
-      const smallCanvas = document.createElement('canvas');
-      await drawStyledQR(smallCanvas, PORTAL_STUDENT_URL, 120, 120, 'rounded', '#111111', '#ffffff');
-      smallCanvas.style.cssText = 'width:100%;height:100%;display:block;border-radius:6px;';
-      smallBox.appendChild(smallCanvas);
-    } catch(e) {
-      if (typeof QRCode !== 'undefined') {
-        new QRCode(smallBox, { text: PORTAL_STUDENT_URL, width: 120, height: 120,
-          colorDark: '#111', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.L });
-      }
-    }
+  smallBox.innerHTML = '';
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(smallBox, {
+      text:   PORTAL_STUDENT_URL,
+      width:  120,
+      height: 120,
+      colorDark:  "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  } else {
+    smallBox.innerHTML = `<div style="font-size:10px;color:#666;padding:10px;text-align:center;">QR lib not loaded</div>`;
   }
 
-  // ── Projector QR — standard clean black/white ─────────────────
-  // Size is controlled by CSS: min(80vw, 80vh) on the container
+  // Large QR for projector
   const largeBox = document.getElementById('projector-qr-giant');
-  if (largeBox) {
-    largeBox.innerHTML = '';
-    if (typeof QRCode !== 'undefined') {
-      // Use a large fixed pixel size; CSS will scale it to fill container
-      new QRCode(largeBox, {
-        text:         PORTAL_STUDENT_URL,
-        width:        800,
-        height:       800,
-        colorDark:    '#000000',
-        colorLight:   '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M   // M = balanced: scannable + not too dense
-      });
-    }
+  largeBox.innerHTML = '';
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(largeBox, {
+      text:   PORTAL_STUDENT_URL,
+      width:  600,
+      height: 600,
+      colorDark:  "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
   }
-}
-
-// ── QR Popup — just reuse projector modal ───────────────────────
-function openQRPopup() {
-  openProjectorModal();
-}
-
-function closeQRPopup(e) {
-  closeProjectorModal();
-}
-
-function _qrEscListener(e) {
-  if (e.key === 'Escape') closeProjectorModal();
 }
 
 // ── Participant Table ────────────────────────────────────────────
@@ -3291,7 +3256,6 @@ const ced = {
   templateBase64: null,
   fontFamily:     'Alex Brush',
   fontColor:      '#d09e3b',   // default: gold
-  qrStyle:        'classic',   // 'classic' | 'rounded' | 'dots'
   // ── Bounding box (canvas-space coords, 900×636 grid) ──
   x:      153,   // left edge px
   y:      240,   // top edge px  (bukan nameY — ini top edge bbox)
@@ -3356,6 +3320,8 @@ async function cedLoadFromFirestore() {
     if (d.fontFamily) {
       document.getElementById('ced-font-select').value = d.fontFamily;
       ced.fontFamily = d.fontFamily;
+      // Sync custom dropdown UI
+      cedSyncFontUI(d.fontFamily);
     }
     if (d.fontColor) {
       ced.fontColor = d.fontColor;
@@ -3369,15 +3335,18 @@ async function cedLoadFromFirestore() {
 
     // ── Load QR config dari Firestore ke state editor ────────────
     if (d.showQR   != null) ced.showQR   = d.showQR;
-    if (d.qrStyle  != null) { ced.qrStyle = d.qrStyle; qrStyleSyncUI(d.qrStyle); }
     if (d.qrX      != null) ced.qrX      = d.qrX;
     if (d.qrY      != null) ced.qrY      = d.qrY;
     if (d.qrWidth  != null) ced.qrWidth  = d.qrWidth;
     if (d.qrHeight != null) ced.qrHeight = d.qrHeight;
+    if (d.qrColor  != null) ced.qrColor  = d.qrColor;
+    if (typeof cedSyncQRColorUI === 'function') cedSyncQRColorUI(ced.qrColor || '#000000');
     // Sync tombol toggle & bbox overlay QR sesuai state Firestore
     const qrBbox = document.getElementById('qr-bbox');
     const qrBtn  = document.getElementById('btn-toggle-qr');
+    const qrColorField = document.getElementById('ced-qrcolor-field');
     if (qrBbox) qrBbox.style.display = ced.showQR ? 'block' : 'none';
+    if (qrColorField) qrColorField.style.display = ced.showQR ? 'block' : 'none';
     if (qrBtn) {
       if (ced.showQR) {
         qrBtn.innerHTML = '❌ Hapus QR Code Placeholder';
@@ -3608,60 +3577,33 @@ async function _cedDraw() {
   ctx.setLineDash([6, 6]);
   ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
   ctx.restore();
-  // MENGGAMBAR QR CODE PREVIEW LIVE DI KANVAS ADMIN (style sesuai pilihan)
+  // MENGGAMBAR DUMMY QR CODE PADA KANVAS PREVIEW ADMIN
   if (window.ced && ced.showQR) {
-    const qrX = ced.qrX, qrY = ced.qrY, qrW = ced.qrWidth, qrH = ced.qrHeight;
-
-    // Pakai cache agar tidak regenerate setiap redraw
-    const cacheKey = `${ced.qrStyle || 'classic'}_${Math.round(qrW)}_${Math.round(qrH)}`;
-    if (!ced._qrPreviewCache || ced._qrPreviewCache.key !== cacheKey) {
-      // Generate async, set cache, lalu trigger redraw lagi
-      ced._qrPreviewCache = { key: cacheKey, img: null, pending: true };
-      const previewCanvas = document.createElement('canvas');
-      drawStyledQR(previewCanvas, 'https://example.com/cert/preview', Math.round(qrW), Math.round(qrH), ced.qrStyle || 'classic', '#000000', '#ffffff')
-        .then(() => {
-          const img = new Image();
-          img.src = previewCanvas.toDataURL();
-          img.onload = () => {
-            ced._qrPreviewCache = { key: cacheKey, img, pending: false };
-            cedRedraw(); // re-draw now that QR is ready
-          };
-        })
-        .catch(() => {
-          ced._qrPreviewCache = { key: cacheKey, img: null, pending: false };
-        });
-    }
-
-    // Draw border + background always
-    ctx.save();
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.fillRect(qrX, qrY, qrW, qrH);
-
-    if (ced._qrPreviewCache && ced._qrPreviewCache.img) {
-      // Draw live QR preview
-      ctx.drawImage(ced._qrPreviewCache.img, qrX, qrY, qrW, qrH);
-    } else {
-      // Whilst loading: draw simple finder-pattern skeleton tinted green
-      ctx.fillStyle = 'rgba(0, 229, 160, 0.12)';
-      ctx.fillRect(qrX, qrY, qrW, qrH);
-      const ps = Math.round(qrW * 0.24);
-      const drawFinder = (fx, fy) => {
-        ctx.fillStyle = '#00e5a0';
-        ctx.fillRect(fx, fy, ps, ps);
-        ctx.clearRect(fx + 3, fy + 3, ps - 6, ps - 6);
-        ctx.fillStyle = '#00e5a0';
-        ctx.fillRect(fx + 5, fy + 5, ps - 10, ps - 10);
-      };
-      drawFinder(qrX + 6, qrY + 6);
-      drawFinder(qrX + qrW - ps - 6, qrY + 6);
-      drawFinder(qrX + 6, qrY + qrH - ps - 6);
-    }
-
-    // Thin green border to show it's selected/draggable
-    ctx.strokeStyle = '#00e5a0';
-    ctx.lineWidth   = 1.5;
-    ctx.strokeRect(qrX + 0.75, qrY + 0.75, qrW - 1.5, qrH - 1.5);
-    ctx.restore();
+    const qrPreviewColor = ced.qrColor || '#000000';
+    ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+    ctx.fillRect(ced.qrX, ced.qrY, ced.qrWidth, ced.qrHeight);
+    ctx.strokeStyle = qrPreviewColor;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ced.qrX, ced.qrY, ced.qrWidth, ced.qrHeight);
+    
+    ctx.fillStyle = qrPreviewColor;
+    const pSize = Math.round(ced.qrWidth * 0.24);
+    
+    ctx.fillRect(ced.qrX + 6, ced.qrY + 6, pSize, pSize);
+    ctx.clearRect(ced.qrX + 9, ced.qrY + 9, pSize - 6, pSize - 6);
+    ctx.fillRect(ced.qrX + 11, ced.qrY + 11, pSize - 10, pSize - 10);
+    
+    ctx.fillRect(ced.qrX + ced.qrWidth - pSize - 6, ced.qrY + 6, pSize, pSize);
+    ctx.clearRect(ced.qrX + ced.qrWidth - pSize - 3, ced.qrY + 9, pSize - 6, pSize - 6);
+    ctx.fillRect(ced.qrX + ced.qrWidth - pSize - 1, ced.qrY + 11, pSize - 10, pSize - 10);
+    
+    ctx.fillRect(ced.qrX + 6, ced.qrY + ced.qrHeight - pSize - 6, pSize, pSize);
+    ctx.clearRect(ced.qrX + 9, ced.qrY + ced.qrHeight - pSize - 3, pSize - 6, pSize - 6);
+    ctx.fillRect(ced.qrX + ced.qrWidth - pSize - 1, ced.qrY + 11, pSize - 10, pSize - 10);
+    
+    ctx.fillRect(ced.qrX + 6, ced.qrY + ced.qrHeight - pSize - 6, pSize, pSize);
+    ctx.clearRect(ced.qrX + 9, ced.qrY + ced.qrHeight - pSize - 3, pSize - 6, pSize - 6);
+    ctx.fillRect(ced.qrX + 11, ced.qrY + ced.qrHeight - pSize - 1, pSize - 10, pSize - 10);
   }
 
   // 5. Debug overlay (font size + Y position info)
@@ -3791,11 +3733,11 @@ async function cedSaveConfig() {
     bboxWidth:  isFinite(ced.width)  ? Math.round(ced.width)  : 594,
     bboxHeight: isFinite(ced.height) ? Math.round(ced.height) : 115,
     showQR:         ced.showQR  === true,
-    qrStyle:        ced.qrStyle || 'classic',
   qrX:            isFinite(ced.qrX)    ? Math.round(ced.qrX)    : 760,
   qrY:            isFinite(ced.qrY)    ? Math.round(ced.qrY)    : 500,
   qrWidth:        isFinite(ced.qrWidth)  ? Math.round(ced.qrWidth)  : 100,
   qrHeight:       isFinite(ced.qrHeight) ? Math.round(ced.qrHeight) : 100,
+  qrColor:        ced.qrColor || '#000000',
   updatedAt:      firebase.firestore.FieldValue.serverTimestamp(),
 };
 
@@ -3949,11 +3891,13 @@ async function cedSaveConfig() {
   ced.qrY = 500;      
   ced.qrWidth = 100;  
   ced.qrHeight = 100; 
+  ced.qrColor = '#000000';
 
   window.toggleQRBox = function() {
     ced.showQR = !ced.showQR;
     const qrBbox = document.getElementById('qr-bbox');
     const btn = document.getElementById('btn-toggle-qr');
+    const colorField = document.getElementById('ced-qrcolor-field');
     if (!qrBbox || !btn) return;
 
     if (ced.showQR) {
@@ -3962,12 +3906,14 @@ async function cedSaveConfig() {
       btn.style.background = 'rgba(255, 77, 109, 0.1)';
       btn.style.borderColor = '#ff4d6d';
       btn.style.color = '#ff4d6d';
+      if (colorField) colorField.style.display = 'block';
     } else {
       qrBbox.style.display = 'none';
       btn.innerHTML = '➕ QR Code';
       btn.style.background = 'rgba(0, 229, 160, 0.1)';
       btn.style.borderColor = '#00e5a0';
       btn.style.color = '#00e5a0';
+      if (colorField) colorField.style.display = 'none';
     }
     if (typeof cedRedraw === 'function') cedRedraw();
     syncQRBbox();
@@ -4046,8 +3992,7 @@ async function cedSaveConfig() {
       const dx = (e.clientX - startX) * scaleX;
       const size = Math.max(40, Math.round(startWidth + dx));
       ced.qrWidth = size;
-      ced.qrHeight = size;
-      ced._qrPreviewCache = null; // size changed → re-render QR preview
+      ced.qrHeight = size; 
     }
 
     syncQRBbox();
@@ -4078,233 +4023,198 @@ window.removeAdminDevice = function() {
 };
 
 // PANGGIL FUNGSI DETEKSI DI SINI, SETELAH SEMUA VARIABEL SIAP
-// ════════════════════════════════════════════════════════════════
-// QR CODE STYLE ENGINE v2 — Clean matrix renderer
-// Uses qrcode-generator lib for proper boolean matrix at Level L
-// Supports: classic | rounded | dots
-// ════════════════════════════════════════════════════════════════
-
-/**
- * Draw a styled QR code onto a canvas element.
- * @param {HTMLCanvasElement} canvas
- * @param {string} text        — content to encode
- * @param {number} w           — output width px
- * @param {number} h           — output height px
- * @param {string} style       — 'classic' | 'rounded' | 'dots'
- * @param {string} dark        — dark module color (hex)
- * @param {string} light       — light/background color (hex)
- */
-function drawStyledQR(canvas, text, w, h, style, dark, light) {
-  dark  = dark  || '#111111';
-  light = light || '#ffffff';
-  style = style || 'classic';
-
-  // qrcode-generator: window.qrcode() — different from QRCode.js (window.QRCode)
-  // typeNumber 0 = auto-detect, errorCorrectionLevel 'L' = most spacious
-  let qr;
-  try {
-    qr = window.qrcode(0, 'L');
-    qr.addData(text);
-    qr.make();
-  } catch(e) {
-    console.warn('[QR Engine] qrcode-generator failed:', e.message);
-    return Promise.reject(e);
-  }
-
-  const n    = qr.getModuleCount();   // number of modules per side
-  const pad  = Math.ceil(w * 0.04);  // 4% quiet zone padding
-  const size = w - pad * 2;
-  const cell = size / n;
-
-  canvas.width  = w;
-  canvas.height = h || w;
-  const ctx = canvas.getContext('2d');
-
-  // Background
-  ctx.fillStyle = light;
-  ctx.fillRect(0, 0, w, h || w);
-
-  // ── Helper: rounded rectangle ─────────────────────────────────
-  function rRect(x, y, rw, rh, r) {
-    r = Math.min(r, rw / 2, rh / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + rw, y,      x + rw, y + rh, r);
-    ctx.arcTo(x + rw, y + rh, x,      y + rh, r);
-    ctx.arcTo(x,      y + rh, x,      y,      r);
-    ctx.arcTo(x,      y,      x + rw, y,      r);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // ── Finder pattern (top-left, top-right, bottom-left) ────────
-  // Always drawn as solid rounded squares regardless of style
-  function drawFinder(row, col) {
-    const ox = pad + col * cell;
-    const oy = pad + row * cell;
-    const fs = cell * 7;
-    const ir = Math.max(2, cell * 0.4);
-
-    // Outer square (dark)
-    ctx.fillStyle = dark;
-    rRect(ox, oy, fs, fs, ir);
-
-    // Inner white gap
-    ctx.fillStyle = light;
-    rRect(ox + cell, oy + cell, cell * 5, cell * 5, ir * 0.4);
-
-    // Center dot (dark)
-    ctx.fillStyle = dark;
-    rRect(ox + cell * 2, oy + cell * 2, cell * 3, cell * 3, ir * 0.25);
-  }
-
-  // ── Is this cell part of a finder pattern region? ─────────────
-  function isFinder(r, c) {
-    return (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7);
-  }
-
-  // ── Draw data modules ─────────────────────────────────────────
-  ctx.fillStyle = dark;
-
-  const modulePad = style === 'classic' ? 0 : cell * 0.14;
-
-  for (let r = 0; r < n; r++) {
-    for (let c = 0; c < n; c++) {
-      if (!qr.isDark(r, c)) continue;
-      if (isFinder(r, c))   continue;
-
-      const x = pad + c * cell + modulePad;
-      const y = pad + r * cell + modulePad;
-      const s = cell - modulePad * 2;
-
-      if (style === 'dots') {
-        ctx.beginPath();
-        ctx.arc(x + s / 2, y + s / 2, s / 2, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (style === 'rounded') {
-        rRect(x, y, s, s, s * 0.32);
-      } else {
-        // Classic: full pixel-tight squares
-        ctx.fillRect(pad + c * cell, pad + r * cell, cell, cell);
-      }
-    }
-  }
-
-  // Draw finders last (on top)
-  drawFinder(0, 0);
-  drawFinder(0, n - 7);
-  drawFinder(n - 7, 0);
-
-  return Promise.resolve(canvas);
-}
-
-// ── QR Style Picker UI logic ─────────────────────────────────────
-let _qrStyleOpen = false;
-
-window.qrStyleToggle = function() {
-  const picker  = document.getElementById('qr-style-picker');
-  const chevron = document.getElementById('qr-style-chevron');
-  const trigger = document.getElementById('qr-style-trigger');
-  if (!picker) return;
-  _qrStyleOpen = !_qrStyleOpen;
-  picker.style.display  = _qrStyleOpen ? 'block' : 'none';
-  if (chevron) chevron.style.transform  = _qrStyleOpen ? 'rotate(180deg)' : 'rotate(0deg)';
-  if (trigger) trigger.style.borderColor = _qrStyleOpen ? 'rgba(0,229,160,0.4)' : 'rgba(255,255,255,0.1)';
-
-  // Draw previews once on first open
-  if (_qrStyleOpen) _drawQRPreviews();
-};
-
-window.qrStylePick = function(btn) {
-  const style = btn.dataset.style;
-  ced.qrStyle = style;
-  ced._qrPreviewCache = null; // invalidate cache → force re-render
-
-  // Update active state
-  document.querySelectorAll('.qr-style-opt').forEach(o => o.classList.remove('active'));
-  btn.classList.add('active');
-
-  // Update trigger label
-  qrStyleSyncUI(style);
-
-  // Close picker
-  const picker  = document.getElementById('qr-style-picker');
-  const chevron = document.getElementById('qr-style-chevron');
-  const trigger = document.getElementById('qr-style-trigger');
-  if (picker)  picker.style.display   = 'none';
-  if (chevron) chevron.style.transform = 'rotate(0deg)';
-  if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
-  _qrStyleOpen = false;
-
-  if (typeof cedRedraw === 'function') cedRedraw();
-};
-
-window.qrStyleSyncUI = function(style) {
-  const labels = {
-    classic: 'Classic — Square modules',
-    rounded: 'Rounded — Soft corners',
-    dots:    'Dots — Circular modules'
-  };
-  const textEl = document.getElementById('qr-style-text');
-  if (textEl) textEl.textContent = labels[style] || labels.classic;
-
-  document.querySelectorAll('.qr-style-opt').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.style === style);
-  });
-};
-
-// Draw tiny 40×40 previews for each style option
-async function _drawQRPreviews() {
-  const demoText = 'https://example.com/cert';
-  const styles = ['classic', 'rounded', 'dots'];
-  for (const s of styles) {
-    const cvs = document.getElementById('qr-prev-' + s);
-    if (cvs && cvs.dataset.drawn !== '1') {
-      try {
-        await drawStyledQR(cvs, demoText, 40, 40, s, '#111', '#fff');
-        cvs.dataset.drawn = '1';
-      } catch(e) { console.warn('[QR Preview]', s, e.message); }
-    }
-  }
-}
-
-// Also show/hide QR style section when QR is toggled
-(function patchToggleQRBox() {
-  const orig = window.toggleQRBox;
-  window.toggleQRBox = function() {
-    orig && orig();
-    const section = document.getElementById('qr-style-section');
-    if (section) {
-      // Show style picker only when QR is active
-      section.style.display = ced.showQR ? 'block' : 'none';
-      if (ced.showQR) {
-        // Draw previews eagerly so they're ready
-        setTimeout(_drawQRPreviews, 100);
-      }
-    }
-  };
-})();
-
-// Close QR style picker on outside click
-document.addEventListener('click', function(e) {
-  if (!_qrStyleOpen) return;
-  const picker  = document.getElementById('qr-style-picker');
-  const trigger = document.getElementById('qr-style-trigger');
-  if (!picker || !trigger) return;
-  if (!picker.contains(e.target) && !trigger.contains(e.target)) {
-    picker.style.display = 'none';
-    const chevron = document.getElementById('qr-style-chevron');
-    if (chevron) chevron.style.transform = 'rotate(0deg)';
-    trigger.style.borderColor = 'rgba(255,255,255,0.1)';
-    _qrStyleOpen = false;
-  }
-});
-
 detectDevice();
 
 // ════════════════════════════════════════════════════════════════
-// FONT COLOR PICKER — Modern HSV gradient picker
+// CUSTOM FONT PICKER — replaces native <select> for full styling
 // ════════════════════════════════════════════════════════════════
+(function initFontPicker() {
+  let _fpOpen = false;
+
+  // Toggle open/close
+  window.cedToggleFontPicker = function() {
+    const picker   = document.getElementById('ced-font-picker');
+    const chevron  = document.getElementById('ced-font-chevron');
+    const trigger  = document.getElementById('ced-font-trigger');
+    if (!picker) return;
+    _fpOpen = !_fpOpen;
+    picker.style.display  = _fpOpen ? 'block' : 'none';
+    if (chevron) chevron.style.transform = _fpOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = _fpOpen ? 'rgba(204,255,0,0.4)' : 'rgba(255,255,255,0.1)';
+  };
+
+  // Pick a font option
+  window.cedPickFont = function(btn) {
+    const value = btn.dataset.value;
+    const label = btn.dataset.label;
+
+    // Update hidden input (read by cedRedraw)
+    const hiddenInput = document.getElementById('ced-font-select');
+    if (hiddenInput) hiddenInput.value = value;
+
+    // Update trigger label + preview font
+    const labelEl = document.getElementById('ced-font-label');
+    if (labelEl) {
+      labelEl.textContent  = label;
+      labelEl.style.fontFamily = value + ', cursive, serif, sans-serif';
+      // Bigger preview for script fonts
+      labelEl.style.fontSize = '16px';
+    }
+
+    // Active state on options
+    document.querySelectorAll('.ced-font-opt').forEach(o => o.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Close picker
+    const picker  = document.getElementById('ced-font-picker');
+    const chevron = document.getElementById('ced-font-chevron');
+    const trigger = document.getElementById('ced-font-trigger');
+    if (picker)  picker.style.display  = 'none';
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+    _fpOpen = false;
+
+    // Trigger redraw
+    if (typeof cedRedraw === 'function') cedRedraw();
+  };
+
+  // Sync UI from a saved fontFamily value (called on Firestore load)
+  window.cedSyncFontUI = function(value) {
+    const opts = document.querySelectorAll('.ced-font-opt');
+    opts.forEach(btn => {
+      if (btn.dataset.value === value) {
+        btn.classList.add('active');
+        const label    = btn.dataset.label;
+        const labelEl  = document.getElementById('ced-font-label');
+        if (labelEl) {
+          labelEl.textContent  = label;
+          labelEl.style.fontFamily = value + ', cursive, serif, sans-serif';
+        }
+        const hiddenInput = document.getElementById('ced-font-select');
+        if (hiddenInput) hiddenInput.value = value;
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  };
+
+  // Close picker on outside click
+  document.addEventListener('click', function(e) {
+    if (!_fpOpen) return;
+    const field = document.getElementById('ced-font-picker');
+    const trigger = document.getElementById('ced-font-trigger');
+    if (!field || !trigger) return;
+    if (!field.contains(e.target) && !trigger.contains(e.target)) {
+      field.style.display = 'none';
+      const chevron = document.getElementById('ced-font-chevron');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+      trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+      _fpOpen = false;
+    }
+  });
+})();
+
+// ════════════════════════════════════════════════════════════════
+// QR COLOR PICKER — dropdown pilihan warna QR Code (pattern sama
+// dengan Font Family picker di atas)
+// ════════════════════════════════════════════════════════════════
+(function initQRColorPicker() {
+  let _qcpOpen = false;
+
+  // Toggle open/close
+  window.cedToggleQRColorPicker = function() {
+    const picker  = document.getElementById('ced-qrcolor-picker');
+    const chevron = document.getElementById('ced-qrcolor-chevron');
+    const trigger = document.getElementById('ced-qrcolor-trigger');
+    if (!picker) return;
+    _qcpOpen = !_qcpOpen;
+    picker.style.display  = _qcpOpen ? 'block' : 'none';
+    if (chevron) chevron.style.transform = _qcpOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = _qcpOpen ? 'rgba(204,255,0,0.4)' : 'rgba(255,255,255,0.1)';
+  };
+
+  // Pick a QR color option
+  window.cedPickQRColor = function(btn) {
+    const value = btn.dataset.value;
+    const label = btn.dataset.label;
+
+    // Update hidden input (read by cedSaveConfig)
+    const hiddenInput = document.getElementById('ced-qrcolor-select');
+    if (hiddenInput) hiddenInput.value = value;
+
+    // Update state
+    ced.qrColor = value;
+
+    // Update trigger label + swatch
+    const labelEl  = document.getElementById('ced-qrcolor-label');
+    const swatchEl = document.getElementById('ced-qrcolor-swatch');
+    if (labelEl)  labelEl.textContent = label;
+    if (swatchEl) swatchEl.style.background = value;
+
+    // Active state on options
+    document.querySelectorAll('.ced-qrcolor-opt').forEach(o => o.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Close picker
+    const picker  = document.getElementById('ced-qrcolor-picker');
+    const chevron = document.getElementById('ced-qrcolor-chevron');
+    const trigger = document.getElementById('ced-qrcolor-trigger');
+    if (picker)  picker.style.display  = 'none';
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+    _qcpOpen = false;
+
+    // Trigger redraw — dummy QR placeholder ikut berubah warna di preview
+    if (typeof cedRedraw === 'function') cedRedraw();
+  };
+
+  // Sync UI from a saved qrColor value (called on Firestore load)
+  window.cedSyncQRColorUI = function(value) {
+    const opts = document.querySelectorAll('.ced-qrcolor-opt');
+    let matched = false;
+    opts.forEach(btn => {
+      if (btn.dataset.value === value) {
+        matched = true;
+        btn.classList.add('active');
+        const label    = btn.dataset.label;
+        const labelEl  = document.getElementById('ced-qrcolor-label');
+        const swatchEl = document.getElementById('ced-qrcolor-swatch');
+        if (labelEl)  labelEl.textContent = label;
+        if (swatchEl) swatchEl.style.background = value;
+        const hiddenInput = document.getElementById('ced-qrcolor-select');
+        if (hiddenInput) hiddenInput.value = value;
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    // Value tersimpan tapi bukan salah satu preset (mis. hasil custom lama) — tetap tampilkan swatch-nya
+    if (!matched) {
+      const labelEl  = document.getElementById('ced-qrcolor-label');
+      const swatchEl = document.getElementById('ced-qrcolor-swatch');
+      const hiddenInput = document.getElementById('ced-qrcolor-select');
+      if (labelEl)  labelEl.textContent = 'Custom';
+      if (swatchEl) swatchEl.style.background = value;
+      if (hiddenInput) hiddenInput.value = value;
+    }
+  };
+
+  // Close picker on outside click
+  document.addEventListener('click', function(e) {
+    if (!_qcpOpen) return;
+    const field = document.getElementById('ced-qrcolor-picker');
+    const trigger = document.getElementById('ced-qrcolor-trigger');
+    if (!field || !trigger) return;
+    if (!field.contains(e.target) && !trigger.contains(e.target)) {
+      field.style.display = 'none';
+      const chevron = document.getElementById('ced-qrcolor-chevron');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+      trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+      _qcpOpen = false;
+    }
+  });
+})();
+
+
 (function initColorPicker() {
 
   let _cpHue = 38;   // default hue: gold ~38°

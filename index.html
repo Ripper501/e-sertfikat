@@ -930,6 +930,14 @@
   }
   #cert-editor-panel.is-open { display: block; }
 
+  /* ── Survey Config Editor Panel container (pattern sama dengan cert-editor-panel) ── */
+  #survey-editor-panel {
+    display: none;
+    margin-top: 20px;
+    animation: fadeUp 0.4s cubic-bezier(0.4,0,0.2,1) both;
+  }
+  #survey-editor-panel.is-open { display: block; }
+
   /* ── Outer glass card ── */
   .ced-card {
     background: rgba(11, 12, 22, 0.80);
@@ -1371,13 +1379,18 @@
           <span>Verify</span>
         </div>
         <div class="step-connector"></div>
-        <div class="step-item active">
+        <div class="step-item active" id="step-track-name">
           <div class="step-num">3</div>
           <span>Name</span>
         </div>
-        <div class="step-connector"></div>
-        <div class="step-item">
+        <div class="step-connector" id="step-track-connector-survey" style="display:none;"></div>
+        <div class="step-item" id="step-track-survey" style="display:none;">
           <div class="step-num">4</div>
+          <span>Survey</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item" id="step-track-done">
+          <div class="step-num">5</div>
           <span>Done</span>
         </div>
       </div>
@@ -1418,6 +1431,89 @@
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         </svg>
         Certificate is cryptographically unique and cannot be duplicated
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 5b: MINI SURVEY (sebelum generate)
+       Hanya tampil jika admin sudah atur pertanyaan
+       survei di panel "📝 Form". Satu pertanyaan per
+       tampilan, wajib dijawab semua sebelum lanjut.
+  ══════════════════════════════════════════ -->
+  <div class="screen" id="screen-survey">
+    <div class="card">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" fill="#0e0f14"/>
+            <path d="M9 12L11 14L15 10" stroke="#0e0f14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-name">CertPortal</div>
+          <div class="brand-sub">Secure · Verified · Official</div>
+        </div>
+      </div>
+
+      <!-- Step tracker (sinkron dengan screen-name, Survey jadi active) -->
+      <div class="steps">
+        <div class="step-item done">
+          <div class="step-num">✓</div>
+          <span>Auth</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item done">
+          <div class="step-num">✓</div>
+          <span>Verify</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item done">
+          <div class="step-num">✓</div>
+          <span>Name</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item active">
+          <div class="step-num">4</div>
+          <span>Survey</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item">
+          <div class="step-num">5</div>
+          <span>Done</span>
+        </div>
+      </div>
+
+      <!-- Progress dot indicator (soal ke-berapa dari berapa) -->
+      <div id="survey-progress-label" style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:18px;">
+        Question 1 of 1
+      </div>
+
+      <h2 class="screen-title" style="font-size:20px; margin-bottom:24px;" id="survey-question-text">—</h2>
+
+      <!-- Area jawaban: diisi dinamis oleh JS sesuai tipe pertanyaan (text / choice) -->
+      <div id="survey-answer-area" style="margin-bottom:8px;"></div>
+
+      <p id="survey-validation-msg" style="font-size:12.5px; color:var(--danger); min-height:18px; margin-bottom:8px; display:none;">
+        Please answer this question before continuing.
+      </p>
+
+      <div class="btn-row" style="margin-top:16px;">
+        <button class="btn btn-outline" id="btn-survey-back" onclick="surveyGoBack()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          Back
+        </button>
+        <button class="btn btn-primary" id="btn-survey-next" onclick="surveyGoNext()">
+          <span id="survey-next-label">Next</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </button>
+      </div>
+
+      <div class="footer-note" style="margin-top:20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Your feedback helps us improve future workshops
       </div>
     </div>
   </div>
@@ -1565,11 +1661,14 @@
         </div>
       </div>
       <div class="admin-actions">
-        <button class="btn-admin btn-admin-primary" onclick="openProjectorModal()">
+        <button class="btn-admin btn-admin-primary" id="btn-survey-form" onclick="toggleSurveyEditor()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="7" width="20" height="12" rx="2"/><path d="M12 19v2m-4 0h8"/><path d="M7 7V5a5 5 0 0 1 10 0v2"/>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="9" y1="13" x2="15" y2="13"/>
+            <line x1="9" y1="17" x2="13" y2="17"/>
           </svg>
-          📽 Projector Mode
+          📝 Form
         </button>
         <button class="btn-admin btn-admin-outline" id="btn-ecert" onclick="toggleCertEditor()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2114,6 +2213,129 @@
   </div><!-- /.ced-card -->
 </div><!-- /#cert-editor-panel -->
 
+<!-- ══════════════════════════════════════════════════════════
+     SURVEY CONFIG EDITOR PANEL
+     Hidden by default. Toggled by the "📝 Form" button
+     (pengganti Projector Mode). Admin atur action URL Google
+     Form + daftar pertanyaan survei mini di sini.
+══════════════════════════════════════════════════════════ -->
+<div id="survey-editor-panel">
+  <div class="ced-card">
+
+    <!-- Title bar -->
+    <div class="ced-titlebar">
+      <div class="ced-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0e0f14" stroke-width="2.2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="13" x2="15" y2="13"/>
+          <line x1="9" y1="17" x2="13" y2="17"/>
+        </svg>
+      </div>
+      <div class="ced-title-wrap">
+        <div class="ced-title">Survey Form Settings</div>
+        <div class="ced-subtitle">Pertanyaan Survei · Sinkron Google Form · Firestore</div>
+      </div>
+      <button class="ced-close" onclick="toggleSurveyEditor()" title="Close editor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div><!-- /.ced-titlebar -->
+
+    <div style="max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px;">
+
+      <!-- Google Form action URL -->
+      <div class="ced-field">
+        <label class="ced-label">Google Form Action URL</label>
+        <input
+          class="ced-input"
+          id="survey-action-url"
+          type="text"
+          placeholder="https://docs.google.com/forms/d/e/.../formResponse"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <p style="margin:2px 0 0; font-size:11px; line-height:1.5; color:var(--text-dim);">
+          Ambil dari tab Network browser saat submit form percobaan. Lihat URL request <code style="color:var(--accent);">formResponse</code>.
+        </p>
+      </div>
+
+      <!-- Survey question cards (rendered dynamically) -->
+      <div class="ced-field">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <label class="ced-label" style="margin:0;">Daftar Pertanyaan Survei</label>
+          <button type="button" class="survey-add-btn" onclick="surveyAddQuestion()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Tambah Pertanyaan
+          </button>
+        </div>
+        <div id="survey-questions-list" style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
+          <!-- Question cards injected here by JS -->
+        </div>
+        <div id="survey-empty-hint" style="display:none; text-align:center; padding:24px 12px; color:var(--text-dim); font-size:12px; border:1.5px dashed var(--border-soft); border-radius:var(--radius-sm); margin-top:10px;">
+          Belum ada pertanyaan. Klik "Tambah Pertanyaan" untuk mulai.
+        </div>
+      </div>
+
+      <!-- Save -->
+      <button class="ced-save-btn" id="survey-save-btn" onclick="surveySaveConfig()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Simpan Pengaturan Survei
+      </button>
+      <div class="ced-save-status" id="survey-save-status"></div>
+
+    </div>
+  </div><!-- /.ced-card -->
+</div><!-- /#survey-editor-panel -->
+
+<style>
+  .survey-add-btn {
+    display:flex; align-items:center; gap:6px;
+    background:rgba(204,255,0,0.08); border:1px solid rgba(204,255,0,0.24);
+    color:var(--accent); font-family:var(--font-main); font-size:11.5px; font-weight:600;
+    padding:7px 12px; border-radius:var(--radius-sm); cursor:pointer; transition:var(--transition);
+    flex-shrink:0;
+  }
+  .survey-add-btn:hover { background:rgba(204,255,0,0.16); }
+  .survey-q-card {
+    background:rgba(255,255,255,0.03); border:1px solid var(--border-soft);
+    border-radius:var(--radius-sm); padding:14px 15px;
+  }
+  .survey-q-card-hd {
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
+  }
+  .survey-q-card-num {
+    font-family:var(--font-mono); font-size:10px; color:var(--text-dim);
+    letter-spacing:0.08em; text-transform:uppercase;
+  }
+  .survey-q-remove {
+    background:transparent; border:none; color:var(--text-dim);
+    cursor:pointer; padding:3px; display:flex; transition:var(--transition);
+  }
+  .survey-q-remove:hover { color:var(--danger); }
+  .survey-q-row { display:flex; gap:8px; margin-top:8px; }
+  .survey-q-row .ced-input, .survey-q-row .ced-select { margin:0; }
+  .survey-opt-row { display:flex; gap:6px; margin-top:6px; align-items:center; }
+  .survey-opt-row .ced-input { padding:8px 11px; font-size:13px; }
+  .survey-opt-remove {
+    background:transparent; border:none; color:var(--text-dim);
+    cursor:pointer; padding:4px; flex-shrink:0; display:flex; transition:var(--transition);
+  }
+  .survey-opt-remove:hover { color:var(--danger); }
+  .survey-opt-add {
+    display:flex; align-items:center; gap:5px;
+    background:transparent; border:1px dashed var(--border-soft); color:var(--text-muted);
+    font-family:var(--font-main); font-size:11px; font-weight:600;
+    padding:6px 11px; border-radius:6px; cursor:pointer; margin-top:6px; transition:var(--transition);
+  }
+  .survey-opt-add:hover { border-color:var(--accent); color:var(--accent); }
+</style>
+
 <!-- ── PROJECTOR MODAL ────────────────────────────────────── -->
 <div id="projector-modal">
   <button class="projector-close" onclick="closeProjectorModal()">
@@ -2353,6 +2575,222 @@ function populateNameScreen() {
   if (currentUser.displayName) {
     document.getElementById('full-name').value = currentUser.displayName;
   }
+  // Sesuaikan step tracker (tampilkan/sembunyikan step "Survey") sesuai
+  // apakah admin sudah atur pertanyaan survei atau belum.
+  surveyAdjustStepTracker();
+}
+
+// Cek cepat ke Firestore apakah survei sedang aktif, lalu sesuaikan
+// tampilan step tracker di screen-name supaya penomoran step konsisten
+// baik saat survei aktif (3→4→5: Name, Survey, Done) maupun tidak
+// (3→4: Name, Done — step Survey disembunyikan total).
+async function surveyAdjustStepTracker() {
+  const stepSurvey       = document.getElementById('step-track-survey');
+  const stepConnector     = document.getElementById('step-track-connector-survey');
+  const stepDone          = document.getElementById('step-track-done');
+  if (!stepSurvey || !stepConnector || !stepDone) return;
+
+  let hasActiveSurvey = false;
+  try {
+    const snap = await db.collection('settings').doc('survey_config').get();
+    const d = snap.exists ? snap.data() : null;
+    hasActiveSurvey = !!(d && Array.isArray(d.questions) && d.questions.filter(q => q && q.text && q.entryId).length > 0);
+  } catch (e) {
+    hasActiveSurvey = false; // fail-safe: anggap tidak ada survei jika gagal cek
+  }
+
+  if (hasActiveSurvey) {
+    stepSurvey.style.display    = 'flex';
+    stepConnector.style.display = 'block';
+    stepDone.querySelector('.step-num').textContent = '5';
+  } else {
+    stepSurvey.style.display    = 'none';
+    stepConnector.style.display = 'none';
+    stepDone.querySelector('.step-num').textContent = '4';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MINI SURVEY FLOW (student) — tampil setelah isi Nama, sebelum
+// generate sertifikat. Pertanyaan & koneksi Google Form diatur admin
+// dari panel "📝 Form" (toggleSurveyEditor di bagian admin).
+// ══════════════════════════════════════════════════════════════════
+
+// Runtime state khusus alur student. Dipisah dari `surveyQuestions`
+// milik panel admin agar dua context (admin editing vs student
+// menjawab) tidak saling menimpa kalau kebetulan berjalan bersamaan.
+let studentSurveyConfig    = null;  // { actionUrl, questions: [...] }
+let studentSurveyAnswers   = {};    // { [questionId]: answerString }
+let studentSurveyIndex     = 0;     // index pertanyaan yang sedang ditampilkan
+
+async function surveyStart() {
+  // Ambil config survei terbaru dari Firestore setiap kali mau mulai,
+  // supaya selalu pakai pertanyaan paling baru yang admin atur.
+  try {
+    const snap = await db.collection('settings').doc('survey_config').get();
+    const d = snap.exists ? snap.data() : null;
+    const questions = (d && Array.isArray(d.questions)) ? d.questions.filter(q => q && q.text && q.entryId) : [];
+
+    if (questions.length === 0) {
+      // Tidak ada survei aktif sama sekali — lanjut seperti behavior lama, tanpa step tambahan.
+      studentSurveyConfig = null;
+      await generateAndStore();
+      return;
+    }
+
+    studentSurveyConfig  = { actionUrl: d.actionUrl || null, questions };
+    studentSurveyAnswers = {};
+    studentSurveyIndex   = 0;
+    surveyRenderCurrentQuestion();
+    showScreen('screen-survey');
+  } catch (e) {
+    console.warn('[Survey] Gagal ambil survey_config, lanjut tanpa survei:', e.message);
+    studentSurveyConfig = null;
+    await generateAndStore();
+  }
+}
+
+function surveyRenderCurrentQuestion() {
+  if (!studentSurveyConfig) return;
+  const questions = studentSurveyConfig.questions;
+  const q = questions[studentSurveyIndex];
+  if (!q) return;
+
+  const progressLabel = document.getElementById('survey-progress-label');
+  const questionText  = document.getElementById('survey-question-text');
+  const answerArea    = document.getElementById('survey-answer-area');
+  const validationMsg = document.getElementById('survey-validation-msg');
+  const backBtn        = document.getElementById('btn-survey-back');
+  const nextLabel      = document.getElementById('survey-next-label');
+
+  if (progressLabel) progressLabel.textContent = `Question ${studentSurveyIndex + 1} of ${questions.length}`;
+  if (questionText)  questionText.textContent  = q.text;
+  if (validationMsg) validationMsg.style.display = 'none';
+
+  // Tombol Back disembunyikan di pertanyaan pertama (tidak ada tempat untuk kembali).
+  if (backBtn) backBtn.style.visibility = (studentSurveyIndex === 0) ? 'hidden' : 'visible';
+  // Label tombol lanjut berubah jadi "Finish" di pertanyaan terakhir.
+  if (nextLabel) nextLabel.textContent = (studentSurveyIndex === questions.length - 1) ? 'Finish' : 'Next';
+
+  const existingAnswer = studentSurveyAnswers[q.id] || '';
+
+  if (!answerArea) return;
+
+  if (q.type === 'choice') {
+    answerArea.innerHTML = (q.options || []).map((opt, oi) => {
+      const checked = (existingAnswer === opt) ? 'checked' : '';
+      const optId = `survey-opt-${studentSurveyIndex}-${oi}`;
+      return `
+        <label for="${optId}" style="
+          display:flex; align-items:center; gap:12px;
+          padding:14px 16px; margin-bottom:10px;
+          background:rgba(255,255,255,0.03); border:1px solid var(--border-soft);
+          border-radius:var(--radius-md); cursor:pointer; transition:var(--transition);
+        " onclick="this.style.borderColor='var(--accent)'; this.style.background='rgba(204,255,0,0.04)';">
+          <input type="radio" id="${optId}" name="survey-current-choice" value="${escapeHtml(opt)}" ${checked}
+            style="width:17px; height:17px; accent-color:var(--accent); flex-shrink:0; cursor:pointer;"
+            onchange="surveySetCurrentAnswer(this.value)" />
+          <span style="font-size:14px; color:var(--text);">${escapeHtml(opt)}</span>
+        </label>
+      `;
+    }).join('');
+  } else {
+    answerArea.innerHTML = `
+      <div class="input-wrap">
+        <textarea
+          class="input-field"
+          id="survey-text-input"
+          rows="3"
+          style="resize:vertical; font-family:var(--font-main); line-height:1.5;"
+          placeholder="Type your answer here..."
+          oninput="surveySetCurrentAnswer(this.value)"
+        >${escapeHtml(existingAnswer)}</textarea>
+      </div>
+    `;
+  }
+}
+
+// Dipanggil oleh radio button / textarea saat user menjawab pertanyaan yang sedang tampil.
+window.surveySetCurrentAnswer = function(value) {
+  if (!studentSurveyConfig) return;
+  const q = studentSurveyConfig.questions[studentSurveyIndex];
+  if (!q) return;
+  studentSurveyAnswers[q.id] = value;
+  const validationMsg = document.getElementById('survey-validation-msg');
+  if (validationMsg && value && value.trim()) validationMsg.style.display = 'none';
+};
+
+window.surveyGoBack = function() {
+  if (studentSurveyIndex === 0) return;
+  studentSurveyIndex -= 1;
+  surveyRenderCurrentQuestion();
+};
+
+window.surveyGoNext = async function() {
+  if (!studentSurveyConfig) return;
+  const q = studentSurveyConfig.questions[studentSurveyIndex];
+  const answer = studentSurveyAnswers[q.id];
+  const validationMsg = document.getElementById('survey-validation-msg');
+
+  // Semua pertanyaan wajib dijawab — tidak bisa lanjut tanpa isi jawaban.
+  if (!answer || !answer.trim()) {
+    if (validationMsg) validationMsg.style.display = 'block';
+    return;
+  }
+
+  const isLast = studentSurveyIndex === studentSurveyConfig.questions.length - 1;
+  if (isLast) {
+    await surveyFinishAndGenerate();
+  } else {
+    studentSurveyIndex += 1;
+    surveyRenderCurrentQuestion();
+  }
+};
+
+// Dipanggil setelah pertanyaan terakhir terjawab. Kirim jawaban ke Google
+// Form (fire-and-forget, lihat catatan CORS) + simpan cadangan ke Firestore,
+// baru lanjut generate sertifikat seperti behavior semula.
+async function surveyFinishAndGenerate() {
+  const nextBtn = document.getElementById('btn-survey-next');
+  if (nextBtn) nextBtn.disabled = true;
+
+  // ── 1. Kirim ke Google Form (best-effort, browser tidak bisa baca hasilnya
+  //       karena kebijakan CORS Google Forms — lihat penjelasan ke pengguna).
+  if (studentSurveyConfig.actionUrl) {
+    try {
+      const formData = new FormData();
+      studentSurveyConfig.questions.forEach(q => {
+        const ans = studentSurveyAnswers[q.id];
+        if (q.entryId && ans != null) formData.append(q.entryId, ans);
+      });
+      // mode 'no-cors': permintaan tetap terkirim ke Google, tapi kita tidak
+      // pernah bisa membaca status berhasil/gagalnya dari sisi browser.
+      await fetch(studentSurveyConfig.actionUrl, { method: 'POST', mode: 'no-cors', body: formData });
+    } catch (e) {
+      // Diam-diam saja — ini bukan alasan untuk menghentikan student dari dapat sertifikatnya.
+      console.warn('[Survey] Gagal kirim ke Google Form (fire-and-forget):', e.message);
+    }
+  }
+
+  // ── 2. Simpan cadangan jawaban ke Firestore — supaya jawaban tetap ada
+  //       walau pengiriman ke Google Form di atas diam-diam gagal.
+  try {
+    const answersForFirestore = studentSurveyConfig.questions.map(q => ({
+      questionId:   q.id,
+      questionText: q.text,
+      answer:       studentSurveyAnswers[q.id] || '',
+    }));
+    await db.collection(USERS_COLLECTION).doc(currentUser.uid).set({
+      survey_answers:    answersForFirestore,
+      survey_updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  } catch (e) {
+    console.warn('[Survey] Gagal simpan cadangan jawaban ke Firestore:', e.message);
+  }
+
+  // ── 3. Lanjut seperti behavior semula ──────────────────────────
+  await generateAndStore();
+  if (nextBtn) nextBtn.disabled = false;
 }
 
 async function submitName() {
@@ -2389,7 +2827,10 @@ async function submitName() {
 
   if (result.isConfirmed) {
     certName = name;
-    await generateAndStore();
+    // Jika admin sudah atur pertanyaan survei di panel "📝 Form", tampilkan
+    // screen-survey dulu (wajib dijawab semua). Jika belum ada survei sama
+    // sekali, langsung lanjut seperti behavior semula (backward compatible).
+    await surveyStart();
   }
   // If denied: modal closes, user edits name field
 }
@@ -3305,6 +3746,247 @@ function toggleCertEditor() {
     }).catch(() => {
       requestAnimationFrame(() => requestAnimationFrame(cedRedraw));
     });
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// SURVEY CONFIG EDITOR — pengaturan pertanyaan survei mini & koneksi
+// Google Form, dipanggil oleh tombol "📝 Form" (pengganti Projector
+// Mode). Disimpan ke settings/survey_config di Firestore.
+// ════════════════════════════════════════════════════════════════
+
+// Runtime state: array pertanyaan yang sedang diedit di panel.
+// Setiap item: { id, text, type: 'text'|'choice', entryId, options: [] }
+let surveyQuestions = [];
+let _surveyQIdCounter = 0;
+
+function _surveyNewId() {
+  _surveyQIdCounter += 1;
+  return 'sq_' + Date.now() + '_' + _surveyQIdCounter;
+}
+
+function toggleSurveyEditor() {
+  const panel = document.getElementById('survey-editor-panel');
+  const btn   = document.getElementById('btn-survey-form');
+  if (!panel) return;
+
+  const open = panel.classList.toggle('is-open');
+
+  if (open) {
+    panel.style.position = 'fixed';
+    panel.style.top = '0';
+    panel.style.left = '0';
+    panel.style.width = '100vw';
+    panel.style.height = '100vh';
+    panel.style.zIndex = '999999';
+    panel.style.background = 'rgba(11, 12, 16, 0.98)';
+    panel.style.backdropFilter = 'blur(20px)';
+    panel.style.overflowY = 'auto';
+    panel.style.padding = '40px';
+    panel.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  } else {
+    panel.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  if (btn) {
+    btn.style.borderColor = open ? 'var(--accent)' : '';
+    btn.style.color       = open ? 'var(--accent)' : '';
+  }
+
+  if (open) {
+    surveyLoadFromFirestore();
+  }
+}
+
+// ── Render daftar kartu pertanyaan ke DOM berdasarkan surveyQuestions ──
+function surveyRenderQuestions() {
+  const list  = document.getElementById('survey-questions-list');
+  const empty = document.getElementById('survey-empty-hint');
+  if (!list) return;
+
+  if (surveyQuestions.length === 0) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  list.innerHTML = surveyQuestions.map((q, i) => {
+    const isChoice = q.type === 'choice';
+    const optionsHtml = (q.options || []).map((opt, oi) => `
+      <div class="survey-opt-row">
+        <input class="ced-input" type="text" placeholder="Teks opsi ${oi + 1}"
+          value="${escapeHtml(opt)}"
+          oninput="surveyUpdateOption('${q.id}', ${oi}, this.value)" />
+        <button type="button" class="survey-opt-remove" onclick="surveyRemoveOption('${q.id}', ${oi})" title="Hapus opsi">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    `).join('');
+
+    return `
+      <div class="survey-q-card" data-qid="${q.id}">
+        <div class="survey-q-card-hd">
+          <span class="survey-q-card-num">Pertanyaan ${i + 1}</span>
+          <button type="button" class="survey-q-remove" onclick="surveyRemoveQuestion('${q.id}')" title="Hapus pertanyaan">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+
+        <input class="ced-input" type="text" placeholder="Teks pertanyaan, mis. Bagaimana kualitas workshop ini?"
+          value="${escapeHtml(q.text || '')}"
+          oninput="surveyUpdateField('${q.id}', 'text', this.value)" />
+
+        <div class="survey-q-row">
+          <select class="ced-input ced-select" style="flex:0 0 150px;" onchange="surveyUpdateField('${q.id}', 'type', this.value)">
+            <option value="text" ${!isChoice ? 'selected' : ''}>Teks bebas</option>
+            <option value="choice" ${isChoice ? 'selected' : ''}>Pilihan ganda</option>
+          </select>
+          <input class="ced-input" type="text" placeholder="entry.123456789" style="flex:1; font-family:var(--font-mono); font-size:12.5px;"
+            value="${escapeHtml(q.entryId || '')}"
+            oninput="surveyUpdateField('${q.id}', 'entryId', this.value)" />
+        </div>
+
+        ${isChoice ? `
+          <div style="margin-top:8px;">
+            ${optionsHtml}
+            <button type="button" class="survey-opt-add" onclick="surveyAddOption('${q.id}')">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tambah Opsi
+            </button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+window.surveyAddQuestion = function() {
+  surveyQuestions.push({ id: _surveyNewId(), text: '', type: 'text', entryId: '', options: [] });
+  surveyRenderQuestions();
+};
+
+window.surveyRemoveQuestion = function(qid) {
+  surveyQuestions = surveyQuestions.filter(q => q.id !== qid);
+  surveyRenderQuestions();
+};
+
+window.surveyUpdateField = function(qid, field, value) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+  q[field] = value;
+  // Saat ganti tipe ke "choice" dan belum ada opsi sama sekali, beri 2 slot kosong agar admin langsung bisa isi.
+  if (field === 'type' && value === 'choice' && (!q.options || q.options.length === 0)) {
+    q.options = ['', ''];
+  }
+  if (field === 'type') {
+    surveyRenderQuestions(); // re-render agar area opsi muncul/hilang
+  }
+};
+
+window.surveyAddOption = function(qid) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+  if (!q.options) q.options = [];
+  q.options.push('');
+  surveyRenderQuestions();
+};
+
+window.surveyRemoveOption = function(qid, optIndex) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q || !q.options) return;
+  q.options.splice(optIndex, 1);
+  surveyRenderQuestions();
+};
+
+window.surveyUpdateOption = function(qid, optIndex, value) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q || !q.options) return;
+  q.options[optIndex] = value;
+  // Tidak perlu re-render penuh di sini — cukup update array, hindari kehilangan fokus input saat mengetik.
+};
+
+// ── Simpan konfigurasi survei ke Firestore ────────────────────────
+async function surveySaveConfig() {
+  const btn    = document.getElementById('survey-save-btn');
+  const status = document.getElementById('survey-save-status');
+  const actionUrlRaw = document.getElementById('survey-action-url').value.trim();
+
+  // Validasi ringan: pertanyaan tanpa teks atau tanpa entry ID akan membingungkan saat dipakai nanti.
+  const invalid = surveyQuestions.find(q => !q.text || !q.text.trim() || !q.entryId || !q.entryId.trim());
+  if (invalid) {
+    status.textContent = '✗ Setiap pertanyaan wajib punya teks dan entry ID Google Form.';
+    status.style.color = 'var(--danger)';
+    return;
+  }
+  const invalidChoice = surveyQuestions.find(q => q.type === 'choice' && (!q.options || q.options.filter(o => o && o.trim()).length < 2));
+  if (invalidChoice) {
+    status.textContent = '✗ Pertanyaan pilihan ganda butuh minimal 2 opsi terisi.';
+    status.style.color = 'var(--danger)';
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = '⏳ Menyimpan konfigurasi survei ke Firestore...';
+  status.style.color = 'var(--accent)';
+
+  // Bersihkan opsi kosong sebelum simpan, dan urutan ditentukan oleh urutan array (dibaca admin sebagai urutan tampil ke student).
+  const cleanQuestions = surveyQuestions.map(q => ({
+    id:      q.id,
+    text:    q.text.trim(),
+    type:    q.type === 'choice' ? 'choice' : 'text',
+    entryId: q.entryId.trim(),
+    options: q.type === 'choice' ? (q.options || []).map(o => o.trim()).filter(o => o) : [],
+  }));
+
+  const payload = {
+    actionUrl: actionUrlRaw || null,
+    questions: cleanQuestions,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  try {
+    await db.collection('settings').doc('survey_config').set(payload, { merge: true });
+    status.textContent = `✓ Tersimpan! ${cleanQuestions.length} pertanyaan aktif.`;
+    status.style.color = 'var(--success)';
+    setTimeout(() => { status.textContent = ''; }, 5000);
+  } catch (err) {
+    status.textContent = '✗ Gagal menyimpan: ' + err.message;
+    status.style.color = 'var(--danger)';
+    console.error('[Survey Save]', err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Muat konfigurasi survei dari Firestore ke panel editor ───────
+async function surveyLoadFromFirestore() {
+  try {
+    const snap = await db.collection('settings').doc('survey_config').get();
+    if (!snap.exists) {
+      surveyQuestions = [];
+      surveyRenderQuestions();
+      return;
+    }
+    const d = snap.data();
+    const urlInput = document.getElementById('survey-action-url');
+    if (urlInput) urlInput.value = d.actionUrl || '';
+
+    surveyQuestions = Array.isArray(d.questions) ? d.questions.map(q => ({
+      id:      q.id || _surveyNewId(),
+      text:    q.text || '',
+      type:    q.type === 'choice' ? 'choice' : 'text',
+      entryId: q.entryId || '',
+      options: Array.isArray(q.options) ? q.options.slice() : [],
+    })) : [];
+
+    surveyRenderQuestions();
+  } catch (e) {
+    console.warn('[Survey] surveyLoadFromFirestore failed:', e.message);
+    surveyQuestions = [];
+    surveyRenderQuestions();
   }
 }
 

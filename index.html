@@ -1965,6 +1965,82 @@
   <button type="button" class="btn" id="btn-toggle-qr" onclick="toggleQRBox()" style="width: 100%; justify-content: center; background: rgba(0, 229, 160, 0.1); border: 1px dashed #00e5a0; color: #00e5a0; padding: 10px; font-weight: 600; border-radius: 6px; transition: all 0.2s;">
     ➕ QR Code
   </button>
+
+  <!-- QR Color picker — custom dropdown, sama pattern dengan Font Family -->
+  <div id="ced-qrcolor-field" style="margin-top: 10px; display: none;">
+    <label class="ced-label" style="display:block; margin-bottom:6px;">Warna QR Code</label>
+
+    <!-- Hidden input dibaca oleh cedRedraw() / cedSaveConfig() -->
+    <input type="hidden" id="ced-qrcolor-select" value="#000000" />
+
+    <!-- Trigger button -->
+    <button type="button" id="ced-qrcolor-trigger" onclick="cedToggleQRColorPicker()" style="
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      width:100%; padding:9px 13px; border-radius:8px;
+      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+      color:#e8e8f0; font-size:13px; cursor:pointer; text-align:left;
+      transition:border-color .2s, background .2s;
+    ">
+      <span style="display:flex; align-items:center; gap:10px;">
+        <span id="ced-qrcolor-swatch" style="width:16px; height:16px; border-radius:50%; background:#000000; border:2px solid rgba(255,255,255,0.25); flex-shrink:0;"></span>
+        <span id="ced-qrcolor-label">Hitam Klasik</span>
+      </span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" style="flex-shrink:0;transition:transform .2s;" id="ced-qrcolor-chevron"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+
+    <!-- Dropdown panel -->
+    <div id="ced-qrcolor-picker" style="
+      display:none; margin-top:6px;
+      background:#16172b; border:1px solid rgba(204,255,0,0.18);
+      border-radius:10px; overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    ">
+      <button class="ced-qrcolor-opt active" data-value="#000000" data-label="Hitam Klasik" onclick="cedPickQRColor(this)">
+        <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="ced-qrcolor-opt-swatch" style="background:#000000;"></span>
+        <span class="ced-font-opt-preview">Hitam Klasik</span>
+      </button>
+      <button class="ced-qrcolor-opt" data-value="#d4af37" data-label="Gold Elegan" onclick="cedPickQRColor(this)">
+        <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="ced-qrcolor-opt-swatch" style="background:#d4af37;"></span>
+        <span class="ced-font-opt-preview">Gold Elegan</span>
+      </button>
+      <button class="ced-qrcolor-opt" data-value="#00e5a0" data-label="Hijau Brand" onclick="cedPickQRColor(this)">
+        <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="ced-qrcolor-opt-swatch" style="background:#00e5a0;"></span>
+        <span class="ced-font-opt-preview">Hijau Brand</span>
+      </button>
+      <button class="ced-qrcolor-opt" data-value="#1a3a8f" data-label="Navy Formal" onclick="cedPickQRColor(this)">
+        <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="ced-qrcolor-opt-swatch" style="background:#1a3a8f;"></span>
+        <span class="ced-font-opt-preview">Navy Formal</span>
+      </button>
+      <button class="ced-qrcolor-opt" data-value="#6b2d8c" data-label="Ungu Premium" onclick="cedPickQRColor(this)">
+        <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="ced-qrcolor-opt-swatch" style="background:#6b2d8c;"></span>
+        <span class="ced-font-opt-preview">Ungu Premium</span>
+      </button>
+    </div>
+
+    <p style="margin:6px 0 0; font-size:10.5px; line-height:1.4; color:var(--text-muted);">
+      Disarankan tetap pakai warna gelap di atas latar putih/terang agar QR mudah dipindai kamera.
+    </p>
+  </div>
+  <style>
+    .ced-qrcolor-opt {
+      display:flex; align-items:center; gap:12px;
+      padding:9px 14px; cursor:pointer;
+      transition:background .15s;
+      border:none; background:transparent; width:100%;
+      text-align:left; color:#e8e8f0;
+    }
+    .ced-qrcolor-opt:hover { background:rgba(204,255,0,0.06); }
+    .ced-qrcolor-opt.active { background:rgba(204,255,0,0.1); }
+    .ced-qrcolor-opt-swatch {
+      width:16px; height:16px; border-radius:50%; flex-shrink:0;
+      border:2px solid rgba(255,255,255,0.2);
+    }
+  </style>
 </div>
         <!-- 4. Coordinate readout — 1 sumber kebenaran: BBOX -->
         <div class="ced-coords">
@@ -2379,16 +2455,17 @@ async function generateAndStore() {
     const ctx = canvas.getContext('2d');
 
     // ── Baca ulang QR config dari Firestore (independent dari ced Admin state) ──
-    let cfgShowQR = false, cfgQrX = 760, cfgQrY = 500, cfgQrW = 100, cfgQrH = 100;
+    let cfgShowQR = false, cfgQrX = 760, cfgQrY = 500, cfgQrW = 100, cfgQrH = 100, cfgQrColor = '#000000';
     try {
       const qrSnap = await db.collection('settings').doc('certificate_config').get();
       if (qrSnap.exists) {
         const qd = qrSnap.data();
-        if (qd.showQR   != null) cfgShowQR = qd.showQR;
-        if (qd.qrX      != null) cfgQrX    = qd.qrX;
-        if (qd.qrY      != null) cfgQrY    = qd.qrY;
-        if (qd.qrWidth  != null) cfgQrW    = qd.qrWidth;
-        if (qd.qrHeight != null) cfgQrH    = qd.qrHeight;
+        if (qd.showQR   != null) cfgShowQR  = qd.showQR;
+        if (qd.qrX      != null) cfgQrX     = qd.qrX;
+        if (qd.qrY      != null) cfgQrY     = qd.qrY;
+        if (qd.qrWidth  != null) cfgQrW     = qd.qrWidth;
+        if (qd.qrHeight != null) cfgQrH     = qd.qrHeight;
+        if (qd.qrColor  != null) cfgQrColor = qd.qrColor;
       }
     } catch(e) {
       console.warn('[QR Config] Gagal baca Firestore, QR tidak akan digenerate:', e.message);
@@ -2402,14 +2479,16 @@ async function generateAndStore() {
       const qrHelper = document.getElementById('qrcode-helper');
       qrHelper.innerHTML = "";
       
-      // Ukuran & posisi QR berdasarkan setting Admin yang tersimpan di Firestore
+      // Ukuran, posisi & warna QR berdasarkan setting Admin yang tersimpan di Firestore.
+      // correctLevel M (bukan H): pola QR lebih ringkas/tidak terlalu padat secara visual,
+      // tetap punya toleransi error ~15% sehingga aman untuk kamera HP yang scan agak miring/blur.
       const qrcode = new QRCode(qrHelper, {
         text: verificationUrl,
         width: cfgQrW,
         height: cfgQrH,
-        colorDark : "#000000",
+        colorDark : cfgQrColor,
         colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
+        correctLevel : QRCode.CorrectLevel.M
       });
 
       await new Promise(resolve => setTimeout(resolve, 250));
@@ -3260,10 +3339,14 @@ async function cedLoadFromFirestore() {
     if (d.qrY      != null) ced.qrY      = d.qrY;
     if (d.qrWidth  != null) ced.qrWidth  = d.qrWidth;
     if (d.qrHeight != null) ced.qrHeight = d.qrHeight;
+    if (d.qrColor  != null) ced.qrColor  = d.qrColor;
+    if (typeof cedSyncQRColorUI === 'function') cedSyncQRColorUI(ced.qrColor || '#000000');
     // Sync tombol toggle & bbox overlay QR sesuai state Firestore
     const qrBbox = document.getElementById('qr-bbox');
     const qrBtn  = document.getElementById('btn-toggle-qr');
+    const qrColorField = document.getElementById('ced-qrcolor-field');
     if (qrBbox) qrBbox.style.display = ced.showQR ? 'block' : 'none';
+    if (qrColorField) qrColorField.style.display = ced.showQR ? 'block' : 'none';
     if (qrBtn) {
       if (ced.showQR) {
         qrBtn.innerHTML = '❌ Hapus QR Code Placeholder';
@@ -3496,13 +3579,14 @@ async function _cedDraw() {
   ctx.restore();
   // MENGGAMBAR DUMMY QR CODE PADA KANVAS PREVIEW ADMIN
   if (window.ced && ced.showQR) {
-    ctx.fillStyle = "rgba(0, 229, 160, 0.08)";
+    const qrPreviewColor = ced.qrColor || '#000000';
+    ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
     ctx.fillRect(ced.qrX, ced.qrY, ced.qrWidth, ced.qrHeight);
-    ctx.strokeStyle = "#00e5a0";
+    ctx.strokeStyle = qrPreviewColor;
     ctx.lineWidth = 2;
     ctx.strokeRect(ced.qrX, ced.qrY, ced.qrWidth, ced.qrHeight);
     
-    ctx.fillStyle = "#00e5a0";
+    ctx.fillStyle = qrPreviewColor;
     const pSize = Math.round(ced.qrWidth * 0.24);
     
     ctx.fillRect(ced.qrX + 6, ced.qrY + 6, pSize, pSize);
@@ -3511,6 +3595,10 @@ async function _cedDraw() {
     
     ctx.fillRect(ced.qrX + ced.qrWidth - pSize - 6, ced.qrY + 6, pSize, pSize);
     ctx.clearRect(ced.qrX + ced.qrWidth - pSize - 3, ced.qrY + 9, pSize - 6, pSize - 6);
+    ctx.fillRect(ced.qrX + ced.qrWidth - pSize - 1, ced.qrY + 11, pSize - 10, pSize - 10);
+    
+    ctx.fillRect(ced.qrX + 6, ced.qrY + ced.qrHeight - pSize - 6, pSize, pSize);
+    ctx.clearRect(ced.qrX + 9, ced.qrY + ced.qrHeight - pSize - 3, pSize - 6, pSize - 6);
     ctx.fillRect(ced.qrX + ced.qrWidth - pSize - 1, ced.qrY + 11, pSize - 10, pSize - 10);
     
     ctx.fillRect(ced.qrX + 6, ced.qrY + ced.qrHeight - pSize - 6, pSize, pSize);
@@ -3649,6 +3737,7 @@ async function cedSaveConfig() {
   qrY:            isFinite(ced.qrY)    ? Math.round(ced.qrY)    : 500,
   qrWidth:        isFinite(ced.qrWidth)  ? Math.round(ced.qrWidth)  : 100,
   qrHeight:       isFinite(ced.qrHeight) ? Math.round(ced.qrHeight) : 100,
+  qrColor:        ced.qrColor || '#000000',
   updatedAt:      firebase.firestore.FieldValue.serverTimestamp(),
 };
 
@@ -3802,11 +3891,13 @@ async function cedSaveConfig() {
   ced.qrY = 500;      
   ced.qrWidth = 100;  
   ced.qrHeight = 100; 
+  ced.qrColor = '#000000';
 
   window.toggleQRBox = function() {
     ced.showQR = !ced.showQR;
     const qrBbox = document.getElementById('qr-bbox');
     const btn = document.getElementById('btn-toggle-qr');
+    const colorField = document.getElementById('ced-qrcolor-field');
     if (!qrBbox || !btn) return;
 
     if (ced.showQR) {
@@ -3815,12 +3906,14 @@ async function cedSaveConfig() {
       btn.style.background = 'rgba(255, 77, 109, 0.1)';
       btn.style.borderColor = '#ff4d6d';
       btn.style.color = '#ff4d6d';
+      if (colorField) colorField.style.display = 'block';
     } else {
       qrBbox.style.display = 'none';
       btn.innerHTML = '➕ QR Code';
       btn.style.background = 'rgba(0, 229, 160, 0.1)';
       btn.style.borderColor = '#00e5a0';
       btn.style.color = '#00e5a0';
+      if (colorField) colorField.style.display = 'none';
     }
     if (typeof cedRedraw === 'function') cedRedraw();
     syncQRBbox();
@@ -4017,6 +4110,106 @@ detectDevice();
       if (chevron) chevron.style.transform = 'rotate(0deg)';
       trigger.style.borderColor = 'rgba(255,255,255,0.1)';
       _fpOpen = false;
+    }
+  });
+})();
+
+// ════════════════════════════════════════════════════════════════
+// QR COLOR PICKER — dropdown pilihan warna QR Code (pattern sama
+// dengan Font Family picker di atas)
+// ════════════════════════════════════════════════════════════════
+(function initQRColorPicker() {
+  let _qcpOpen = false;
+
+  // Toggle open/close
+  window.cedToggleQRColorPicker = function() {
+    const picker  = document.getElementById('ced-qrcolor-picker');
+    const chevron = document.getElementById('ced-qrcolor-chevron');
+    const trigger = document.getElementById('ced-qrcolor-trigger');
+    if (!picker) return;
+    _qcpOpen = !_qcpOpen;
+    picker.style.display  = _qcpOpen ? 'block' : 'none';
+    if (chevron) chevron.style.transform = _qcpOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = _qcpOpen ? 'rgba(204,255,0,0.4)' : 'rgba(255,255,255,0.1)';
+  };
+
+  // Pick a QR color option
+  window.cedPickQRColor = function(btn) {
+    const value = btn.dataset.value;
+    const label = btn.dataset.label;
+
+    // Update hidden input (read by cedSaveConfig)
+    const hiddenInput = document.getElementById('ced-qrcolor-select');
+    if (hiddenInput) hiddenInput.value = value;
+
+    // Update state
+    ced.qrColor = value;
+
+    // Update trigger label + swatch
+    const labelEl  = document.getElementById('ced-qrcolor-label');
+    const swatchEl = document.getElementById('ced-qrcolor-swatch');
+    if (labelEl)  labelEl.textContent = label;
+    if (swatchEl) swatchEl.style.background = value;
+
+    // Active state on options
+    document.querySelectorAll('.ced-qrcolor-opt').forEach(o => o.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Close picker
+    const picker  = document.getElementById('ced-qrcolor-picker');
+    const chevron = document.getElementById('ced-qrcolor-chevron');
+    const trigger = document.getElementById('ced-qrcolor-trigger');
+    if (picker)  picker.style.display  = 'none';
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+    _qcpOpen = false;
+
+    // Trigger redraw — dummy QR placeholder ikut berubah warna di preview
+    if (typeof cedRedraw === 'function') cedRedraw();
+  };
+
+  // Sync UI from a saved qrColor value (called on Firestore load)
+  window.cedSyncQRColorUI = function(value) {
+    const opts = document.querySelectorAll('.ced-qrcolor-opt');
+    let matched = false;
+    opts.forEach(btn => {
+      if (btn.dataset.value === value) {
+        matched = true;
+        btn.classList.add('active');
+        const label    = btn.dataset.label;
+        const labelEl  = document.getElementById('ced-qrcolor-label');
+        const swatchEl = document.getElementById('ced-qrcolor-swatch');
+        if (labelEl)  labelEl.textContent = label;
+        if (swatchEl) swatchEl.style.background = value;
+        const hiddenInput = document.getElementById('ced-qrcolor-select');
+        if (hiddenInput) hiddenInput.value = value;
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    // Value tersimpan tapi bukan salah satu preset (mis. hasil custom lama) — tetap tampilkan swatch-nya
+    if (!matched) {
+      const labelEl  = document.getElementById('ced-qrcolor-label');
+      const swatchEl = document.getElementById('ced-qrcolor-swatch');
+      const hiddenInput = document.getElementById('ced-qrcolor-select');
+      if (labelEl)  labelEl.textContent = 'Custom';
+      if (swatchEl) swatchEl.style.background = value;
+      if (hiddenInput) hiddenInput.value = value;
+    }
+  };
+
+  // Close picker on outside click
+  document.addEventListener('click', function(e) {
+    if (!_qcpOpen) return;
+    const field = document.getElementById('ced-qrcolor-picker');
+    const trigger = document.getElementById('ced-qrcolor-trigger');
+    if (!field || !trigger) return;
+    if (!field.contains(e.target) && !trigger.contains(e.target)) {
+      field.style.display = 'none';
+      const chevron = document.getElementById('ced-qrcolor-chevron');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+      trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+      _qcpOpen = false;
     }
   });
 })();

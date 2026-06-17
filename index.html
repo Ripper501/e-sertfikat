@@ -2758,51 +2758,34 @@ window.surveyGoNext = async function() {
 // Dipanggil setelah pertanyaan terakhir terjawab. Kirim jawaban ke Google
 // Form (fire-and-forget, lihat catatan CORS) + simpan cadangan ke Firestore,
 // baru lanjut generate sertifikat seperti behavior semula.
+// Dipanggil setelah pertanyaan terakhir terjawab. Kirim jawaban ke Google Form
 async function surveyFinishAndGenerate() {
   const nextBtn = document.getElementById('btn-survey-next');
   if (nextBtn) nextBtn.disabled = true;
 
-  // ── 1. KIRIM OTOMATIS KE GOOGLE SHEET (MENGGUNAKAN APPS SCRIPT ARRAY)
+  // ── 1. KIRIM OTOMATIS KE GOOGLE SHEET (MENGGUNAKAN APPS SCRIPT ARRAY DINAMIS)
   try {
-    // Susun jawaban secara berurutan: Kolom A = Nama, Kolom B = Pertanyaan 1, Kolom C = Pertanyaan 2, dst.
-    // Header otomatis
-const headers = [
-  "Nama Sertifikat",
-  "Email",
-  ...studentSurveyConfig.questions.map(q => q.text)
-];
+    // Memetakan jawaban survei ke format array objek [{label, value}] sesuai pesanan Apps Script
+    const dynamicResponses = studentSurveyConfig.questions.map(q => ({
+      label: q.text,                            // Menjadi judul kolom di Google Sheets
+      value: studentSurveyAnswers[q.id] || ""   // Menjadi isi jawaban siswa
+    }));
 
-// Jawaban otomatis
-const values = [
-  certName,
-  currentUser?.email || "",
-  ...studentSurveyConfig.questions.map(
-    q => studentSurveyAnswers[q.id] || ""
-  )
-];
+    // Ambil nama atau ID event/seminar saat ini untuk nama tab
+    const eventId = currentEvent?.title || currentEvent?.name || currentEvent?.id || "General_Event";
 
-// Ambil nama event
-const eventId =
-  currentEvent?.title ||
-  currentEvent?.name ||
-  currentEvent?.id ||
-  "General_Event";
+    // Susun payload agar pas dengan variabel di Google Apps Script Anda
+    const payload = {
+      eventId: eventId,
+      namaSertifikat: certName,
+      email: currentUser?.email || "No Email",
+      dynamicResponses: dynamicResponses
+    };
 
-const payload = {
-  eventId,
-  headers,
-  values
-};
+    // ⚠️ MASUKKAN URL WEB APP YANG BERAKHIRAN /exec DI SINI! ⚠️
+    const urlAppsScript = "https://script.google.com/macros/s/AKfycbySDGHr9QY1D2cLS9Jhy85Oxwi9jAqNXONLKRwX8ER0O_yeQd2MkqIHYourmNzJeBliDQ/exec";
 
-    // ⚠️ GANTI URL DI BAWAH INI DENGAN URL DEPLOYMENT WEB APP APPS SCRIPT KAMU
-    const urlAppsScript = "https://script.google.com/macros/library/d/1k736C5bXs1D7gEAyc7XJir3O4LADlvI6Bn9cek3qq6udVIGxNzwRoIga/5";
-
-    // Content-Type sengaja "text/plain", BUKAN "application/json": JSON adalah
-    // content-type yang memicu CORS preflight (OPTIONS) sebelum browser kirim
-    // POST sungguhan. Apps Script web app tidak punya doOptions sehingga
-    // preflight itu gagal dan POST aslinya tidak pernah terkirim. Dengan
-    // text/plain, request dianggap "simple request" (tanpa preflight), dan
-    // doPost() tetap bisa JSON.parse(e.postData.contents) seperti biasa.
+    // Gunakan text/plain untuk membungkus JSON agar bypass CORS (Anti-Blokir Browser)
     await fetch(urlAppsScript, {
       method: 'POST',
       headers: {
@@ -2816,8 +2799,7 @@ const payload = {
     console.warn('[Survey] Gagal kirim ke Apps Script:', e.message);
   }
 
-  // ── 2. Simpan cadangan jawaban ke Firestore — supaya jawaban tetap ada
-  //       walau pengiriman ke Google Form di atas diam-diam gagal.
+  // ── 2. Simpan cadangan jawaban ke Firestore ──────────────────
   try {
     const answersForFirestore = studentSurveyConfig.questions.map(q => ({
       questionId:   q.id,
@@ -2832,7 +2814,7 @@ const payload = {
     console.warn('[Survey] Gagal simpan cadangan jawaban ke Firestore:', e.message);
   }
 
-  // ── 3. Lanjut seperti behavior semula ──────────────────────────
+  // ── 3. Lanjut generate PDF ──────────────────────────
   await generateAndStore();
   if (nextBtn) nextBtn.disabled = false;
 }

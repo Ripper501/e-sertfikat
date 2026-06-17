@@ -2786,10 +2786,12 @@ async function surveyFinishAndGenerate() {
     const urlAppsScript = "https://script.google.com/macros/s/AKfycbySDGHr9QY1D2cLS9Jhy85Oxwi9jAqNXONLKRwX8ER0O_yeQd2MkqIHYourmNzJeBliDQ/exec";
 
     // Gunakan text/plain untuk membungkus JSON agar bypass CORS (Anti-Blokir Browser)
+    // PENTING: Gunakan text/plain dan no-cors untuk membungkus JSON agar bypass CORS (Anti-Blokir Browser)
     await fetch(urlAppsScript, {
       method: 'POST',
+      mode: 'no-cors', // 👈 TAMBAHKAN BARIS INI (Ini kunci utamanya!)
       headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
+        'Content-Type': 'text/plain'
       },
       body: JSON.stringify(payload)
     });

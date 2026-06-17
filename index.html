@@ -2245,20 +2245,65 @@
 
     <div style="max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px;">
 
-      <!-- Google Form action URL -->
+      <!-- Nama Event + Tombol Sheet (2 kolom sejajar) -->
       <div class="ced-field">
-        <label class="ced-label">Google Form Action URL</label>
-        <input
-          class="ced-input"
-          id="survey-action-url"
-          type="text"
-          placeholder="https://docs.google.com/spreadsheets/d/1k0BHEvoMg1nltOTLeJorZqgP4-DxXLgCVgH9QqDN1u0/edit?gid=0#gid=0"
-          spellcheck="false"
-          autocomplete="off"
-        />
-        <p style="margin:2px 0 0; font-size:11px; line-height:1.5; color:var(--text-dim);">
-          Ambil dari tab Network browser saat submit form percobaan. Lihat URL request <code style="color:var(--accent);">formResponse</code>.
-        </p>
+        <div style="display:flex; gap:12px; align-items:flex-start;">
+
+          <!-- Kolom kiri: Nama Event -->
+          <div style="flex:1; min-width:0;">
+            <label class="ced-label">Nama Event</label>
+            <input
+              class="ced-input"
+              id="survey-event-name"
+              type="text"
+              placeholder="Contoh: UNTL"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <p style="margin:4px 0 0; font-size:10.5px; line-height:1.5; color:var(--text-dim);">
+              Jadi nama <code style="color:var(--accent);">tab sheet</code> (contoh: <code style="color:var(--accent);">UNTL</code> atau <code style="color:var(--accent);">Workshop_Dili</code>)
+            </p>
+          </div>
+
+          <!-- Kolom kanan: Tombol Sheet langsung link ke spreadsheet -->
+          <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:0;">
+            <label class="ced-label" style="text-align:center;">Sheet</label>
+            <a
+              id="survey-sheet-link"
+              href="https://docs.google.com/spreadsheets/d/1k0BHEvoMg1nltOTLeJorZqgP4-DxXLgCVgH9QqDN1u0/edit?gid=1981152439#gid=1981152439"
+              target="_blank"
+              rel="noopener"
+              title="Buka Google Sheet"
+              style="
+                display:flex; flex-direction:column; align-items:center; justify-content:center;
+                gap:5px;
+                width:72px; height:54px;
+                background:rgba(0,229,160,0.06);
+                border:1px solid rgba(0,229,160,0.3);
+                border-radius:var(--radius-sm);
+                color:var(--success);
+                text-decoration:none;
+                font-family:var(--font-mono);
+                font-size:9px;
+                letter-spacing:0.06em;
+                text-transform:uppercase;
+                transition:var(--transition);
+                cursor:pointer;
+              "
+              onmouseover="this.style.background='rgba(0,229,160,0.14)';this.style.borderColor='var(--success)';this.style.transform='translateY(-1px)'"
+              onmouseout="this.style.background='rgba(0,229,160,0.06)';this.style.borderColor='rgba(0,229,160,0.3)';this.style.transform=''"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <line x1="3" y1="9" x2="21" y2="9"/>
+                <line x1="3" y1="15" x2="21" y2="15"/>
+                <line x1="9" y1="3" x2="9" y2="21"/>
+              </svg>
+              Buka
+            </a>
+          </div>
+
+        </div>
       </div>
 
       <!-- Survey question cards (rendered dynamically) -->
@@ -2318,6 +2363,29 @@
     cursor:pointer; padding:3px; display:flex; transition:var(--transition);
   }
   .survey-q-remove:hover { color:var(--danger); }
+  .survey-q-insert {
+    background: rgba(204,255,0,0.08);
+    border: 1px solid rgba(204,255,0,0.22);
+    border-radius: 6px;
+    color: var(--accent);
+    cursor: pointer;
+    padding: 3px 5px;
+    display: flex;
+    align-items: center;
+    transition: var(--transition);
+  }
+  .survey-q-insert:hover { background: rgba(204,255,0,0.18); }
+  /* Dropdown tipe — warna background gelap agar teks putih jelas */
+  .survey-type-select {
+    background: #2a2c42 !important;
+    color: var(--text) !important;
+    border-color: var(--border-soft) !important;
+  }
+  .survey-type-select option {
+    background: #1e2033;
+    color: var(--text);
+    padding: 8px;
+  }
   .survey-q-row { display:flex; gap:8px; margin-top:8px; }
   .survey-q-row .ced-input, .survey-q-row .ced-select { margin:0; }
   .survey-opt-row { display:flex; gap:6px; margin-top:6px; align-items:center; }
@@ -2602,7 +2670,7 @@ async function surveyAdjustStepTracker() {
   try {
     const snap = await db.collection('settings').doc('survey_config').get();
     const d = snap.exists ? snap.data() : null;
-    hasActiveSurvey = !!(d && Array.isArray(d.questions) && d.questions.filter(q => q && q.text && q.entryId).length > 0);
+    hasActiveSurvey = !!(d && Array.isArray(d.questions) && d.questions.filter(q => q && q.text).length > 0);
   } catch (e) {
     hasActiveSurvey = false; // fail-safe: anggap tidak ada survei jika gagal cek
   }
@@ -2627,7 +2695,7 @@ async function surveyAdjustStepTracker() {
 // Runtime state khusus alur student. Dipisah dari `surveyQuestions`
 // milik panel admin agar dua context (admin editing vs student
 // menjawab) tidak saling menimpa kalau kebetulan berjalan bersamaan.
-let studentSurveyConfig    = null;  // { actionUrl, questions: [...] }
+let studentSurveyConfig    = null;  // { eventName, questions: [...] }
 let studentSurveyAnswers   = {};    // { [questionId]: answerString }
 let studentSurveyIndex     = 0;     // index pertanyaan yang sedang ditampilkan
 
@@ -2637,7 +2705,7 @@ async function surveyStart() {
   try {
     const snap = await db.collection('settings').doc('survey_config').get();
     const d = snap.exists ? snap.data() : null;
-    const questions = (d && Array.isArray(d.questions)) ? d.questions.filter(q => q && q.text && q.entryId) : [];
+    const questions = (d && Array.isArray(d.questions)) ? d.questions.filter(q => q && q.text) : [];
 
     if (questions.length === 0) {
       // Tidak ada survei aktif sama sekali — lanjut seperti behavior lama, tanpa step tambahan.
@@ -2646,7 +2714,7 @@ async function surveyStart() {
       return;
     }
 
-    studentSurveyConfig  = { actionUrl: d.actionUrl || null, questions };
+    studentSurveyConfig  = { eventName: (d.eventName || 'General_Event'), questions };
     studentSurveyAnswers = {};
     studentSurveyIndex   = 0;
     surveyRenderCurrentQuestion();
@@ -2702,6 +2770,28 @@ function surveyRenderCurrentQuestion() {
         </label>
       `;
     }).join('');
+
+  } else if (q.type === 'checkbox') {
+    // Jawaban checkbox disimpan sebagai string CSV, mis. "Opsi A,Opsi C"
+    const selected = existingAnswer ? existingAnswer.split(',').map(s => s.trim()) : [];
+    answerArea.innerHTML = (q.options || []).map((opt, oi) => {
+      const isChecked = selected.includes(opt) ? 'checked' : '';
+      const optId = `survey-cb-${studentSurveyIndex}-${oi}`;
+      return `
+        <label for="${optId}" style="
+          display:flex; align-items:center; gap:12px;
+          padding:14px 16px; margin-bottom:10px;
+          background:rgba(255,255,255,0.03); border:1px solid ${selected.includes(opt) ? 'var(--accent)' : 'var(--border-soft)'};
+          border-radius:var(--radius-md); cursor:pointer; transition:var(--transition);
+        ">
+          <input type="checkbox" id="${optId}" name="survey-current-cb" value="${escapeHtml(opt)}" ${isChecked}
+            style="width:17px; height:17px; accent-color:var(--accent); flex-shrink:0; cursor:pointer;"
+            onchange="surveyToggleCheckbox('${q.id}', '${escapeHtml(opt)}', this.checked, this)" />
+          <span style="font-size:14px; color:var(--text);">${escapeHtml(opt)}</span>
+        </label>
+      `;
+    }).join('');
+
   } else {
     answerArea.innerHTML = `
       <div class="input-wrap">
@@ -2726,6 +2816,32 @@ window.surveySetCurrentAnswer = function(value) {
   studentSurveyAnswers[q.id] = value;
   const validationMsg = document.getElementById('survey-validation-msg');
   if (validationMsg && value && value.trim()) validationMsg.style.display = 'none';
+};
+
+// Dipanggil oleh checkbox — toggle opsi dalam CSV answer
+window.surveyToggleCheckbox = function(qid, opt, isChecked, el) {
+  if (!studentSurveyConfig) return;
+  const q = studentSurveyConfig.questions[studentSurveyIndex];
+  if (!q || q.id !== qid) return;
+
+  const current = studentSurveyAnswers[q.id] || '';
+  let selected = current ? current.split(',').map(s => s.trim()).filter(s => s) : [];
+
+  if (isChecked) {
+    if (!selected.includes(opt)) selected.push(opt);
+  } else {
+    selected = selected.filter(s => s !== opt);
+  }
+  studentSurveyAnswers[q.id] = selected.join(', ');
+
+  // Update border label secara visual tanpa re-render penuh
+  const label = el?.closest('label');
+  if (label) {
+    label.style.borderColor = isChecked ? 'var(--accent)' : 'var(--border-soft)';
+    label.style.background  = isChecked ? 'rgba(204,255,0,0.04)' : 'rgba(255,255,255,0.03)';
+  }
+  const validationMsg = document.getElementById('survey-validation-msg');
+  if (validationMsg && selected.length > 0) validationMsg.style.display = 'none';
 };
 
 window.surveyGoBack = function() {
@@ -2771,8 +2887,8 @@ async function surveyFinishAndGenerate() {
       value: studentSurveyAnswers[q.id] || ""   // Menjadi isi jawaban siswa
     }));
 
-    // Ambil nama atau ID event/seminar saat ini untuk nama tab
-    const eventId = currentEvent?.title || currentEvent?.name || currentEvent?.id || "General_Event";
+    // Ambil nama event dari config survei yang sudah di-set admin (field "Nama Event")
+    const eventId = studentSurveyConfig?.eventName || 'General_Event';
 
     // Susun payload agar pas dengan variabel di Google Apps Script Anda
     const payload = {
@@ -3784,7 +3900,7 @@ function toggleCertEditor() {
 // ════════════════════════════════════════════════════════════════
 
 // Runtime state: array pertanyaan yang sedang diedit di panel.
-// Setiap item: { id, text, type: 'text'|'choice', entryId, options: [] }
+// Setiap item: { id, text, type: 'text'|'choice', options: [] }
 let surveyQuestions = [];
 let _surveyQIdCounter = 0;
 
@@ -3828,7 +3944,7 @@ function toggleSurveyEditor() {
   }
 }
 
-// ── Render daftar kartu pertanyaan ke DOM berdasarkan surveyQuestions ──
+
 function surveyRenderQuestions() {
   const list  = document.getElementById('survey-questions-list');
   const empty = document.getElementById('survey-empty-hint');
@@ -3842,10 +3958,19 @@ function surveyRenderQuestions() {
   if (empty) empty.style.display = 'none';
 
   list.innerHTML = surveyQuestions.map((q, i) => {
-    const isChoice = q.type === 'choice';
+    const isChoice   = q.type === 'choice';
+    const isCheckbox = q.type === 'checkbox';
+    const hasOptions = isChoice || isCheckbox;
+
     const optionsHtml = (q.options || []).map((opt, oi) => `
       <div class="survey-opt-row">
-        <input class="ced-input" type="text" placeholder="Teks opsi ${oi + 1}"
+        <span style="
+          display:inline-flex; align-items:center; justify-content:center;
+          width:18px; height:18px; flex-shrink:0;
+          border:2px solid var(--text-dim); border-radius:${isCheckbox ? '4px' : '50%'};
+          margin-right:2px; opacity:0.4;
+        "></span>
+        <input class="ced-input" type="text" placeholder="Opsi ${oi + 1}"
           value="${escapeHtml(opt)}"
           oninput="surveyUpdateOption('${q.id}', ${oi}, this.value)" />
         <button type="button" class="survey-opt-remove" onclick="surveyRemoveOption('${q.id}', ${oi})" title="Hapus opsi">
@@ -3856,29 +3981,43 @@ function surveyRenderQuestions() {
 
     return `
       <div class="survey-q-card" data-qid="${q.id}">
+
+        <!-- Header: nomor + tombol insert + hapus -->
         <div class="survey-q-card-hd">
           <span class="survey-q-card-num">Pertanyaan ${i + 1}</span>
-          <button type="button" class="survey-q-remove" onclick="surveyRemoveQuestion('${q.id}')" title="Hapus pertanyaan">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
-          </button>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <button type="button" class="survey-q-insert" onclick="surveyInsertAfter('${q.id}')" title="Tambah pertanyaan baru di sini">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button type="button" class="survey-q-remove" onclick="surveyRemoveQuestion('${q.id}')" title="Hapus pertanyaan">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
         </div>
 
-        <input class="ced-input" type="text" placeholder="Teks pertanyaan, mis. Bagaimana kualitas workshop ini?"
-          value="${escapeHtml(q.text || '')}"
-          oninput="surveyUpdateField('${q.id}', 'text', this.value)" />
-
-        <div class="survey-q-row">
-          <select class="ced-input ced-select" style="flex:0 0 150px;" onchange="surveyUpdateField('${q.id}', 'type', this.value)">
-            <option value="text" ${!isChoice ? 'selected' : ''}>Teks bebas</option>
-            <option value="choice" ${isChoice ? 'selected' : ''}>Pilihan ganda</option>
+        <!-- Baris utama: pertanyaan kiri + dropdown kanan -->
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input
+            class="ced-input"
+            type="text"
+            placeholder="Tulis pertanyaan di sini..."
+            value="${escapeHtml(q.text || '')}"
+            oninput="surveyUpdateField('${q.id}', 'text', this.value)"
+            style="flex:1; min-width:0;"
+          />
+          <select
+            class="ced-input ced-select survey-type-select"
+            onchange="surveyUpdateField('${q.id}', 'type', this.value)"
+            style="flex:0 0 150px;"
+          >
+            <option value="text"     ${ q.type === 'text'     ? 'selected' : ''}>✏️  Teks bebas</option>
+            <option value="choice"   ${ q.type === 'choice'   ? 'selected' : ''}>🔘  Pilihan ganda</option>
+            <option value="checkbox" ${ q.type === 'checkbox' ? 'selected' : ''}>☑️  Kotak centang</option>
           </select>
-          <input class="ced-input" type="text" placeholder="entry.123456789" style="flex:1; font-family:var(--font-mono); font-size:12.5px;"
-            value="${escapeHtml(q.entryId || '')}"
-            oninput="surveyUpdateField('${q.id}', 'entryId', this.value)" />
         </div>
 
-        ${isChoice ? `
-          <div style="margin-top:8px;">
+        ${hasOptions ? `
+          <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
             ${optionsHtml}
             <button type="button" class="survey-opt-add" onclick="surveyAddOption('${q.id}')">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -3892,7 +4031,7 @@ function surveyRenderQuestions() {
 }
 
 window.surveyAddQuestion = function() {
-  surveyQuestions.push({ id: _surveyNewId(), text: '', type: 'text', entryId: '', options: [] });
+  surveyQuestions.push({ id: _surveyNewId(), text: '', type: 'text', options: [] });
   surveyRenderQuestions();
 };
 
@@ -3901,12 +4040,26 @@ window.surveyRemoveQuestion = function(qid) {
   surveyRenderQuestions();
 };
 
+// Insert pertanyaan baru SETELAH kartu dengan id qid
+window.surveyInsertAfter = function(qid) {
+  const idx = surveyQuestions.findIndex(q => q.id === qid);
+  if (idx === -1) return;
+  const newQ = { id: _surveyNewId(), text: '', type: 'text', options: [] };
+  surveyQuestions.splice(idx + 1, 0, newQ);
+  surveyRenderQuestions();
+  // Scroll ke kartu baru agar langsung terlihat
+  setTimeout(() => {
+    const cards = document.querySelectorAll('.survey-q-card');
+    if (cards[idx + 1]) cards[idx + 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 80);
+};
+
 window.surveyUpdateField = function(qid, field, value) {
   const q = surveyQuestions.find(q => q.id === qid);
   if (!q) return;
   q[field] = value;
-  // Saat ganti tipe ke "choice" dan belum ada opsi sama sekali, beri 2 slot kosong agar admin langsung bisa isi.
-  if (field === 'type' && value === 'choice' && (!q.options || q.options.length === 0)) {
+  // Saat ganti tipe ke "choice" atau "checkbox" dan belum ada opsi, beri 2 slot kosong.
+  if (field === 'type' && (value === 'choice' || value === 'checkbox') && (!q.options || q.options.length === 0)) {
     q.options = ['', ''];
   }
   if (field === 'type') {
@@ -3940,18 +4093,18 @@ window.surveyUpdateOption = function(qid, optIndex, value) {
 async function surveySaveConfig() {
   const btn    = document.getElementById('survey-save-btn');
   const status = document.getElementById('survey-save-status');
-  const actionUrlRaw = document.getElementById('survey-action-url').value.trim();
+  const eventNameRaw = (document.getElementById('survey-event-name').value.trim()) || 'General_Event';
 
-  // Validasi ringan: pertanyaan tanpa teks atau tanpa entry ID akan membingungkan saat dipakai nanti.
-  const invalid = surveyQuestions.find(q => !q.text || !q.text.trim() || !q.entryId || !q.entryId.trim());
+  // Validasi ringan: pertanyaan tanpa teks akan membingungkan saat dipakai nanti.
+  const invalid = surveyQuestions.find(q => !q.text || !q.text.trim());
   if (invalid) {
-    status.textContent = '✗ Setiap pertanyaan wajib punya teks dan entry ID Google Form.';
+    status.textContent = '✗ Setiap pertanyaan wajib punya teks.';
     status.style.color = 'var(--danger)';
     return;
   }
-  const invalidChoice = surveyQuestions.find(q => q.type === 'choice' && (!q.options || q.options.filter(o => o && o.trim()).length < 2));
+  const invalidChoice = surveyQuestions.find(q => (q.type === 'choice' || q.type === 'checkbox') && (!q.options || q.options.filter(o => o && o.trim()).length < 2));
   if (invalidChoice) {
-    status.textContent = '✗ Pertanyaan pilihan ganda butuh minimal 2 opsi terisi.';
+    status.textContent = '✗ Pilihan ganda & kotak centang butuh minimal 2 opsi terisi.';
     status.style.color = 'var(--danger)';
     return;
   }
@@ -3960,24 +4113,23 @@ async function surveySaveConfig() {
   status.textContent = '⏳ Menyimpan konfigurasi survei ke Firestore...';
   status.style.color = 'var(--accent)';
 
-  // Bersihkan opsi kosong sebelum simpan, dan urutan ditentukan oleh urutan array (dibaca admin sebagai urutan tampil ke student).
+  // Bersihkan opsi kosong sebelum simpan
   const cleanQuestions = surveyQuestions.map(q => ({
     id:      q.id,
     text:    q.text.trim(),
-    type:    q.type === 'choice' ? 'choice' : 'text',
-    entryId: q.entryId.trim(),
-    options: q.type === 'choice' ? (q.options || []).map(o => o.trim()).filter(o => o) : [],
+    type:    ['choice','checkbox'].includes(q.type) ? q.type : 'text',
+    options: ['choice','checkbox'].includes(q.type) ? (q.options || []).map(o => o.trim()).filter(o => o) : [],
   }));
 
   const payload = {
-    actionUrl: actionUrlRaw || null,
+    eventName: eventNameRaw,
     questions: cleanQuestions,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   };
 
   try {
     await db.collection('settings').doc('survey_config').set(payload, { merge: true });
-    status.textContent = `✓ Tersimpan! ${cleanQuestions.length} pertanyaan aktif.`;
+    status.textContent = `✓ Tersimpan! Event: "${eventNameRaw}" · ${cleanQuestions.length} pertanyaan aktif.`;
     status.style.color = 'var(--success)';
     setTimeout(() => { status.textContent = ''; }, 5000);
   } catch (err) {
@@ -3999,14 +4151,13 @@ async function surveyLoadFromFirestore() {
       return;
     }
     const d = snap.data();
-    const urlInput = document.getElementById('survey-action-url');
-    if (urlInput) urlInput.value = d.actionUrl || '';
+    const eventNameInput = document.getElementById('survey-event-name');
+    if (eventNameInput) eventNameInput.value = d.eventName || '';
 
     surveyQuestions = Array.isArray(d.questions) ? d.questions.map(q => ({
       id:      q.id || _surveyNewId(),
       text:    q.text || '',
-      type:    q.type === 'choice' ? 'choice' : 'text',
-      entryId: q.entryId || '',
+      type:    ['choice','checkbox'].includes(q.type) ? q.type : 'text',
       options: Array.isArray(q.options) ? q.options.slice() : [],
     })) : [];
 

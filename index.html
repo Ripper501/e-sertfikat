@@ -2757,24 +2757,46 @@ async function surveyFinishAndGenerate() {
   // ── 1. KIRIM OTOMATIS KE GOOGLE SHEET (MENGGUNAKAN APPS SCRIPT ARRAY)
   try {
     // Susun jawaban secara berurutan: Kolom A = Nama, Kolom B = Pertanyaan 1, Kolom C = Pertanyaan 2, dst.
-    const kumpulanJawaban = [certName]; 
-    
-    studentSurveyConfig.questions.forEach(q => {
-      kumpulanJawaban.push(studentSurveyAnswers[q.id] || '');
-    });
+    // Header otomatis
+const headers = [
+  "Nama Sertifikat",
+  "Email",
+  ...studentSurveyConfig.questions.map(q => q.text)
+];
 
-    const formData = new FormData();
-    formData.append("kumpulan_jawaban", JSON.stringify(kumpulanJawaban));
+// Jawaban otomatis
+const values = [
+  certName,
+  currentUser?.email || "",
+  ...studentSurveyConfig.questions.map(
+    q => studentSurveyAnswers[q.id] || ""
+  )
+];
+
+// Ambil nama event
+const eventId =
+  currentEvent?.title ||
+  currentEvent?.name ||
+  currentEvent?.id ||
+  "General_Event";
+
+const payload = {
+  eventId,
+  headers,
+  values
+};
 
     // ⚠️ GANTI URL DI BAWAH INI DENGAN URL DEPLOYMENT WEB APP APPS SCRIPT KAMU
     const urlAppsScript = "https://script.google.com/macros/s/AKfycbzto18ZfH4xBuHZ9x3ZDrFmVjISi6jzPXfuRCT31azoPrQPeYVN4WRC2O5vDOC6MShtLA/exec";
 
     // Kirim data menggunakan mode no-cors agar tidak terblock browser
-    await fetch(urlAppsScript, { 
-      method: 'POST', 
-      mode: 'no-cors', 
-      body: formData 
-    });
+   await fetch(urlAppsScript, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(payload)
+});
     
     console.log('[Survey] Data berhasil dikirim ke Google Sheet via Apps Script.');
   } catch (e) {

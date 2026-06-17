@@ -3,297 +3,487 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>E-Certificate Verification</title>
-  
+  <title>Certificate Verification</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --bg-color: #0a0a0a;
-      --card-bg: #121212;
-      --accent-yellow: #fff500; /* Kuning Premium / Neon Gen-Z */
-      --text-white: #ffffff;
-      --text-gray: #a0a0a0;
-      --border-color: #262626;
+      --gold:        #d09e3b;
+      --gold-dim:    #8a6820;
+      --gold-glow:   rgba(208,158,59,0.18);
+      --gold-line:   rgba(208,158,59,0.25);
+      --void:        #070708;
+      --surface:     #0e0e10;
+      --surface-2:   #141416;
+      --border:      rgba(208,158,59,0.15);
+      --text:        #f0ece4;
+      --text-muted:  #6b6455;
+      --danger:      #c0392b;
+      --danger-dim:  rgba(192,57,43,0.12);
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    html { scroll-behavior: smooth; }
 
     body {
-      background-color: var(--bg-color);
-      color: var(--text-white);
+      background: var(--void);
+      color: var(--text);
       font-family: 'Space Grotesk', sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       min-height: 100vh;
-      padding: 20px;
-      overflow-x: hidden;
-    }
-
-    /* Background Dekorasi ala Gen-Z */
-    .bg-glow {
-      position: absolute;
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, rgba(255, 245, 0, 0.15) 0%, rgba(0,0,0,0) 70%);
-      top: 10%;
-      right: -5%;
-      z-index: 1;
-    }
-
-    /* Container Utama */
-    .verify-container {
-      position: relative;
-      width: 100%;
-      max-width: 500px;
-      background-color: var(--card-bg);
-      border: 2px solid var(--border-color);
-      border-radius: 24px;
-      padding: 40px 32px;
-      z-index: 2;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-      transition: border-color 0.3s ease;
-    }
-
-    .verify-container:hover {
-      border-color: var(--accent-yellow);
-    }
-
-    /* Badge Verified */
-    .badge-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background-color: rgba(255, 245, 0, 0.1);
-      border: 1px solid var(--accent-yellow);
-      color: var(--accent-yellow);
-      padding: 6px 16px;
-      border-radius: 100px;
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      margin-bottom: 32px;
-      text-transform: uppercase;
-    }
-
-    /* Animasi Loading */
-    .loading-state {
-      text-align: center;
-      padding: 40px 0;
-    }
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid rgba(255, 255, 255, 0.1);
-      border-radius: 50%;
-      border-top-color: var(--accent-yellow);
-      animation: spin 1s ease-in-out infinite;
-      margin: 0 auto 16px auto;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Konten Utama */
-    .presentation-text {
-      font-size: 16px;
-      color: var(--text-gray);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .student-name {
-      font-size: 36px;
-      font-weight: 700;
-      color: var(--text-white);
-      line-height: 1.2;
-      margin-bottom: 24px;
-      word-wrap: break-word;
-    }
-
-    .info-group {
-      margin-bottom: 40px;
-    }
-
-    .student-email {
-      font-size: 16px;
-      color: var(--text-white);
-      opacity: 0.9;
-      margin-bottom: 6px;
-    }
-
-    .student-uid {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      color: var(--text-gray);
-      background-color: #1a1a1a;
-      padding: 4px 8px;
-      border-radius: 6px;
-      display: inline-block;
-    }
-
-    /* Footer Card (Issue At di bawah kiri) */
-    .card-footer {
-      border-top: 1px solid var(--border-color);
-      padding-top: 20px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
-    .issue-label {
-      font-size: 12px;
-      color: var(--text-gray);
+    /* ── Ambient background ─────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(208,158,59,0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 80% 80%, rgba(208,158,59,0.04) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Noise texture overlay ──────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.6;
+    }
+
+    /* ── Card ───────────────────────────────────────────────── */
+    .card {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      z-index: 2;
+      opacity: 0;
+      transform: translateY(28px);
+      animation: cardIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+    }
+
+    @keyframes cardIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Gold ribbon top seal */
+    .card-ribbon {
+      height: 3px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        var(--gold-dim) 15%,
+        var(--gold) 40%,
+        #f5d97a 50%,
+        var(--gold) 60%,
+        var(--gold-dim) 85%,
+        transparent 100%
+      );
+      border-radius: 2px 2px 0 0;
+      position: relative;
+    }
+    .card-ribbon::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: inherit;
+      filter: blur(6px);
+      opacity: 0.5;
+    }
+
+    .card-body {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 20px 20px;
+      padding: 36px 36px 32px;
+      box-shadow:
+        0 32px 80px rgba(0,0,0,0.7),
+        0 0 0 1px rgba(255,255,255,0.03) inset,
+        0 1px 0 rgba(208,158,59,0.08) inset;
+    }
+
+    /* ── Loading ────────────────────────────────────────────── */
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 24px 0 8px;
+    }
+    .spinner-ring {
+      width: 36px; height: 36px;
+      border: 2px solid rgba(208,158,59,0.15);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
-    .issue-date {
-      font-size: 14px;
+    /* ── Badge ──────────────────────────────────────────────── */
+    .badge-verified {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 14px 5px 10px;
+      border-radius: 100px;
+      border: 1px solid var(--gold-line);
+      background: var(--gold-glow);
+      color: var(--gold);
+      font-size: 11px;
       font-weight: 600;
-      color: var(--text-white);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Shine sweep */
+    .badge-verified::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(208,158,59,0.3), transparent);
+      animation: shine 2.8s ease-in-out 0.9s infinite;
+    }
+    @keyframes shine {
+      0% { left: -100%; }
+      40%, 100% { left: 160%; }
+    }
+    .badge-icon {
+      width: 16px; height: 16px;
+      background: var(--gold);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .badge-icon svg { display: block; }
+
+    /* ── Presented to ───────────────────────────────────────── */
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
     }
 
-    /* Tampilan Error */
+    .cert-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(32px, 8vw, 48px);
+      font-weight: 600;
+      line-height: 1.1;
+      color: var(--text);
+      margin-bottom: 28px;
+      word-break: break-word;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.55s forwards;
+    }
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Divider ────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, var(--gold-line), transparent);
+      margin-bottom: 24px;
+    }
+
+    /* ── Info rows ──────────────────────────────────────────── */
+    .info-block {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .info-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .info-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .info-value {
+      font-size: 15px;
+      color: var(--text);
+      font-weight: 400;
+    }
+    .info-uid {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--surface-2);
+      border: 1px solid rgba(255,255,255,0.05);
+      padding: 5px 10px;
+      border-radius: 6px;
+      display: inline-block;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .card-footer {
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .footer-issued {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .footer-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .footer-date {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    /* Seal icon right side */
+    .seal {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 1.5px solid var(--gold-line);
+      background: var(--gold-glow);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .seal svg { color: var(--gold); }
+
+    /* ── Error state ─────────────────────────────────────────── */
     .error-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       text-align: center;
+      gap: 12px;
+      padding: 8px 0;
+    }
+    .error-icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--danger-dim);
+      border: 1px solid rgba(192,57,43,0.3);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 4px;
     }
     .error-title {
-      font-size: 24px;
-      color: #ff4444;
-      margin-bottom: 12px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: #e05555;
     }
     .error-desc {
-      color: var(--text-gray);
-      font-size: 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 320px;
+    }
+
+    /* ── Wordmark bottom ─────────────────────────────────────── */
+    .wordmark {
+      margin-top: 28px;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.5;
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      .card-body { padding: 28px 24px 24px; }
     }
   </style>
 </head>
 <body>
 
-  <div class="bg-glow"></div>
+  <div class="card" id="card">
+    <div class="card-ribbon"></div>
+    <div class="card-body">
 
-  <div class="verify-container">
-    <div id="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p style="color: var(--text-gray)">Memverifikasi data sertifikat...</p>
-    </div>
-
-    <div id="success-content" style="display: none;">
-      <div class="badge-status">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-        Verified Certificate
-      </div>
-      
-      <p class="presentation-text">This certificate is presented to</p>
-      <h1 id="cert-name" class="student-name">-</h1>
-      
-      <div class="info-group">
-        <p id="cert-email" class="student-email">-</p>
-        <p id="cert-uid" class="student-uid">-</p>
+      <!-- Loading -->
+      <div id="state-loading" class="loading-state">
+        <div class="spinner-ring"></div>
+        <p class="loading-text">Verifying certificate</p>
       </div>
 
-      <div class="card-footer">
-        <span class="issue-label">Issued At</span>
-        <span id="cert-issue" class="issue-date">-</span>
-      </div>
-    </div>
+      <!-- Success -->
+      <div id="state-success" style="display:none;">
+        <div class="badge-verified">
+          <span class="badge-icon">
+            <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="#070708" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="2 6 5 9 10 3"/>
+            </svg>
+          </span>
+          Verified Certificate
+        </div>
 
-    <div id="error-content" class="error-state" style="display: none;">
-      <h2 class="error-title">Sertifikat Tidak Valid</h2>
-      <p id="error-msg" class="error-desc">ID Sertifikat tidak ditemukan atau tautan salah.</p>
-    </div>
-  </div>
+        <p class="eyebrow">This certificate is presented to</p>
+        <h1 id="cert-name" class="cert-name">—</h1>
+
+        <div class="divider"></div>
+
+        <div class="info-block">
+          <div class="info-row">
+            <span class="info-label">Email</span>
+            <span id="cert-email" class="info-value">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Certificate ID</span>
+            <span id="cert-uid" class="info-uid">—</span>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <div class="footer-issued">
+            <span class="footer-label">Issued</span>
+            <span id="cert-issue" class="footer-date">—</span>
+          </div>
+          <div class="seal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l2.4 4.8L20 8l-4 3.9.94 5.5L12 15l-4.94 2.4.94-5.5L4 8l5.6-1.2z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="state-error" class="error-state" style="display:none;">
+        <div class="error-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e05555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <h2 class="error-title">Certificate Not Found</h2>
+        <p id="error-msg" class="error-desc">This certificate ID does not exist or the link is invalid.</p>
+      </div>
+
+    </div><!-- /.card-body -->
+  </div><!-- /.card -->
+
+  <p class="wordmark">E-Certificate System</p>
 
   <script>
-    // ⚠️ ATURAN PENTING: PASTE KAN CONFIG FIREBASE KAMU DI SINI
     const firebaseConfig = {
-      apiKey:  "AIzaSyAdr4A7woxm7qQs5HmEGbObUi8cIyWqVNk",
-      authDomain: "e-sertifikat-3d535.firebaseapp.com",
-      projectId: "e-sertifikat-3d535",
-      storageBucket: "e-sertifikat-3d535.firebasestorage.app",
+      apiKey:            "AIzaSyAdr4A7woxm7qQs5HmEGbObUi8cIyWqVNk",
+      authDomain:        "e-sertifikat-3d535.firebaseapp.com",
+      projectId:         "e-sertifikat-3d535",
+      storageBucket:     "e-sertifikat-3d535.firebasestorage.app",
       messagingSenderId: "539663029190",
-      appId: "1:539663029190:web:0f9cb21fa2c2aef1de58c7",
-      measurementId: "G-M6YBSV7DKP"
+      appId:             "1:539663029190:web:0f9cb21fa2c2aef1de58c7",
+      measurementId:     "G-M6YBSV7DKP"
     };
 
-    // Inisialisasi Firebase
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    db.settings({ experimentalForceLongPolling: true, useFetchStreams: false });
 
-    // Gunakan Long Polling mencegah crash database saat refresh harian
-    db.settings({
-      experimentalForceLongPolling: true,
-      useFetchStreams: false
-    });
+    // ── Read UID from URL path or ?id= param ─────────────────
+    // Supports: /verify.html?id=UID  AND  /e-sertifikat/UID
+    function getStudentId() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('id')) return params.get('id');
+      // Path-based: last non-empty segment
+      const segs = window.location.pathname.split('/').filter(Boolean);
+      const last  = segs[segs.length - 1];
+      // Ignore known filenames
+      if (last && last !== 'verify.html' && last !== 'index.html') return last;
+      return null;
+    }
 
-    // Ambil ID dari URL (?id=UID_STUDENT)
-    const urlParams = new URLSearchParams(window.location.search);
-    const studentId = urlParams.get('id');
+    const studentId = getStudentId();
 
-    const loadingDiv = document.getElementById('loading');
-    const successDiv = document.getElementById('success-content');
-    const errorDiv = document.getElementById('error-content');
+    const stLoading = document.getElementById('state-loading');
+    const stSuccess = document.getElementById('state-success');
+    const stError   = document.getElementById('state-error');
+
+    function showState(name) {
+      stLoading.style.display = name === 'loading' ? 'flex'  : 'none';
+      stSuccess.style.display = name === 'success' ? 'block' : 'none';
+      stError.style.display   = name === 'error'   ? 'flex'  : 'none';
+    }
+
+    // ── Format date in English ────────────────────────────────
+    function formatDate(raw) {
+      let d;
+      if (raw && typeof raw.toDate === 'function') {
+        d = raw.toDate();
+      } else if (raw) {
+        d = new Date(raw);
+      }
+      if (!d || isNaN(d)) return '—';
+      return d.toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      }); // e.g. "17 June 2026"
+    }
 
     if (!studentId) {
-      // Jika di URL tidak ada parameter id
-      loadingDiv.style.display = 'none';
-      errorDiv.style.display = 'block';
-      document.getElementById('error-msg').textContent = "Akses ditolak. Tidak ada ID Sertifikat yang dilampirkan pada URL.";
+      showState('error');
+      document.getElementById('error-msg').textContent =
+        'No certificate ID found in this URL. Please scan the QR code again.';
     } else {
-      // Tarik data dari Firestore collection: cert_user
-      db.collection('cert_users').doc(studentId).get().then((doc) => {
-        loadingDiv.style.display = 'none';
-        
-        if (doc.exists) {
-          const data = doc.data();
-          
-          // Tampilkan konten sukses
-          successDiv.style.display = 'block';
-          
-          // Inject data ke HTML
-          document.getElementById('cert-name').textContent = data.cert_name || 'No Name';
-          document.getElementById('cert-email').textContent = data.email || 'No Email';
-          document.getElementById('cert-uid').textContent = studentId; // Menampilkan UID di bawah email
-          
-          // Handle format tanggal issue_at
-          if (data.issued_at) {
-            if (typeof data.issued_at.toDate === 'function') {
-              // Jika formatnya Firebase Timestamp asli
-              const options = { year: 'numeric', month: 'long', day: 'numeric' };
-              document.getElementById('cert-issue').textContent = data.issued_at.toDate().toLocaleDateString('id-ID', options);
-            } else {
-              // Jika formatnya string biasa
-              document.getElementById('cert-issue').textContent = data.issued_at;
-            }
+      db.collection('cert_users').doc(studentId).get()
+        .then(doc => {
+          if (doc.exists) {
+            const d = doc.data();
+            document.getElementById('cert-name').textContent  = d.cert_name  || '—';
+            document.getElementById('cert-email').textContent = d.email       || '—';
+            document.getElementById('cert-uid').textContent   = studentId;
+            document.getElementById('cert-issue').textContent = formatDate(d.issued_at);
+            showState('success');
           } else {
-            document.getElementById('cert-issue').textContent = '-';
+            showState('error');
+            document.getElementById('error-msg').textContent =
+              `No certificate registered with ID "${studentId}".`;
           }
-
-        } else {
-          // Jika ID tidak ada di database Firestore
-          errorDiv.style.display = 'block';
-          document.getElementById('error-msg').textContent = `Sertifikat dengan ID "${studentId}" tidak terdaftar di sistem kami.`;
-        }
-      }).catch((error) => {
-        console.error("Error fetching document: ", error);
-        loadingDiv.style.display = 'none';
-        errorDiv.style.display = 'block';
-        document.getElementById('error-msg').textContent = "Terjadi masalah jaringan saat menghubungi server database.";
-      });
+        })
+        .catch(err => {
+          console.error(err);
+          showState('error');
+          document.getElementById('error-msg').textContent =
+            'A network error occurred. Please check your connection and try again.';
+        });
     }
   </script>
 </body>

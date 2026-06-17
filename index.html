@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-<link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Allura&family=Cormorant+Garamond:wght@400;600;700&family=Great+Vibes&family=Montserrat:wght@400;500;600;700&family=Mr+De+Haviland&family=Parisienne&family=Pinyon+Script&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Tangerine:wght@400;700&display=swap" rel="stylesheet" />
 
 <!-- SweetAlert2 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" />
@@ -1707,15 +1707,156 @@
           />
         </div>
 
-        <!-- 3. Font selector -->
+        <!-- 3. Font selector — custom dropdown (native select tidak bisa di-style) -->
         <div class="ced-field">
-          <label class="ced-label" for="ced-font-select">Font Family</label>
-          <select class="ced-input ced-select" id="ced-font-select" onchange="cedRedraw()">
-            <option value="Alex Brush">Alex Brush — Calligraphy</option>
-            <option value="Space Grotesk">Space Grotesk — Modern</option>
-            <option value="Playfair Display">Playfair Display — Elegant Serif</option>
-            <option value="Montserrat">Montserrat — Clean Sans-serif</option>
-          </select>
+          <label class="ced-label">Font Family</label>
+
+          <!-- Hidden input yang dibaca oleh cedRedraw() -->
+          <input type="hidden" id="ced-font-select" value="Alex Brush" />
+
+          <!-- Trigger button -->
+          <button type="button" id="ced-font-trigger" onclick="cedToggleFontPicker()" style="
+            display:flex; align-items:center; justify-content:space-between; gap:8px;
+            width:100%; padding:9px 13px; border-radius:8px;
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+            color:#e8e8f0; font-size:13px; cursor:pointer; text-align:left;
+            transition:border-color .2s, background .2s;
+          ">
+            <span id="ced-font-label" style="font-family:'Alex Brush',cursive; font-size:16px; line-height:1.2;">Alex Brush — Signature Script</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" style="flex-shrink:0;transition:transform .2s;" id="ced-font-chevron"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+
+          <!-- Dropdown panel -->
+          <div id="ced-font-picker" style="
+            display:none; margin-top:6px;
+            background:#16172b; border:1px solid rgba(204,255,0,0.18);
+            border-radius:10px; overflow:hidden;
+            box-shadow:0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
+            max-height:340px; overflow-y:auto;
+          ">
+            <!-- Scrollbar style inside shadow DOM workaround -->
+            <style>
+              #ced-font-picker::-webkit-scrollbar { width:4px; }
+              #ced-font-picker::-webkit-scrollbar-track { background:transparent; }
+              #ced-font-picker::-webkit-scrollbar-thumb { background:rgba(204,255,0,0.2); border-radius:4px; }
+              .ced-font-group-label {
+                padding:8px 14px 4px;
+                font-size:9px; font-weight:700; letter-spacing:.14em;
+                text-transform:uppercase; color:rgba(204,255,0,0.5);
+                background:rgba(204,255,0,0.04);
+                border-top:1px solid rgba(204,255,0,0.1);
+                font-family:'Space Grotesk',sans-serif;
+              }
+              .ced-font-group-label:first-child { border-top:none; }
+              .ced-font-opt {
+                display:flex; align-items:center; gap:12px;
+                padding:10px 14px; cursor:pointer;
+                transition:background .15s;
+                border:none; background:transparent; width:100%;
+                text-align:left; color:#e8e8f0;
+              }
+              .ced-font-opt:hover { background:rgba(204,255,0,0.06); }
+              .ced-font-opt.active { background:rgba(204,255,0,0.1); }
+              .ced-font-opt-preview {
+                font-size:18px; line-height:1.1;
+                color:#f0f0f5; flex:1; white-space:nowrap;
+                overflow:hidden; text-overflow:ellipsis;
+              }
+              .ced-font-opt-tag {
+                font-size:10px; color:rgba(255,255,255,0.25);
+                font-family:'Space Grotesk',sans-serif;
+                flex-shrink:0;
+              }
+              .ced-font-opt-check {
+                width:14px; height:14px; flex-shrink:0;
+                color:rgba(204,255,0,0.9);
+                opacity:0; transition:opacity .15s;
+              }
+              .ced-font-opt.active .ced-font-opt-check { opacity:1; }
+            </style>
+
+            <!-- Group: Script & Calligraphy -->
+            <div class="ced-font-group-label">Script &amp; Calligraphy</div>
+            <button class="ced-font-opt active" data-value="Alex Brush" data-label="Alex Brush — Signature Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Alex Brush',cursive;">Alex Brush</span>
+              <span class="ced-font-opt-tag">Signature Script</span>
+            </button>
+            <button class="ced-font-opt" data-value="Allura" data-label="Allura — Flowing Calligraphy" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Allura',cursive;">Allura</span>
+              <span class="ced-font-opt-tag">Flowing Calligraphy</span>
+            </button>
+            <button class="ced-font-opt" data-value="Great Vibes" data-label="Great Vibes — Elegant Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Great Vibes',cursive;">Great Vibes</span>
+              <span class="ced-font-opt-tag">Elegant Script</span>
+            </button>
+            <button class="ced-font-opt" data-value="Parisienne" data-label="Parisienne — French Romantic" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Parisienne',cursive;">Parisienne</span>
+              <span class="ced-font-opt-tag">French Romantic</span>
+            </button>
+            <button class="ced-font-opt" data-value="Pinyon Script" data-label="Pinyon Script — Formal Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Pinyon Script',cursive;">Pinyon Script</span>
+              <span class="ced-font-opt-tag">Formal Script</span>
+            </button>
+            <button class="ced-font-opt" data-value="Mr De Haviland" data-label="Mr De Haviland — Vintage Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Mr De Haviland',cursive;">Mr De Haviland</span>
+              <span class="ced-font-opt-tag">Vintage Script</span>
+            </button>
+            <button class="ced-font-opt" data-value="Tangerine" data-label="Tangerine — Thin Calligraphy" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Tangerine',cursive; font-size:22px;">Tangerine</span>
+              <span class="ced-font-opt-tag">Thin Calligraphy</span>
+            </button>
+
+            <!-- Group: Serif & Display -->
+            <div class="ced-font-group-label">Serif &amp; Display</div>
+            <button class="ced-font-opt" data-value="Cormorant Garamond" data-label="Cormorant Garamond — Luxury Serif" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Cormorant Garamond',serif; font-weight:600;">Cormorant Garamond</span>
+              <span class="ced-font-opt-tag">Luxury Serif</span>
+            </button>
+            <button class="ced-font-opt" data-value="Playfair Display" data-label="Playfair Display — Elegant Serif" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Playfair Display',serif;">Playfair Display</span>
+              <span class="ced-font-opt-tag">Elegant Serif</span>
+            </button>
+
+            <!-- Group: System Fonts (Windows) -->
+            <div class="ced-font-group-label">System Fonts (Windows only)</div>
+            <button class="ced-font-opt" data-value="'Edwardian Script ITC', Allura, cursive" data-label="Edwardian Script ITC — Classic Formal" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Edwardian Script ITC',Allura,cursive;">Edwardian Script ITC</span>
+              <span class="ced-font-opt-tag">Classic Formal</span>
+            </button>
+            <button class="ced-font-opt" data-value="'Monotype Corsiva', 'Pinyon Script', cursive" data-label="Monotype Corsiva — Italic Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Monotype Corsiva','Pinyon Script',cursive;">Monotype Corsiva</span>
+              <span class="ced-font-opt-tag">Italic Script</span>
+            </button>
+            <button class="ced-font-opt" data-value="'Lucida Calligraphy', 'Mr De Haviland', cursive" data-label="Lucida Calligraphy — Brush Script" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Lucida Calligraphy','Mr De Haviland',cursive;">Lucida Calligraphy</span>
+              <span class="ced-font-opt-tag">Brush Script</span>
+            </button>
+
+            <!-- Group: Sans-serif -->
+            <div class="ced-font-group-label">Sans-serif</div>
+            <button class="ced-font-opt" data-value="Space Grotesk" data-label="Space Grotesk — Modern" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Space Grotesk',sans-serif;">Space Grotesk</span>
+              <span class="ced-font-opt-tag">Modern</span>
+            </button>
+            <button class="ced-font-opt" data-value="Montserrat" data-label="Montserrat — Clean Sans-serif" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Montserrat',sans-serif;">Montserrat</span>
+              <span class="ced-font-opt-tag">Clean Sans-serif</span>
+            </button>
+          </div>
         </div>
 
         <!-- 3b. Font Color picker -->
@@ -3100,6 +3241,8 @@ async function cedLoadFromFirestore() {
     if (d.fontFamily) {
       document.getElementById('ced-font-select').value = d.fontFamily;
       ced.fontFamily = d.fontFamily;
+      // Sync custom dropdown UI
+      cedSyncFontUI(d.fontFamily);
     }
     if (d.fontColor) {
       ced.fontColor = d.fontColor;
@@ -3790,8 +3933,95 @@ window.removeAdminDevice = function() {
 detectDevice();
 
 // ════════════════════════════════════════════════════════════════
-// FONT COLOR PICKER — Modern HSV gradient picker
+// CUSTOM FONT PICKER — replaces native <select> for full styling
 // ════════════════════════════════════════════════════════════════
+(function initFontPicker() {
+  let _fpOpen = false;
+
+  // Toggle open/close
+  window.cedToggleFontPicker = function() {
+    const picker   = document.getElementById('ced-font-picker');
+    const chevron  = document.getElementById('ced-font-chevron');
+    const trigger  = document.getElementById('ced-font-trigger');
+    if (!picker) return;
+    _fpOpen = !_fpOpen;
+    picker.style.display  = _fpOpen ? 'block' : 'none';
+    if (chevron) chevron.style.transform = _fpOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = _fpOpen ? 'rgba(204,255,0,0.4)' : 'rgba(255,255,255,0.1)';
+  };
+
+  // Pick a font option
+  window.cedPickFont = function(btn) {
+    const value = btn.dataset.value;
+    const label = btn.dataset.label;
+
+    // Update hidden input (read by cedRedraw)
+    const hiddenInput = document.getElementById('ced-font-select');
+    if (hiddenInput) hiddenInput.value = value;
+
+    // Update trigger label + preview font
+    const labelEl = document.getElementById('ced-font-label');
+    if (labelEl) {
+      labelEl.textContent  = label;
+      labelEl.style.fontFamily = value + ', cursive, serif, sans-serif';
+      // Bigger preview for script fonts
+      labelEl.style.fontSize = '16px';
+    }
+
+    // Active state on options
+    document.querySelectorAll('.ced-font-opt').forEach(o => o.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Close picker
+    const picker  = document.getElementById('ced-font-picker');
+    const chevron = document.getElementById('ced-font-chevron');
+    const trigger = document.getElementById('ced-font-trigger');
+    if (picker)  picker.style.display  = 'none';
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+    _fpOpen = false;
+
+    // Trigger redraw
+    if (typeof cedRedraw === 'function') cedRedraw();
+  };
+
+  // Sync UI from a saved fontFamily value (called on Firestore load)
+  window.cedSyncFontUI = function(value) {
+    const opts = document.querySelectorAll('.ced-font-opt');
+    opts.forEach(btn => {
+      if (btn.dataset.value === value) {
+        btn.classList.add('active');
+        const label    = btn.dataset.label;
+        const labelEl  = document.getElementById('ced-font-label');
+        if (labelEl) {
+          labelEl.textContent  = label;
+          labelEl.style.fontFamily = value + ', cursive, serif, sans-serif';
+        }
+        const hiddenInput = document.getElementById('ced-font-select');
+        if (hiddenInput) hiddenInput.value = value;
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  };
+
+  // Close picker on outside click
+  document.addEventListener('click', function(e) {
+    if (!_fpOpen) return;
+    const field = document.getElementById('ced-font-picker');
+    const trigger = document.getElementById('ced-font-trigger');
+    if (!field || !trigger) return;
+    if (!field.contains(e.target) && !trigger.contains(e.target)) {
+      field.style.display = 'none';
+      const chevron = document.getElementById('ced-font-chevron');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+      trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+      _fpOpen = false;
+    }
+  });
+})();
+
+
 (function initColorPicker() {
 
   let _cpHue = 38;   // default hue: gold ~38°

@@ -2407,6 +2407,14 @@ let currentUser   = null;
 let generatedPDF  = null;   // jsPDF instance
 let certName      = "";
 
+// Placeholder untuk dukungan multi-event di masa depan. Saat ini selalu null
+// (aplikasi masih single-event), sehingga eventId di surveyFinishAndGenerate()
+// otomatis fallback ke "General_Event". Sebelumnya variabel ini dipakai
+// (currentEvent?.title dst.) TANPA pernah dideklarasikan -> setiap submit
+// melempar ReferenceError dan seluruh proses kirim ke Apps Script (termasuk
+// fetch()-nya) batal dieksekusi, tertangkap diam-diam oleh catch.
+let currentEvent  = null;
+
 // ══════════════════════════════════════════════════════════════════
 // UTILITIES
 // ══════════════════════════════════════════════════════════════════
@@ -2578,42 +2586,6 @@ function populateNameScreen() {
   // Sesuaikan step tracker (tampilkan/sembunyikan step "Survey") sesuai
   // apakah admin sudah atur pertanyaan survei atau belum.
   surveyAdjustStepTracker();
-}
-
-// ══════════════════════════════════════════════════════════════════
-// STEP 4b: SUBMIT NAME (TRANSISI KE SURVEI / GENERATE)
-// ══════════════════════════════════════════════════════════════════
-async function submitName() {
-  const nameInput = document.getElementById('full-name');
-  const nameVal = nameInput.value.trim();
-
-  // 1. Validasi: Pastikan nama tidak kosong
-  if (!nameVal) {
-    showToast('error', 'Nama Kosong', 'Harap masukkan nama lengkap Anda untuk dicetak di sertifikat.');
-    nameInput.focus();
-    return;
-  }
-
-  // 2. Simpan ke variabel global 'certName' (digunakan saat cetak PDF)
-  certName = nameVal;
-
-  // 3. Ubah UI tombol menjadi loading agar user tidak klik berkali-kali
-  const btn = document.getElementById('btn-submit-name');
-  const originalContent = btn.innerHTML;
-  btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;margin-right:8px;border-top-color:#0e0f14;"></div> Memproses...';
-  btn.disabled = true;
-
-  try {
-    // 4. Lanjutkan ke alur berikutnya (Masuk ke Survei atau langsung Generate)
-    await surveyStart();
-  } catch (error) {
-    console.error("Gagal melanjutkan proses:", error);
-    showToast('error', 'Terjadi Kesalahan', 'Gagal memproses data. Silakan coba lagi.');
-  } finally {
-    // 5. Kembalikan tombol ke keadaan semula
-    btn.innerHTML = originalContent;
-    btn.disabled = false;
-  }
 }
 
 // Cek cepat ke Firestore apakah survei sedang aktif, lalu sesuaikan
@@ -2790,34 +2762,51 @@ async function surveyFinishAndGenerate() {
   const nextBtn = document.getElementById('btn-survey-next');
   if (nextBtn) nextBtn.disabled = true;
 
-  // ── 1. KIRIM OTOMATIS KE GOOGLE SHEET (MENGGUNAKAN APPS SCRIPT ARRAY DINAMIS)
+  // ── 1. KIRIM OTOMATIS KE GOOGLE SHEET (MENGGUNAKAN APPS SCRIPT ARRAY)
   try {
-    // Memetakan jawaban survei ke format array objek [{label, value}] sesuai pesanan Apps Script
-    const dynamicResponses = studentSurveyConfig.questions.map(q => ({
-      label: q.text,                            // Menjadi judul kolom di Google Sheets
-      value: studentSurveyAnswers[q.id] || ""   // Menjadi isi jawaban siswa
-    }));
+    // Susun jawaban secara berurutan: Kolom A = Nama, Kolom B = Pertanyaan 1, Kolom C = Pertanyaan 2, dst.
+    // Header otomatis
+const headers = [
+  "Nama Sertifikat",
+  "Email",
+  ...studentSurveyConfig.questions.map(q => q.text)
+];
 
-    // PERBAIKAN: Menggunakan variabel EVENT_NAME yang sudah terdaftar di atas file
-    const eventId = typeof EVENT_NAME !== 'undefined' ? EVENT_NAME : "General_Event";
+// Jawaban otomatis
+const values = [
+  certName,
+  currentUser?.email || "",
+  ...studentSurveyConfig.questions.map(
+    q => studentSurveyAnswers[q.id] || ""
+  )
+];
 
-    // Susun payload agar pas dengan variabel di Google Apps Script Anda
-    const payload = {
-      eventId: eventId,
-      namaSertifikat: certName,
-      email: currentUser?.email || "No Email",
-      dynamicResponses: dynamicResponses
-    };
+// Ambil nama event
+const eventId =
+  currentEvent?.title ||
+  currentEvent?.name ||
+  currentEvent?.id ||
+  "General_Event";
 
-    // Tautkan ke Web App Apps Script Anda
-    // PENTING: Pastikan URL di bawah ini adalah URL Web App Apps Script Anda yang valid
+const payload = {
+  eventId,
+  headers,
+  values
+};
+
+    // ⚠️ GANTI URL DI BAWAH INI DENGAN URL DEPLOYMENT WEB APP APPS SCRIPT KAMU
     const urlAppsScript = "https://script.google.com/macros/library/d/1k736C5bXs1D7gEAyc7XJir3O4LADlvI6Bn9cek3qq6udVIGxNzwRoIga/5";
 
-    // PENTING: Gunakan text/plain untuk membungkus JSON agar bypass CORS (Anti-Blokir Browser)
+    // Content-Type sengaja "text/plain", BUKAN "application/json": JSON adalah
+    // content-type yang memicu CORS preflight (OPTIONS) sebelum browser kirim
+    // POST sungguhan. Apps Script web app tidak punya doOptions sehingga
+    // preflight itu gagal dan POST aslinya tidak pernah terkirim. Dengan
+    // text/plain, request dianggap "simple request" (tanpa preflight), dan
+    // doPost() tetap bisa JSON.parse(e.postData.contents) seperti biasa.
     await fetch(urlAppsScript, {
       method: 'POST',
       headers: {
-        'Content-Type': 'text/plain'
+        'Content-Type': 'text/plain;charset=utf-8'
       },
       body: JSON.stringify(payload)
     });
@@ -2827,14 +2816,15 @@ async function surveyFinishAndGenerate() {
     console.warn('[Survey] Gagal kirim ke Apps Script:', e.message);
   }
 
-  // ── 2. Simpan cadangan jawaban ke Firestore (Biarkan kode bawaan Anda di bawah ini tetap utuh)
+  // ── 2. Simpan cadangan jawaban ke Firestore — supaya jawaban tetap ada
+  //       walau pengiriman ke Google Form di atas diam-diam gagal.
   try {
     const answersForFirestore = studentSurveyConfig.questions.map(q => ({
       questionId:   q.id,
       questionText: q.text,
       answer:       studentSurveyAnswers[q.id] || '',
     }));
-    await db.collection('cert_users').doc(currentUser.uid).set({
+    await db.collection(USERS_COLLECTION).doc(currentUser.uid).set({
       survey_answers:    answersForFirestore,
       survey_updated_at: firebase.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -2845,6 +2835,48 @@ async function surveyFinishAndGenerate() {
   // ── 3. Lanjut seperti behavior semula ──────────────────────────
   await generateAndStore();
   if (nextBtn) nextBtn.disabled = false;
+}
+
+async function submitName() {
+  const raw  = document.getElementById('full-name').value.trim();
+  const name = raw.replace(/\s+/g, ' ');
+
+  if (!name || name.length < 2) {
+    showToast('warning', 'Name too short', 'Please enter your full name as it should appear on the certificate.');
+    return;
+  }
+  if (name.length > 80) {
+    showToast('warning', 'Name too long', 'Please shorten your name to under 80 characters.');
+    return;
+  }
+
+  // ── SweetAlert2 confirmation modal ──────────────────────────
+  const result = await Swal.fire({
+    title: 'Confirm your name',
+    html: `
+      <p style="color:var(--text-muted);font-size:14px;line-height:1.6;margin-bottom:4px;">
+        This name will be printed on your certificate exactly as shown below.
+      </p>
+      <span class="swal2-name-preview">${escapeHtml(name)}</span>
+      <p style="color:var(--text-muted);font-size:13px;">Is this correct?</p>
+    `,
+    showDenyButton:   true,
+    showCancelButton: false,
+    confirmButtonText: '✓ &nbsp;Sim, generate it!',
+    denyButtonText:    '✗ &nbsp;Lae, edit',
+    reverseButtons:    true,
+    focusConfirm:      false,
+    customClass: { popup: 'swal2-dark-custom' }
+  });
+
+  if (result.isConfirmed) {
+    certName = name;
+    // Jika admin sudah atur pertanyaan survei di panel "📝 Form", tampilkan
+    // screen-survey dulu (wajib dijawab semua). Jika belum ada survei sama
+    // sekali, langsung lanjut seperti behavior semula (backward compatible).
+    await surveyStart();
+  }
+  // If denied: modal closes, user edits name field
 }
 
 // ══════════════════════════════════════════════════════════════════

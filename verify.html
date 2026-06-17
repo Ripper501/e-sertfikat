@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E-Certificate Verification</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #0a0a0a;
+      --card-bg: #121212;
+      --accent-yellow: #fff500; /* Kuning Premium / Neon Gen-Z */
+      --text-white: #ffffff;
+      --text-gray: #a0a0a0;
+      --border-color: #262626;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-white);
+      font-family: 'Space Grotesk', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    /* Background Dekorasi ala Gen-Z */
+    .bg-glow {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(255, 245, 0, 0.15) 0%, rgba(0,0,0,0) 70%);
+      top: 10%;
+      right: -5%;
+      z-index: 1;
+    }
+
+    /* Container Utama */
+    .verify-container {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      background-color: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 24px;
+      padding: 40px 32px;
+      z-index: 2;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      transition: border-color 0.3s ease;
+    }
+
+    .verify-container:hover {
+      border-color: var(--accent-yellow);
+    }
+
+    /* Badge Verified */
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: rgba(255, 245, 0, 0.1);
+      border: 1px solid var(--accent-yellow);
+      color: var(--accent-yellow);
+      padding: 6px 16px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 32px;
+      text-transform: uppercase;
+    }
+
+    /* Animasi Loading */
+    .loading-state {
+      text-align: center;
+      padding: 40px 0;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      border-top-color: var(--accent-yellow);
+      animation: spin 1s ease-in-out infinite;
+      margin: 0 auto 16px auto;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Konten Utama */
+    .presentation-text {
+      font-size: 16px;
+      color: var(--text-gray);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .student-name {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--text-white);
+      line-height: 1.2;
+      margin-bottom: 24px;
+      word-wrap: break-word;
+    }
+
+    .info-group {
+      margin-bottom: 40px;
+    }
+
+    .student-email {
+      font-size: 16px;
+      color: var(--text-white);
+      opacity: 0.9;
+      margin-bottom: 6px;
+    }
+
+    .student-uid {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-gray);
+      background-color: #1a1a1a;
+      padding: 4px 8px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    /* Footer Card (Issue At di bawah kiri) */
+    .card-footer {
+      border-top: 1px solid var(--border-color);
+      padding-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .issue-label {
+      font-size: 12px;
+      color: var(--text-gray);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .issue-date {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-white);
+    }
+
+    /* Tampilan Error */
+    .error-state {
+      text-align: center;
+    }
+    .error-title {
+      font-size: 24px;
+      color: #ff4444;
+      margin-bottom: 12px;
+    }
+    .error-desc {
+      color: var(--text-gray);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-glow"></div>
+
+  <div class="verify-container">
+    <div id="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p style="color: var(--text-gray)">Memverifikasi data sertifikat...</p>
+    </div>
+
+    <div id="success-content" style="display: none;">
+      <div class="badge-status">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        Verified Certificate
+      </div>
+      
+      <p class="presentation-text">This certificate is presented to</p>
+      <h1 id="cert-name" class="student-name">-</h1>
+      
+      <div class="info-group">
+        <p id="cert-email" class="student-email">-</p>
+        <p id="cert-uid" class="student-uid">-</p>
+      </div>
+
+      <div class="card-footer">
+        <span class="issue-label">Issued At</span>
+        <span id="cert-issue" class="issue-date">-</span>
+      </div>
+    </div>
+
+    <div id="error-content" class="error-state" style="display: none;">
+      <h2 class="error-title">Sertifikat Tidak Valid</h2>
+      <p id="error-msg" class="error-desc">ID Sertifikat tidak ditemukan atau tautan salah.</p>
+    </div>
+  </div>
+
+  <script>
+    // ⚠️ ATURAN PENTING: PASTE KAN CONFIG FIREBASE KAMU DI SINI
+    const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAdr4A7woxm7qQs5HmEGbObUi8cIyWqVNk",
+  authDomain: "e-sertifikat-3d535.firebaseapp.com",
+  projectId: "e-sertifikat-3d535",
+  storageBucket: "e-sertifikat-3d535.firebasestorage.app",
+  messagingSenderId: "539663029190",
+  appId: "1:539663029190:web:0f9cb21fa2c2aef1de58c7",
+  measurementId: "G-M6YBSV7DKP"
+};
+
+    // Inisialisasi Firebase
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // Gunakan Long Polling mencegah crash database saat refresh harian
+    db.settings({
+      experimentalForceLongPolling: true,
+      useFetchStreams: false
+    });
+
+    // Ambil ID dari URL (?id=UID_STUDENT)
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentId = urlParams.get('id');
+
+    const loadingDiv = document.getElementById('loading');
+    const successDiv = document.getElementById('success-content');
+    const errorDiv = document.getElementById('error-content');
+
+    if (!studentId) {
+      // Jika di URL tidak ada parameter id
+      loadingDiv.style.display = 'none';
+      errorDiv.style.display = 'block';
+      document.getElementById('error-msg').textContent = "Akses ditolak. Tidak ada ID Sertifikat yang dilampirkan pada URL.";
+    } else {
+      // Tarik data dari Firestore collection: cert_user
+      db.collection('cert_user').doc(studentId).get().then((doc) => {
+        loadingDiv.style.display = 'none';
+        
+        if (doc.exists) {
+          const data = doc.data();
+          
+          // Tampilkan konten sukses
+          successDiv.style.display = 'block';
+          
+          // Inject data ke HTML
+          document.getElementById('cert-name').textContent = data.cert_name || 'No Name';
+          document.getElementById('cert-email').textContent = data.email || 'No Email';
+          document.getElementById('cert-uid').textContent = studentId; // Menampilkan UID di bawah email
+          
+          // Handle format tanggal issue_at
+          if (data.issue_at) {
+            if (typeof data.issue_at.toDate === 'function') {
+              // Jika formatnya Firebase Timestamp asli
+              const options = { year: 'numeric', month: 'long', day: 'numeric' };
+              document.getElementById('cert-issue').textContent = data.issue_at.toDate().toLocaleDateString('id-ID', options);
+            } else {
+              // Jika formatnya string biasa
+              document.getElementById('cert-issue').textContent = data.issue_at;
+            }
+          } else {
+            document.getElementById('cert-issue').textContent = '-';
+          }
+
+        } else {
+          // Jika ID tidak ada di database Firestore
+          errorDiv.style.display = 'block';
+          document.getElementById('error-msg').textContent = `Sertifikat dengan ID "${studentId}" tidak terdaftar di sistem kami.`;
+        }
+      }).catch((error) => {
+        console.error("Error fetching document: ", error);
+        loadingDiv.style.display = 'none';
+        errorDiv.style.display = 'block';
+        document.getElementById('error-msg').textContent = "Terjadi masalah jaringan saat menghubungi server database.";
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1717,6 +1717,108 @@
             <option value="Montserrat">Montserrat — Clean Sans-serif</option>
           </select>
         </div>
+
+        <!-- 3b. Font Color picker -->
+        <div class="ced-field" id="ced-color-field">
+          <label class="ced-label">Font Color</label>
+
+          <!-- Trigger button -->
+          <button type="button" id="ced-color-trigger" onclick="cedToggleColorPicker()" style="
+            display: flex; align-items: center; gap: 10px;
+            width: 100%; padding: 9px 13px; border-radius: 8px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+            color: #e8e8f0; font-size: 13px; cursor: pointer;
+            transition: border-color .2s, background .2s;
+          ">
+            <span id="ced-color-swatch" style="
+              display: inline-block; width: 20px; height: 20px; border-radius: 50%;
+              background: #d09e3b; border: 2px solid rgba(255,255,255,0.2);
+              flex-shrink: 0; box-shadow: 0 0 8px rgba(208,158,59,0.5);
+              transition: background .15s, box-shadow .15s;
+            "></span>
+            <span id="ced-color-hex" style="font-family: var(--font-mono); letter-spacing: .04em; font-size: 12px;">#d09e3b</span>
+            <span style="margin-left:auto; opacity:.5; font-size:11px;">▾</span>
+          </button>
+
+          <!-- Dropdown picker panel -->
+          <div id="ced-color-picker" style="
+            display: none; margin-top: 8px; border-radius: 12px;
+            background: #16172099; backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+            padding: 14px 14px 12px; overflow: hidden;
+          ">
+            <!-- Gradient canvas picker -->
+            <div style="position:relative; margin-bottom: 10px;">
+              <canvas id="ced-color-grad" width="236" height="150" style="
+                border-radius: 8px; cursor: crosshair; display: block; width: 100%;
+                box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+              "></canvas>
+              <!-- Cursor dot -->
+              <div id="ced-color-cursor" style="
+                position:absolute; width:14px; height:14px; border-radius:50%;
+                border: 2.5px solid #fff; box-shadow: 0 0 6px rgba(0,0,0,0.8);
+                pointer-events:none; transform: translate(-50%,-50%);
+                top: 30%; left: 80%;
+                transition: box-shadow .1s;
+              "></div>
+            </div>
+
+            <!-- Hue slider -->
+            <div style="position:relative; margin-bottom: 10px;">
+              <canvas id="ced-hue-bar" width="236" height="16" style="
+                border-radius: 8px; cursor: pointer; display: block; width: 100%;
+                box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+              "></canvas>
+              <div id="ced-hue-cursor" style="
+                position:absolute; top:50%; width:18px; height:18px; border-radius:50%;
+                border: 2.5px solid #fff; box-shadow: 0 0 6px rgba(0,0,0,0.8);
+                pointer-events:none; transform: translate(-50%,-50%);
+                left: 25%;
+                transition: left .05s;
+              "></div>
+            </div>
+
+            <!-- Preset swatches row -->
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+              <button type="button" class="ced-swatch-btn" data-color="#d09e3b" title="Gold Classic" style="background:#d09e3b;"></button>
+              <button type="button" class="ced-swatch-btn" data-color="#f5c842" title="Gold Bright" style="background:#f5c842;"></button>
+              <button type="button" class="ced-swatch-btn" data-color="#e8d5a3" title="Champagne" style="background:#e8d5a3;"></button>
+              <button type="button" class="ced-swatch-btn" data-color="#c0c0c0" title="Silver" style="background:#c0c0c0;"></button>
+              <button type="button" class="ced-swatch-btn" data-color="#ffffff" title="White" style="background:#ffffff;"></button>
+              <button type="button" class="ced-swatch-btn" data-color="#1a1a1a" title="Black" style="background:#1a1a1a; border-color:rgba(255,255,255,0.2)!important;"></button>
+              <button type="button" class="ced-swatch-btn" data-color="#4a90d9" title="Blue" style="background:#4a90d9;"></button>
+              <button type="button" class="ced-swatch-btn" data-color="#a855f7" title="Purple" style="background:#a855f7;"></button>
+              <button type="button" class="ced-swatch-btn" data-color="#22c55e" title="Green" style="background:#22c55e;"></button>
+              <button type="button" class="ced-swatch-btn" data-color="#ef4444" title="Red" style="background:#ef4444;"></button>
+            </div>
+
+            <!-- Hex input row -->
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:11px; color:rgba(255,255,255,0.35); font-family:var(--font-mono); flex-shrink:0;">#</span>
+              <input id="ced-color-input" type="text" maxlength="6" placeholder="d09e3b"
+                style="
+                  flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+                  border-radius:6px; padding:6px 10px; color:#e8e8f0;
+                  font-family:var(--font-mono); font-size:13px; letter-spacing:.06em;
+                  outline:none; transition: border-color .2s;
+                "
+                oninput="cedColorFromHexInput(this.value)"
+                onfocus="this.style.borderColor='rgba(255,255,255,0.3)'"
+                onblur="this.style.borderColor='rgba(255,255,255,0.1)'"
+              />
+            </div>
+          </div>
+        </div>
+        <style>
+          .ced-swatch-btn {
+            width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.15);
+            cursor: pointer; flex-shrink: 0; padding:0;
+            transition: transform .15s, box-shadow .15s, border-color .15s;
+          }
+          .ced-swatch-btn:hover { transform: scale(1.25); box-shadow: 0 0 10px rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.5)!important; }
+          .ced-swatch-btn.active { border-color: #fff!important; box-shadow: 0 0 0 2px rgba(255,255,255,0.4), 0 0 12px rgba(255,255,255,0.2); }
+        </style>
       <div class="control-group" style="margin-top: 15px;">
   <label style="display: block; margin-bottom: 8px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">QR Code Verifikasi</label>
   <button type="button" class="btn" id="btn-toggle-qr" onclick="toggleQRBox()" style="width: 100%; justify-content: center; background: rgba(0, 229, 160, 0.1); border: 1px dashed #00e5a0; color: #00e5a0; padding: 10px; font-weight: 600; border-radius: 6px; transition: all 0.2s;">
@@ -2154,7 +2256,7 @@ async function generateAndStore() {
     // HANYA GENERATE QR CODE ASLI JIKA ADMIN AKTIFKAN MODE QR (dibaca dari Firestore)
     if (cfgShowQR) {
       const uniqueID = currentUser.uid;
-      const verificationUrl = `https://ripper501.github.io/e-sertfikat/?id=${uniqueID}`;
+      const verificationUrl = `https://ripper501.github.io/e-sertfikat/verify.html?id=${uniqueID}`;
       
       const qrHelper = document.getElementById('qrcode-helper');
       qrHelper.innerHTML = "";
@@ -2273,8 +2375,9 @@ async function drawCertificateOnCanvas(canvas, name) {
   const H   = canvas.height;  // 636
 
   // ── Fetch config dari Firestore — SATU SUMBER KEBENARAN: bbox ──
-  let cfgSrc    = 'sertifikat-template.png';
-  let cfgFont   = 'Alex Brush';
+  let cfgSrc       = 'sertifikat-template.png';
+  let cfgFont      = 'Alex Brush';
+  let cfgFontColor = '#d09e3b';
   // Default bbox (persis default ced state)
   let bboxX = 153, bboxY = 240, bboxW = 594, bboxH = 115;
   // Default QR config (diambil dari Firestore saat generate)
@@ -2290,6 +2393,7 @@ async function drawCertificateOnCanvas(canvas, name) {
       const d = snap.data();
       if (d.templateBase64)  cfgSrc = d.templateBase64;
       if (d.fontFamily)      cfgFont = d.fontFamily;
+      if (d.fontColor)       cfgFontColor = d.fontColor;
       // Baca 4 nilai bbox — inilah satu-satunya sumber posisi
       if (d.bboxX      != null) bboxX = d.bboxX;
       if (d.bboxY      != null) bboxY = d.bboxY;
@@ -2328,7 +2432,7 @@ async function drawCertificateOnCanvas(canvas, name) {
   ctx.save();
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle    = '#d09e3b';
+  ctx.fillStyle    = cfgFontColor;
 
   let fontSize = 68;
   ctx.font = `${fontSize}px "${cfgFont}"`;
@@ -2931,6 +3035,7 @@ function projectorEscHandler(e) {
 const ced = {
   templateBase64: null,
   fontFamily:     'Alex Brush',
+  fontColor:      '#d09e3b',   // default: gold
   // ── Bounding box (canvas-space coords, 900×636 grid) ──
   x:      153,   // left edge px
   y:      240,   // top edge px  (bukan nameY — ini top edge bbox)
@@ -2995,6 +3100,10 @@ async function cedLoadFromFirestore() {
     if (d.fontFamily) {
       document.getElementById('ced-font-select').value = d.fontFamily;
       ced.fontFamily = d.fontFamily;
+    }
+    if (d.fontColor) {
+      ced.fontColor = d.fontColor;
+      cedSyncColorUI(d.fontColor);
     }
     // Satu sumber kebenaran: semua dari bbox
     if (d.bboxX      != null) ced.x      = d.bboxX;
@@ -3198,7 +3307,7 @@ async function _cedDraw() {
   ctx.save();
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle    = '#d09e3b';
+  ctx.fillStyle    = ced.fontColor || '#d09e3b';
 
   let fontSize = 68;
   let lines, lineH, ascent, descent, totalH;
@@ -3387,6 +3496,7 @@ async function cedSaveConfig() {
   const payload = {
     templateBase64: ced.templateBase64 || null,
     fontFamily:     ced.fontFamily,
+    fontColor:      ced.fontColor || '#d09e3b',
     bboxX:      isFinite(ced.x)      ? Math.round(ced.x)      : 153,
     bboxY:      isFinite(ced.y)      ? Math.round(ced.y)      : 240,
     bboxWidth:  isFinite(ced.width)  ? Math.round(ced.width)  : 594,
@@ -3678,6 +3788,222 @@ window.removeAdminDevice = function() {
 
 // PANGGIL FUNGSI DETEKSI DI SINI, SETELAH SEMUA VARIABEL SIAP
 detectDevice();
+
+// ════════════════════════════════════════════════════════════════
+// FONT COLOR PICKER — Modern HSV gradient picker
+// ════════════════════════════════════════════════════════════════
+(function initColorPicker() {
+
+  let _cpHue = 38;   // default hue: gold ~38°
+  let _cpSat = 0.72; // default saturation
+  let _cpVal = 0.82; // default value (brightness)
+  let _cpOpen = false;
+
+  // ── HSV → HEX helpers ────────────────────────────────────────
+  function hsvToRgb(h, s, v) {
+    let r, g, b;
+    const i = Math.floor(h / 60) % 6;
+    const f = h / 60 - Math.floor(h / 60);
+    const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+    [[r,g,b]=[v,t,p],[r,g,b]=[q,v,p],[r,g,b]=[p,v,t],[r,g,b]=[p,q,v],[r,g,b]=[t,p,v],[r,g,b]=[v,p,q]][i];
+    switch(i){ case 0:r=v;g=t;b=p;break;case 1:r=q;g=v;b=p;break;case 2:r=p;g=v;b=t;break;case 3:r=p;g=q;b=v;break;case 4:r=t;g=p;b=v;break;case 5:r=v;g=p;b=q;break; }
+    return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+  }
+  function rgbToHex(r, g, b) {
+    return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
+  }
+  function hexToRgb(hex) {
+    hex = hex.replace('#','');
+    if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+    return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+  }
+  function rgbToHsv(r, g, b) {
+    r/=255; g/=255; b/=255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+    let h=0, s=max===0?0:d/max, v=max;
+    if(d!==0){if(max===r)h=((g-b)/d+6)%6;else if(max===g)h=(b-r)/d+2;else h=(r-g)/d+4; h*=60;}
+    return [h, s, v];
+  }
+
+  // ── Draw gradient canvas ──────────────────────────────────────
+  function drawGradient() {
+    const cvs = document.getElementById('ced-color-grad');
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    const W = cvs.width, H = cvs.height;
+
+    // Saturation gradient (white → hue color)
+    const hueColor = `hsl(${_cpHue}, 100%, 50%)`;
+    const gH = ctx.createLinearGradient(0, 0, W, 0);
+    gH.addColorStop(0, '#fff');
+    gH.addColorStop(1, hueColor);
+    ctx.fillStyle = gH;
+    ctx.fillRect(0, 0, W, H);
+
+    // Value gradient (transparent → black)
+    const gV = ctx.createLinearGradient(0, 0, 0, H);
+    gV.addColorStop(0, 'rgba(0,0,0,0)');
+    gV.addColorStop(1, '#000');
+    ctx.fillStyle = gV;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ── Draw hue bar ──────────────────────────────────────────────
+  function drawHueBar() {
+    const cvs = document.getElementById('ced-hue-bar');
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    const W = cvs.width, H = cvs.height;
+    const g = ctx.createLinearGradient(0, 0, W, 0);
+    [0,60,120,180,240,300,360].forEach((h, i) => {
+      g.addColorStop(i/6, `hsl(${h},100%,50%)`);
+    });
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ── Sync cursor positions to current HSV ─────────────────────
+  function syncCursors() {
+    const gradCvs = document.getElementById('ced-color-grad');
+    const hueCvs  = document.getElementById('ced-hue-bar');
+    const gradCur = document.getElementById('ced-color-cursor');
+    const hueCur  = document.getElementById('ced-hue-cursor');
+    if (!gradCvs || !gradCur || !hueCvs || !hueCur) return;
+
+    // Gradient cursor (sat, val)
+    const gW = gradCvs.offsetWidth || gradCvs.width;
+    const gH = gradCvs.offsetHeight || gradCvs.height;
+    gradCur.style.left = (_cpSat * gW) + 'px';
+    gradCur.style.top  = ((1 - _cpVal) * gH) + 'px';
+
+    // Hue cursor
+    const hW = hueCvs.offsetWidth || hueCvs.width;
+    hueCur.style.left = ((_cpHue / 360) * hW) + 'px';
+
+    // Cursor ring color matches bg luminance
+    const [r,g,b] = hsvToRgb(_cpHue, _cpSat, _cpVal);
+    const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+    gradCur.style.borderColor = lum > 0.5 ? '#000' : '#fff';
+  }
+
+  // ── Apply color → ced state + UI ─────────────────────────────
+  function applyColor(hex) {
+    ced.fontColor = hex;
+    cedSyncColorUI(hex);
+    if (typeof cedRedraw === 'function') cedRedraw();
+  }
+
+  // ── Update UI elements to reflect a hex color ─────────────────
+  window.cedSyncColorUI = function(hex) {
+    const swatch  = document.getElementById('ced-color-swatch');
+    const hexSpan = document.getElementById('ced-color-hex');
+    const input   = document.getElementById('ced-color-input');
+    const trigger = document.getElementById('ced-color-trigger');
+    if (swatch)  { swatch.style.background = hex; swatch.style.boxShadow = `0 0 8px ${hex}88`; }
+    if (hexSpan) hexSpan.textContent = hex;
+    if (input)   input.value = hex.replace('#','');
+    if (trigger) trigger.style.borderColor = `${hex}66`;
+
+    // Sync active swatch
+    document.querySelectorAll('.ced-swatch-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.color === hex);
+    });
+
+    // Sync HSV state from hex
+    const [r,g,b] = hexToRgb(hex);
+    [_cpHue, _cpSat, _cpVal] = rgbToHsv(r, g, b);
+    drawGradient();
+    syncCursors();
+  };
+
+  // ── Toggle picker open/close ──────────────────────────────────
+  window.cedToggleColorPicker = function() {
+    const picker = document.getElementById('ced-color-picker');
+    if (!picker) return;
+    _cpOpen = !_cpOpen;
+    picker.style.display = _cpOpen ? 'block' : 'none';
+    if (_cpOpen) {
+      // Wait a frame so offsetWidth is correct
+      requestAnimationFrame(() => {
+        drawGradient();
+        drawHueBar();
+        syncCursors();
+        attachPickerEvents();
+      });
+    }
+  };
+
+  // ── Hex input handler ─────────────────────────────────────────
+  window.cedColorFromHexInput = function(val) {
+    val = val.replace(/[^0-9a-fA-F]/g,'');
+    if (val.length === 6) applyColor('#' + val);
+  };
+
+  // ── Drag helpers ──────────────────────────────────────────────
+  let _eventsAttached = false;
+  function attachPickerEvents() {
+    if (_eventsAttached) return;
+    _eventsAttached = true;
+
+    const gradCvs = document.getElementById('ced-color-grad');
+    const hueCvs  = document.getElementById('ced-hue-bar');
+
+    // Gradient canvas drag
+    let _draggingGrad = false;
+    function pickFromGrad(e) {
+      const rect = gradCvs.getBoundingClientRect();
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      _cpSat = Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
+      _cpVal = Math.max(0, Math.min(1, 1 - (cy - rect.top) / rect.height));
+      syncCursors();
+      applyColor(rgbToHex(...hsvToRgb(_cpHue, _cpSat, _cpVal)));
+    }
+    gradCvs.addEventListener('mousedown',  e => { _draggingGrad = true; pickFromGrad(e); });
+    gradCvs.addEventListener('touchstart', e => { _draggingGrad = true; pickFromGrad(e); e.preventDefault(); }, {passive:false});
+    window.addEventListener('mousemove',  e => { if (_draggingGrad) pickFromGrad(e); });
+    window.addEventListener('touchmove',  e => { if (_draggingGrad) pickFromGrad(e); }, {passive:true});
+    window.addEventListener('mouseup',    () => _draggingGrad = false);
+    window.addEventListener('touchend',   () => _draggingGrad = false);
+
+    // Hue bar drag
+    let _draggingHue = false;
+    function pickFromHue(e) {
+      const rect = hueCvs.getBoundingClientRect();
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      _cpHue = Math.max(0, Math.min(360, ((cx - rect.left) / rect.width) * 360));
+      drawGradient();
+      syncCursors();
+      applyColor(rgbToHex(...hsvToRgb(_cpHue, _cpSat, _cpVal)));
+    }
+    hueCvs.addEventListener('mousedown',  e => { _draggingHue = true; pickFromHue(e); });
+    hueCvs.addEventListener('touchstart', e => { _draggingHue = true; pickFromHue(e); e.preventDefault(); }, {passive:false});
+    window.addEventListener('mousemove',  e => { if (_draggingHue) pickFromHue(e); });
+    window.addEventListener('touchmove',  e => { if (_draggingHue) pickFromHue(e); }, {passive:true});
+    window.addEventListener('mouseup',    () => _draggingHue = false);
+    window.addEventListener('touchend',   () => _draggingHue = false);
+
+    // Preset swatches
+    document.querySelectorAll('.ced-swatch-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const hex = btn.dataset.color;
+        applyColor(hex);
+      });
+    });
+
+    // Close picker on outside click
+    document.addEventListener('click', e => {
+      if (!_cpOpen) return;
+      const field = document.getElementById('ced-color-field');
+      if (field && !field.contains(e.target)) {
+        const picker = document.getElementById('ced-color-picker');
+        if (picker) picker.style.display = 'none';
+        _cpOpen = false;
+      }
+    });
+  }
+
+})();
 </script>
 </body>
 </html>

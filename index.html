@@ -2580,6 +2580,42 @@ function populateNameScreen() {
   surveyAdjustStepTracker();
 }
 
+// ══════════════════════════════════════════════════════════════════
+// STEP 4b: SUBMIT NAME (TRANSISI KE SURVEI / GENERATE)
+// ══════════════════════════════════════════════════════════════════
+async function submitName() {
+  const nameInput = document.getElementById('full-name');
+  const nameVal = nameInput.value.trim();
+
+  // 1. Validasi: Pastikan nama tidak kosong
+  if (!nameVal) {
+    showToast('error', 'Nama Kosong', 'Harap masukkan nama lengkap Anda untuk dicetak di sertifikat.');
+    nameInput.focus();
+    return;
+  }
+
+  // 2. Simpan ke variabel global 'certName' (digunakan saat cetak PDF)
+  certName = nameVal;
+
+  // 3. Ubah UI tombol menjadi loading agar user tidak klik berkali-kali
+  const btn = document.getElementById('btn-submit-name');
+  const originalContent = btn.innerHTML;
+  btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;margin-right:8px;border-top-color:#0e0f14;"></div> Memproses...';
+  btn.disabled = true;
+
+  try {
+    // 4. Lanjutkan ke alur berikutnya (Masuk ke Survei atau langsung Generate)
+    await surveyStart();
+  } catch (error) {
+    console.error("Gagal melanjutkan proses:", error);
+    showToast('error', 'Terjadi Kesalahan', 'Gagal memproses data. Silakan coba lagi.');
+  } finally {
+    // 5. Kembalikan tombol ke keadaan semula
+    btn.innerHTML = originalContent;
+    btn.disabled = false;
+  }
+}
+
 // Cek cepat ke Firestore apakah survei sedang aktif, lalu sesuaikan
 // tampilan step tracker di screen-name supaya penomoran step konsisten
 // baik saat survei aktif (3→4→5: Name, Survey, Done) maupun tidak

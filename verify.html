@@ -255,7 +255,7 @@
       document.getElementById('error-msg').textContent = "Akses ditolak. Tidak ada ID Sertifikat yang dilampirkan pada URL.";
     } else {
       // Tarik data dari Firestore collection: cert_user
-      db.collection('cert_user').doc(studentId).get().then((doc) => {
+      db.collection('cert_users').doc(studentId).get().then((doc) => {
         loadingDiv.style.display = 'none';
         
         if (doc.exists) {
@@ -270,14 +270,14 @@
           document.getElementById('cert-uid').textContent = studentId; // Menampilkan UID di bawah email
           
           // Handle format tanggal issue_at
-          if (data.issue_at) {
-            if (typeof data.issue_at.toDate === 'function') {
+          if (data.issued_at) {
+            if (typeof data.issued_at.toDate === 'function') {
               // Jika formatnya Firebase Timestamp asli
               const options = { year: 'numeric', month: 'long', day: 'numeric' };
-              document.getElementById('cert-issue').textContent = data.issue_at.toDate().toLocaleDateString('id-ID', options);
+              document.getElementById('cert-issue').textContent = data.issued_at.toDate().toLocaleDateString('id-ID', options);
             } else {
               // Jika formatnya string biasa
-              document.getElementById('cert-issue').textContent = data.issue_at;
+              document.getElementById('cert-issue').textContent = data.issued_at;
             }
           } else {
             document.getElementById('cert-issue').textContent = '-';

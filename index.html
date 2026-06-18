@@ -206,6 +206,10 @@
     0%,100% { opacity: 1; transform: scale(1); }
     50%      { opacity: 0.5; transform: scale(0.7); }
   }
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
 
   /* ─── BUTTONS ────────────────────────────────────────── */
   .btn {
@@ -1434,10 +1438,10 @@
   </div>
 
   <!-- ══════════════════════════════════════════
-       SCREEN 6: SUCCESS + DOWNLOAD
+       SCREEN 6: SUCCESS + PREVIEW + DOWNLOAD
   ══════════════════════════════════════════ -->
-  <div class="screen" id="screen-success">
-    <div class="card">
+  <div class="screen" id="screen-success" style="max-width:520px;">
+    <div class="card" style="padding:28px 24px;">
       <div class="brand">
         <div class="brand-icon">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1451,30 +1455,58 @@
         </div>
       </div>
 
+      <!-- Check icon + title -->
       <div class="success-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
           <polyline points="22 4 12 14.01 9 11.01"/>
         </svg>
       </div>
+      <h2 class="success-title" style="margin-bottom:2px;">Certificate Ready!</h2>
+      <div class="success-name" id="success-cert-name" style="margin-bottom:16px;"></div>
 
-      <h2 class="success-title">Certificate Ready!</h2>
-      <div class="success-name" id="success-cert-name">Maria Antonia de Silva</div>
-      <p class="success-msg">Your official certificate has been generated and is ready to download. This is a unique, flattened PDF.</p>
-
-      <div class="cert-badge">
-        <div class="cert-badge-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0e0f14" stroke-width="2.5">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
-        </div>
-        <div class="cert-badge-info">
-          <div class="cert-badge-label">Document</div>
-          <div class="cert-badge-name" id="success-cert-filename">certificate.pdf</div>
-        </div>
+      <!-- Preview sertifikat (gambar canvas, di-inject JS) -->
+      <div id="cert-preview-wrap" style="
+        width:100%; border-radius:10px; overflow:hidden;
+        border:1px solid var(--border-soft);
+        box-shadow:0 4px 24px rgba(0,0,0,0.35);
+        margin-bottom:18px; background:#111;
+        aspect-ratio:900/636; position:relative;
+      ">
+        <img id="cert-preview-img" src="" alt="Certificate Preview" style="
+          width:100%; height:100%; object-fit:cover; display:block;
+        "/>
+        <!-- Shimmer saat belum load -->
+        <div id="cert-preview-shimmer" style="
+          position:absolute; inset:0;
+          background:linear-gradient(90deg,#1a1b2a 25%,#23253a 50%,#1a1b2a 75%);
+          background-size:200% 100%;
+          animation:shimmer 1.4s infinite;
+        "></div>
       </div>
-      <div class="footer-note" style="margin-top:20px;">
+
+      <!-- Tombol Download + Share -->
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <button class="btn btn-primary" onclick="certDownloadAgain()" style="flex:1; gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download PDF
+        </button>
+        <button class="btn btn-outline" onclick="certShareNative()" id="btn-share-cert" style="flex:1; gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Share
+        </button>
+      </div>
+
+      <!-- Footer note -->
+      <div class="footer-note">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -2387,7 +2419,9 @@ const functions = firebase.functions();
 // STATE
 // ══════════════════════════════════════════════════════════════════
 let currentUser   = null;
-let generatedPDF  = null;   // jsPDF instance
+let generatedPDF      = null;   // jsPDF instance
+let generatedPDFBlob  = null;   // Blob PDF final (untuk download ulang & share)
+let certPreviewUrl    = null;   // Data URL gambar canvas (untuk preview di screen-done)
 let certName      = "";
 
 // Placeholder untuk dukungan multi-event di masa depan. Saat ini selalu null
@@ -2999,11 +3033,17 @@ async function generateAndStore() {
 
     // Ambil hasil akhir gambar canvas setelah ditempeli QR Code (jika ada)
     const imgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
+    certPreviewUrl = imgDataUrl; // simpan untuk preview di screen-done
 
     // Build Flattened PDF
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [900, 636], hotfixes: ['px_scaling'] });
     pdf.addImage(imgDataUrl, 'JPEG', 0, 0, 900, 636);
+
+    // Simpan blob global agar bisa di-download ulang / di-share dari screen-done
+    const pdfBlob = pdf.output('blob');
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    generatedPDFBlob = isIOS ? new Blob([pdfBlob], { type: 'application/octet-stream' }) : pdfBlob;
 
     // Simpan ke Firestore & Kunci Akun (Anti-Cheat)
     const lsKey = `cert_claimed_${currentUser.uid}`;
@@ -3016,29 +3056,18 @@ async function generateAndStore() {
     }, { merge: true });
     localStorage.setItem(lsKey, 'true');
 
-    // Ubah UI utama di belakang layar menjadi "Berhasil"
+    // Ubah UI utama menjadi "Berhasil" + inject preview
     showSuccessScreen();
 
-    // 3. EKSEKUSI DOWNLOAD OTOMATIS (Memicu Pop-up Unduhan Bawaan iOS/Android)
-    const pdfBlob = pdf.output('blob');
-    let finalBlob = pdfBlob;
-    
-    // Deteksi cerdas Apple Device (Trik Octet-Stream agar Safari iOS langsung tanya "Mau Unduh?")
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (isIOS) {
-      finalBlob = new Blob([pdfBlob], { type: 'application/octet-stream' });
-    }
-
+    // 3. AUTO-DOWNLOAD sekali di awal
     const safeName = certName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    const url = window.URL.createObjectURL(finalBlob);
+    const url = window.URL.createObjectURL(generatedPDFBlob);
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
     a.download = `Sertifikat_${safeName}.pdf`;
     document.body.appendChild(a);
-    a.click(); // Unduhan terpicu di belakang layar!
-    
-    // Bersihkan memori penampung objek tautan
+    a.click();
     setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 1000);
 
     // 4. LANGSUNG MUNCULKAN POP-UP WA UTAMA
@@ -3232,9 +3261,75 @@ function generateCertId() {
 // ══════════════════════════════════════════════════════════════════
 function showSuccessScreen() {
   document.getElementById('success-cert-name').textContent = certName;
-  const safeName = certName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  document.getElementById('success-cert-filename').textContent = `certificate_${safeName}.pdf`;
   showScreen('screen-success');
+
+  // Inject preview gambar sertifikat dari canvas yang sudah dirender
+  const img     = document.getElementById('cert-preview-img');
+  const shimmer = document.getElementById('cert-preview-shimmer');
+  if (img && certPreviewUrl) {
+    img.onload = () => { if (shimmer) shimmer.style.display = 'none'; };
+    img.src = certPreviewUrl;
+  } else if (shimmer) {
+    shimmer.style.display = 'none';
+  }
+
+  // Sembunyikan tombol Share jika browser tidak support Web Share API
+  const shareBtn = document.getElementById('btn-share-cert');
+  if (shareBtn && !navigator.share) {
+    shareBtn.style.display = 'none';
+  }
+}
+
+// ── Download ulang PDF dari blob yang sudah tersimpan ─────────────
+function certDownloadAgain() {
+  if (!generatedPDFBlob) {
+    return showToast('error', 'PDF not found', 'Please reload and try again.');
+  }
+  const safeName = certName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  const url = window.URL.createObjectURL(generatedPDFBlob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = `Sertifikat_${safeName}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 1000);
+}
+
+// ── Share via Web Share API (sheet native Android/iOS) ────────────
+async function certShareNative() {
+  if (!generatedPDFBlob || !navigator.share) return;
+
+  const safeName = certName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  const fileName = `Sertifikat_${safeName}.pdf`;
+
+  // Buat File object dari blob (diperlukan untuk share file)
+  const pdfFile = new File([generatedPDFBlob], fileName, { type: 'application/pdf' });
+
+  // Cek apakah device support share file (bukan hanya URL)
+  const canShareFile = navigator.canShare && navigator.canShare({ files: [pdfFile] });
+
+  try {
+    if (canShareFile) {
+      // Share file PDF langsung — muncul sheet native (WhatsApp, Drive, Telegram, dll)
+      await navigator.share({
+        title: `Sertifikat - ${certName}`,
+        text:  `Sertifikat resmi atas nama ${certName}`,
+        files: [pdfFile],
+      });
+    } else {
+      // Fallback: share hanya teks + link verifikasi (jika share file tidak didukung)
+      await navigator.share({
+        title: `Sertifikat - ${certName}`,
+        text:  `Sertifikat resmi atas nama ${certName}. Download dari portal resmi.`,
+      });
+    }
+  } catch (err) {
+    // User cancel share atau error — tidak perlu toast
+    if (err.name !== 'AbortError') {
+      console.warn('[Share]', err.message);
+    }
+  }
 }
 
 // ── Download PDF ──────────────────────────────────────────────────

@@ -807,6 +807,15 @@
   .stat-value.accent { color: var(--accent); }
   .stat-value.success { color: var(--success); }
   .stat-value.danger  { color: var(--danger); }
+  .stat-card-clickable {
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .stat-card-clickable:hover {
+    border-color: rgba(255,77,109,0.4);
+    background: rgba(255,77,109,0.05);
+    transform: translateY(-1px);
+  }
 
   /* ─── QR SECTION ─────────────────────────────────────────── */
   .admin-qr-row {
@@ -886,16 +895,56 @@
     animation: fadeUp 0.3s ease both;
   }
   #projector-modal.open { display: flex; }
-  #projector-qr-giant {
-    width: min(80vw, 80vh);
-    height: min(80vw, 80vh);
+
+  /* Card putih membungkus QR + judul + badge claimed, seperti kartu fisik */
+  #projector-qr-card {
+    position: relative;
+    width: min(62vw, 62vh);
+    max-width: 560px;
     background: #fff;
-    border-radius: 24px;
+    border-radius: 28px;
+    padding: 32px 32px 24px;
+    display: flex; flex-direction: column; align-items: center;
+    box-shadow: 0 0 120px rgba(204,255,0,0.25), 0 20px 60px rgba(0,0,0,0.5);
+  }
+  #projector-claimed-badge {
+    position: absolute;
+    top: 18px; left: 18px;
+    display: flex; flex-direction: column; align-items: flex-start;
+    line-height: 1;
+    z-index: 2;
+  }
+  #projector-claimed-count {
+    font-family: var(--font-mono);
+    font-size: 30px; font-weight: 700;
+    color: #0e0f14;
+    letter-spacing: -0.02em;
+  }
+  .projector-claimed-label {
+    margin-top: 3px;
+    font-family: var(--font-mono);
+    font-size: 9px; font-weight: 700;
+    color: #8a8d9e;
+    letter-spacing: 0.12em;
+  }
+  #projector-qr-giant {
+    width: 100%;
+    aspect-ratio: 1 / 1;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden;
-    box-shadow: 0 0 120px rgba(204,255,0,0.25);
   }
   #projector-qr-giant canvas, #projector-qr-giant img { width: 100%; height: 100%; }
+  #projector-qr-title {
+    margin-top: 18px;
+    font-family: var(--font-main); font-size: 18px; font-weight: 700;
+    color: #0e0f14; text-align: center;
+  }
+  #projector-qr-subtitle {
+    margin-top: 2px;
+    font-family: var(--font-main); font-size: 12px;
+    color: #9ca0b4; text-align: center;
+  }
+
   .projector-label {
     margin-top: 32px;
     font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.15em;
@@ -918,6 +967,71 @@
     transition: var(--transition);
   }
   .projector-close:hover { background: rgba(255,77,109,0.2); border-color: var(--danger); color: var(--danger); }
+
+  /* ─── GEO VIOLATIONS MODAL ────────────────────────────────── */
+  #geo-violations-modal {
+    display: none;
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+    padding: 20px;
+    animation: fadeUp 0.2s ease both;
+  }
+  #geo-violations-modal.open { display: flex; }
+  .gv-modal-card {
+    width: 100%; max-width: 560px; max-height: 82vh;
+    background: var(--bg-card, #15161e);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg, 16px);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .gv-modal-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding: 20px 22px; border-bottom: 1px solid var(--border-soft);
+    flex-shrink: 0;
+  }
+  .gv-modal-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .gv-modal-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-family: var(--font-mono); }
+  .gv-modal-close {
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border-soft);
+    border-radius: 8px; color: var(--text-muted); cursor: pointer;
+    padding: 6px; display: flex; transition: var(--transition); flex-shrink: 0;
+  }
+  .gv-modal-close:hover { background: rgba(255,77,109,0.15); border-color: var(--danger); color: var(--danger); }
+  .gv-modal-body { overflow-y: auto; padding: 14px; flex: 1; }
+  .gv-item {
+    background: rgba(255,77,109,0.04);
+    border: 1px solid rgba(255,77,109,0.18);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .gv-item-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .gv-item-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .gv-item-time { font-size: 10.5px; color: var(--text-dim); font-family: var(--font-mono); white-space: nowrap; }
+  .gv-item-email { font-size: 12.5px; color: var(--text-muted); margin-bottom: 10px; word-break: break-all; }
+  .gv-item-loc-row {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px; padding: 9px 11px;
+    font-size: 12px; color: var(--text-muted); line-height: 1.5;
+  }
+  .gv-item-loc-row svg { flex-shrink: 0; margin-top: 1px; color: var(--danger); }
+  .gv-item-dist {
+    display: inline-block; margin-top: 6px;
+    font-family: var(--font-mono); font-size: 10.5px;
+    color: var(--danger); background: rgba(255,77,109,0.1);
+    border: 1px solid rgba(255,77,109,0.25);
+    border-radius: 5px; padding: 2px 7px;
+  }
+  .gv-item-link {
+    color: var(--accent); text-decoration: none; font-size: 11px;
+    margin-left: 6px; white-space: nowrap;
+  }
+  .gv-item-link:hover { text-decoration: underline; }
 
   /* ─── ADMIN ACCESS DENIED OVERLAY ────────────────────────── */
   #screen-admin-denied { max-width: 420px; }
@@ -1642,7 +1756,7 @@
         <div class="stat-label">Total Claimed</div>
         <div class="stat-value accent" id="stat-claimed">—</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" id="stat-violations-card" onclick="openGeoViolationsModal()" title="Click to see who violated the geofence">
         <div class="stat-label">Geo Violations</div>
         <div class="stat-value danger" id="stat-violations">—</div>
       </div>
@@ -2359,9 +2473,43 @@
     </svg>
     Close (Esc)
   </button>
-  <div id="projector-qr-giant"></div>
+
+  <!-- Card QR putih + badge total claimed -->
+  <div id="projector-qr-card">
+    <div id="projector-claimed-badge" title="Total certificates claimed">
+      <span id="projector-claimed-count">0</span>
+      <span class="projector-claimed-label">CLAIMED</span>
+    </div>
+    <div id="projector-qr-giant"></div>
+    <div id="projector-qr-title">—</div>
+    <div id="projector-qr-subtitle">Klik liur atu taka</div>
+  </div>
+
   <div class="projector-label">Scan to claim your certificate</div>
   <div class="projector-url" id="projector-url-label">—</div>
+</div>
+
+<!-- ── GEO VIOLATIONS MODAL ───────────────────────────────── -->
+<div id="geo-violations-modal">
+  <div class="gv-modal-card">
+    <div class="gv-modal-header">
+      <div>
+        <div class="gv-modal-title">⚠️ Geofence Violations</div>
+        <div class="gv-modal-subtitle" id="gv-modal-count">Loading…</div>
+      </div>
+      <button class="gv-modal-close" onclick="closeGeoViolationsModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="gv-modal-body" id="gv-modal-body">
+      <div style="text-align:center; padding:40px 0; color:var(--text-muted);">
+        <div class="spinner" style="margin:0 auto 12px;"></div>
+        Loading violations…
+      </div>
+    </div>
+  </div>
 </div>
 
 
@@ -2582,6 +2730,134 @@ async function logGeofenceViolation(lat, lng, dist, reason = null) {
   } catch (e) {
     console.error('[GeoViolation] Failed to log:', e.message);
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ADMIN: GEO VIOLATIONS MODAL (klik stat card "Geo Violations")
+// ══════════════════════════════════════════════════════════════════
+async function openGeoViolationsModal() {
+  const modal  = document.getElementById('geo-violations-modal');
+  const body   = document.getElementById('gv-modal-body');
+  const countL = document.getElementById('gv-modal-count');
+
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', gvEscHandler);
+
+  body.innerHTML = `<div style="text-align:center; padding:40px 0; color:var(--text-muted);">
+    <div class="spinner" style="margin:0 auto 12px;"></div>Loading violations…
+  </div>`;
+  countL.textContent = 'Loading…';
+
+  try {
+    const snap = await db.collection(VIOLATIONS_COLLECTION).get();
+    const rows = [];
+    snap.forEach(doc => rows.push({ id: doc.id, ...doc.data() }));
+
+    // Urutkan terbaru dulu (client-side, hindari kebutuhan composite index)
+    rows.sort((a, b) => {
+      const ta = a.timestamp ? a.timestamp.seconds : 0;
+      const tb = b.timestamp ? b.timestamp.seconds : 0;
+      return tb - ta;
+    });
+
+    countL.textContent = `${rows.length} violation${rows.length !== 1 ? 's' : ''} recorded`;
+
+    if (rows.length === 0) {
+      body.innerHTML = `<div style="text-align:center; padding:40px 16px; color:var(--text-muted); font-size:13px;">
+        No geofence violations recorded. Everyone checked in from the correct location. 🎉
+      </div>`;
+      return;
+    }
+
+    body.innerHTML = rows.map(r => {
+      const name  = escapeHtml(r.displayName || 'Unknown');
+      const email = escapeHtml(r.email || '—');
+      const ts    = r.timestamp ? new Date(r.timestamp.seconds * 1000).toLocaleString('id-ID') : '—';
+      const hasCoords = (r.attempted_lat != null && r.attempted_lng != null);
+
+      let locHtml;
+      if (hasCoords) {
+        const lat = r.attempted_lat.toFixed(5);
+        const lng = r.attempted_lng.toFixed(5);
+        const mapsUrl = `https://www.google.com/maps?q=${r.attempted_lat},${r.attempted_lng}`;
+        locHtml = `
+          <div class="gv-item-loc-row">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span id="gv-addr-${r.id}">Resolving address… (${lat}, ${lng})</span>
+            <a class="gv-item-link" href="${mapsUrl}" target="_blank" rel="noopener">Open in Maps ↗</a>
+          </div>
+          ${r.distance_m != null ? `<span class="gv-item-dist">${r.distance_m.toLocaleString('id-ID')} m from event location</span>` : ''}
+        `;
+      } else {
+        locHtml = `
+          <div class="gv-item-loc-row">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>Location unavailable${r.reason ? ` — ${escapeHtml(r.reason)}` : ' (permission denied)'}</span>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="gv-item">
+          <div class="gv-item-top">
+            <div class="gv-item-name">${name}</div>
+            <div class="gv-item-time">${ts}</div>
+          </div>
+          <div class="gv-item-email">${email}</div>
+          ${locHtml}
+        </div>
+      `;
+    }).join('');
+
+    // Reverse-geocode tiap koordinat jadi alamat (async, isi belakangan tanpa blok render)
+    rows.forEach(r => {
+      if (r.attempted_lat != null && r.attempted_lng != null) {
+        gvResolveAddress(r.id, r.attempted_lat, r.attempted_lng);
+      }
+    });
+
+  } catch (e) {
+    body.innerHTML = `<div style="text-align:center; padding:30px 16px; color:var(--danger); font-size:13px;">
+      Failed to load violations: ${escapeHtml(e.message)}
+    </div>`;
+    countL.textContent = 'Error';
+  }
+}
+
+// Reverse geocode via Nominatim (OpenStreetMap) — gratis, tanpa API key
+async function gvResolveAddress(rowId, lat, lng) {
+  const target = document.getElementById(`gv-addr-${rowId}`);
+  if (!target) return;
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`, {
+      headers: { 'Accept-Language': 'id,en' }
+    });
+    const data = await res.json();
+    if (data && data.display_name) {
+      target.textContent = data.display_name;
+    } else {
+      target.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)} (address not found)`;
+    }
+  } catch (e) {
+    // Biarkan tampilan koordinat mentah jika reverse geocode gagal (mis. rate limit)
+    console.warn('[GeoViolations] Reverse geocode failed:', e.message);
+  }
+}
+
+function closeGeoViolationsModal() {
+  const modal = document.getElementById('geo-violations-modal');
+  modal.classList.remove('open');
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', gvEscHandler);
+}
+
+function gvEscHandler(e) {
+  if (e.key === 'Escape') closeGeoViolationsModal();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -3709,6 +3985,10 @@ function adminRefreshTable() {
           claimedEl.textContent = rows.length;
           countEl.textContent   = `${rows.length} participant${rows.length !== 1 ? 's' : ''}`;
 
+          // Sinkronkan juga angka di badge Projector Mode, kalau-kalau sedang terbuka
+          const projCountEl = document.getElementById('projector-claimed-count');
+          if (projCountEl) projCountEl.textContent = rows.length;
+
           // Ambil violations secara terpisah — error violations tidak ganggu table
           try {
             const vSnap = await db.collection(VIOLATIONS_COLLECTION).get();
@@ -3804,6 +4084,16 @@ function adminLockDashboard() {
 function openProjectorModal() {
   const modal = document.getElementById('projector-modal');
   modal.classList.add('open');
+
+  // Isi judul event di card QR
+  const titleEl = document.getElementById('projector-qr-title');
+  if (titleEl) titleEl.textContent = EVENT_NAME || 'Certificate Event';
+
+  // Tampilkan angka claimed terkini (ambil dari counter admin yang sudah live via onSnapshot)
+  const liveCount   = document.getElementById('stat-claimed')?.textContent;
+  const claimedEl   = document.getElementById('projector-claimed-count');
+  if (claimedEl) claimedEl.textContent = (liveCount && liveCount !== '—') ? liveCount : '0';
+
   // Prevent page scroll while projector is open
   document.body.style.overflow = 'hidden';
   // Close on Escape key
@@ -4000,9 +4290,10 @@ function surveyRenderQuestions() {
           <input
             class="ced-input"
             type="text"
-            placeholder="Tulis pertanyaan di sini..."
+            placeholder="Tulis atau paste pertanyaan (bisa langsung dengan pilihan A/B/C/D)..."
             value="${escapeHtml(q.text || '')}"
             oninput="surveyUpdateField('${q.id}', 'text', this.value)"
+            onpaste="surveyHandlePaste('${q.id}', event)"
             style="flex:1; min-width:0;"
           />
           <select
@@ -4066,6 +4357,83 @@ window.surveyUpdateField = function(qid, field, value) {
     surveyRenderQuestions(); // re-render agar area opsi muncul/hilang
   }
 };
+
+// ══════════════════════════════════════════════════════════════════
+// SMART PASTE: deteksi pertanyaan + pilihan ganda dari teks yang
+// di-paste, lalu otomatis pisahkan ke field pertanyaan & opsi.
+// Mendukung format penanda opsi umum: "A.", "A)", "(A)", "a.", "1.",
+// "1)", serta varian dengan/tanpa spasi setelah penanda.
+// ══════════════════════════════════════════════════════════════════
+window.surveyHandlePaste = function(qid, event) {
+  const clipboardText = (event.clipboardData || window.clipboardData)?.getData('text') || '';
+
+  // Hanya intercept kalau ada lebih dari 1 baris — paste 1 baris biasa
+  // (tanpa opsi) biarkan jalan normal seperti input teks biasa.
+  const lineCount = clipboardText.split(/\r\n|\r|\n/).filter(l => l.trim()).length;
+  if (lineCount < 2) return; // biarkan default paste behavior
+
+  const parsed = surveySmartParsePaste(clipboardText);
+  if (!parsed || parsed.options.length < 2) return; // pola tidak cocok, biarkan default
+
+  // Pola pilihan ganda terdeteksi — cegah paste mentah ke input
+  event.preventDefault();
+
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+
+  q.text    = parsed.question;
+  q.type    = 'choice';
+  q.options = parsed.options;
+
+  surveyRenderQuestions();
+  showToast('success', 'Smart Paste detected!', `${parsed.options.length} pilihan otomatis terisi.`);
+
+  // Kembalikan fokus ke input pertanyaan kartu ini (DOM diganti total saat render ulang)
+  setTimeout(() => {
+    const card = document.querySelector(`.survey-q-card[data-qid="${qid}"] input[type="text"]`);
+    if (card) { card.focus(); card.setSelectionRange(card.value.length, card.value.length); }
+  }, 50);
+};
+
+// Parser inti: pisahkan teks jadi { question, options[] }.
+// Strategi: scan tiap baris. Baris berawalan HURUF + titik/kurung
+// (A. / A) / (A) / a.) dianggap opsi pilihan ganda. Baris berawalan
+// ANGKA + titik/kurung (1. / 1)) dianggap nomor urut soal — angka ini
+// dipangkas dan sisanya masuk sebagai bagian teks pertanyaan, BUKAN opsi,
+// supaya "1. Apa yang dimaksud..." tidak salah dikira opsi nomor 1.
+function surveySmartParsePaste(rawText) {
+  const lines = rawText.split(/\r\n|\r|\n/).map(l => l.trim()).filter(l => l.length > 0);
+  if (lines.length < 2) return null;
+
+  const letterMarker  = /^\(?([A-Za-z])\)?[.)]\s*(.+)$/;  // A.  A)  (A)  a.
+  const leadingNumber = /^\d{1,3}[.)]\s*/;                 // 1.  1)  — nomor soal, bukan opsi
+
+  const questionLines = [];
+  const options = [];
+  let inOptionsZone = false;
+
+  for (const line of lines) {
+    const m = line.match(letterMarker);
+    if (m && m[2] && m[2].trim()) {
+      inOptionsZone = true;
+      options.push(m[2].trim());
+    } else if (!inOptionsZone) {
+      // Bagian dari pertanyaan — buang nomor urut soal di depan jika ada.
+      questionLines.push(line.replace(leadingNumber, ''));
+    } else {
+      // Baris di tengah opsi yang tidak match marker huruf — anggap
+      // kelanjutan opsi sebelumnya (opsi yang teksnya lebih dari 1 baris).
+      if (options.length > 0) {
+        options[options.length - 1] += ' ' + line;
+      }
+    }
+  }
+
+  const question = questionLines.join(' ').trim();
+  if (!question || options.length < 2) return null;
+
+  return { question, options };
+}
 
 window.surveyAddOption = function(qid) {
   const q = surveyQuestions.find(q => q.id === qid);

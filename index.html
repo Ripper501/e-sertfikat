@@ -1352,94 +1352,10 @@
   <!-- ══════════════════════════════════════════
        SCREEN 5: NAME INPUT
   ══════════════════════════════════════════ -->
-  <div class="screen" id="screen-name">
-    <div class="card">
-      <div class="brand">
-        <div class="brand-icon">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" fill="#0e0f14"/>
-            <path d="M9 12L11 14L15 10" stroke="#0e0f14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="brand-text">
-          <div class="brand-name">CertPortal</div>
-          <div class="brand-sub">Secure · Verified · Official</div>
-        </div>
-      </div>
-
-      <!-- Step tracker -->
-      <div class="steps">
-        <div class="step-item done">
-          <div class="step-num">✓</div>
-          <span>Auth</span>
-        </div>
-        <div class="step-connector"></div>
-        <div class="step-item done">
-          <div class="step-num">✓</div>
-          <span>Verify</span>
-        </div>
-        <div class="step-connector"></div>
-        <div class="step-item active" id="step-track-name">
-          <div class="step-num">3</div>
-          <span>Name</span>
-        </div>
-        <div class="step-connector" id="step-track-connector-survey" style="display:none;"></div>
-        <div class="step-item" id="step-track-survey" style="display:none;">
-          <div class="step-num">4</div>
-          <span>Survey</span>
-        </div>
-        <div class="step-connector"></div>
-        <div class="step-item" id="step-track-done">
-          <div class="step-num">5</div>
-          <span>Done</span>
-        </div>
-      </div>
-
-      <div class="user-bar" id="name-user-bar">
-        <div class="user-avatar" id="name-user-avatar">U</div>
-        <span class="user-email" id="name-user-email">user@email.com</span>
-        <div class="user-verified">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z"/></svg>
-          Verified
-        </div>
-      </div>
-
-      <h2 class="screen-title" style="font-size:22px; margin-bottom:6px;">Enter your <span>full name</span></h2>
-      <p class="screen-desc" style="margin-bottom:24px;">This name will appear exactly as printed on your certificate. Double-check spelling carefully.</p>
-
-      <div class="input-group">
-        <label class="input-label" for="full-name">Full Name (as on certificate)</label>
-        <div class="input-wrap">
-          <input
-            class="input-field"
-            id="full-name"
-            type="text"
-            placeholder="e.g. Maria Antonia de Silva"
-            autocomplete="name"
-            spellcheck="false"
-          />
-        </div>
-      </div>
-
-      <button class="btn btn-primary" id="btn-submit-name" onclick="submitName()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-        Generate Certificate
-      </button>
-
-      <div class="footer-note">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        </svg>
-        Certificate is cryptographically unique and cannot be duplicated
-      </div>
-    </div>
-  </div>
-
   <!-- ══════════════════════════════════════════
-       SCREEN 5b: MINI SURVEY (sebelum generate)
-       Hanya tampil jika admin sudah atur pertanyaan
-       survei di panel "📝 Form". Satu pertanyaan per
-       tampilan, wajib dijawab semua sebelum lanjut.
+       SCREEN 3: SURVEY (includes name as Q1)
+       Pertanyaan pertama selalu "Full Name" otomatis.
+       Pertanyaan berikutnya dari konfigurasi admin.
   ══════════════════════════════════════════ -->
   <div class="screen" id="screen-survey">
     <div class="card">
@@ -1456,7 +1372,7 @@
         </div>
       </div>
 
-      <!-- Step tracker (sinkron dengan screen-name, Survey jadi active) -->
+      <!-- Step tracker: Auth → Verify → Survey → Done -->
       <div class="steps">
         <div class="step-item done">
           <div class="step-num">✓</div>
@@ -1468,18 +1384,13 @@
           <span>Verify</span>
         </div>
         <div class="step-connector"></div>
-        <div class="step-item done">
-          <div class="step-num">✓</div>
-          <span>Name</span>
-        </div>
-        <div class="step-connector"></div>
         <div class="step-item active">
-          <div class="step-num">4</div>
+          <div class="step-num">3</div>
           <span>Survey</span>
         </div>
         <div class="step-connector"></div>
         <div class="step-item">
-          <div class="step-num">5</div>
+          <div class="step-num">4</div>
           <span>Done</span>
         </div>
       </div>
@@ -2598,11 +2509,10 @@ function runGeofenceCheck() {
           await logGeofenceViolation(latitude, longitude, dist);
           showScreen('screen-blocked-geo');
         } else {
-          // ── PASS: proceed to name input ─────────────────────
-          populateNameScreen();
-          showScreen('screen-name');
+          // ── PASS: langsung ke survei (pertanyaan pertama = nama) ─
+          await surveyStart();
+          resolve();
         }
-        resolve();
       },
       async (err) => {
         // Treat denied/unavailable as a soft-fail — block for safety
@@ -2637,59 +2547,7 @@ async function logGeofenceViolation(lat, lng, dist, reason = null) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// STEP 4: NAME INPUT
-// ══════════════════════════════════════════════════════════════════
-function populateNameScreen() {
-  document.getElementById('name-user-email').textContent = currentUser.email;
-  const av = document.getElementById('name-user-avatar');
-  if (currentUser.photoURL) {
-    av.innerHTML = `<img src="${currentUser.photoURL}" alt="" />`;
-  } else {
-    av.textContent = (currentUser.displayName || currentUser.email || 'U')[0].toUpperCase();
-  }
-  // Pre-fill name if available from provider
-  if (currentUser.displayName) {
-    document.getElementById('full-name').value = currentUser.displayName;
-  }
-  // Sesuaikan step tracker (tampilkan/sembunyikan step "Survey") sesuai
-  // apakah admin sudah atur pertanyaan survei atau belum.
-  surveyAdjustStepTracker();
-}
-
-// Cek cepat ke Firestore apakah survei sedang aktif, lalu sesuaikan
-// tampilan step tracker di screen-name supaya penomoran step konsisten
-// baik saat survei aktif (3→4→5: Name, Survey, Done) maupun tidak
-// (3→4: Name, Done — step Survey disembunyikan total).
-async function surveyAdjustStepTracker() {
-  const stepSurvey       = document.getElementById('step-track-survey');
-  const stepConnector     = document.getElementById('step-track-connector-survey');
-  const stepDone          = document.getElementById('step-track-done');
-  if (!stepSurvey || !stepConnector || !stepDone) return;
-
-  let hasActiveSurvey = false;
-  try {
-    const snap = await db.collection('settings').doc('survey_config').get();
-    const d = snap.exists ? snap.data() : null;
-    hasActiveSurvey = !!(d && Array.isArray(d.questions) && d.questions.filter(q => q && q.text).length > 0);
-  } catch (e) {
-    hasActiveSurvey = false; // fail-safe: anggap tidak ada survei jika gagal cek
-  }
-
-  if (hasActiveSurvey) {
-    stepSurvey.style.display    = 'flex';
-    stepConnector.style.display = 'block';
-    stepDone.querySelector('.step-num').textContent = '5';
-  } else {
-    stepSurvey.style.display    = 'none';
-    stepConnector.style.display = 'none';
-    stepDone.querySelector('.step-num').textContent = '4';
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════
-// MINI SURVEY FLOW (student) — tampil setelah isi Nama, sebelum
-// generate sertifikat. Pertanyaan & koneksi Google Form diatur admin
-// dari panel "📝 Form" (toggleSurveyEditor di bagian admin).
+// STEP 3: SURVEY (pertanyaan pertama selalu Full Name)
 // ══════════════════════════════════════════════════════════════════
 
 // Runtime state khusus alur student. Dipisah dari `surveyQuestions`
@@ -2700,29 +2558,53 @@ let studentSurveyAnswers   = {};    // { [questionId]: answerString }
 let studentSurveyIndex     = 0;     // index pertanyaan yang sedang ditampilkan
 
 async function surveyStart() {
-  // Ambil config survei terbaru dari Firestore setiap kali mau mulai,
-  // supaya selalu pakai pertanyaan paling baru yang admin atur.
   try {
     const snap = await db.collection('settings').doc('survey_config').get();
     const d = snap.exists ? snap.data() : null;
-    const questions = (d && Array.isArray(d.questions)) ? d.questions.filter(q => q && q.text) : [];
+    const adminQuestions = (d && Array.isArray(d.questions))
+      ? d.questions.filter(q => q && q.text)
+      : [];
 
-    if (questions.length === 0) {
-      // Tidak ada survei aktif sama sekali — lanjut seperti behavior lama, tanpa step tambahan.
-      studentSurveyConfig = null;
-      await generateAndStore();
-      return;
-    }
+    // Pertanyaan pertama SELALU Full Name — wajib, tidak bisa dihapus
+    const nameQuestion = {
+      id:       '__fullname__',
+      text:     'Full Name (As on Certificate)',
+      type:     'text',
+      options:  [],
+      isName:   true,   // flag khusus agar surveyGoNext tahu ini = certName
+    };
 
-    studentSurveyConfig  = { eventName: (d.eventName || 'General_Event'), questions };
+    studentSurveyConfig  = {
+      eventName: (d?.eventName || 'General_Event'),
+      questions: [nameQuestion, ...adminQuestions],
+    };
     studentSurveyAnswers = {};
     studentSurveyIndex   = 0;
+
+    // Pre-fill nama dari Google account jika ada
+    if (currentUser?.displayName) {
+      studentSurveyAnswers['__fullname__'] = currentUser.displayName;
+    }
+
     surveyRenderCurrentQuestion();
     showScreen('screen-survey');
   } catch (e) {
-    console.warn('[Survey] Gagal ambil survey_config, lanjut tanpa survei:', e.message);
-    studentSurveyConfig = null;
-    await generateAndStore();
+    console.warn('[Survey] Gagal ambil survey_config, lanjut hanya nama:', e.message);
+    // Fallback: hanya pertanyaan nama
+    studentSurveyConfig  = {
+      eventName: 'General_Event',
+      questions: [{
+        id: '__fullname__', text: 'Full Name (As on Certificate)',
+        type: 'text', options: [], isName: true,
+      }],
+    };
+    studentSurveyAnswers = {};
+    studentSurveyIndex   = 0;
+    if (currentUser?.displayName) {
+      studentSurveyAnswers['__fullname__'] = currentUser.displayName;
+    }
+    surveyRenderCurrentQuestion();
+    showScreen('screen-survey');
   }
 }
 
@@ -2736,34 +2618,75 @@ function surveyRenderCurrentQuestion() {
   const questionText  = document.getElementById('survey-question-text');
   const answerArea    = document.getElementById('survey-answer-area');
   const validationMsg = document.getElementById('survey-validation-msg');
-  const backBtn        = document.getElementById('btn-survey-back');
-  const nextLabel      = document.getElementById('survey-next-label');
+  const backBtn       = document.getElementById('btn-survey-back');
+  const nextLabel     = document.getElementById('survey-next-label');
 
   if (progressLabel) progressLabel.textContent = `Question ${studentSurveyIndex + 1} of ${questions.length}`;
-  if (questionText)  questionText.textContent  = q.text;
   if (validationMsg) validationMsg.style.display = 'none';
 
-  // Tombol Back disembunyikan di pertanyaan pertama (tidak ada tempat untuk kembali).
+  // Judul pertanyaan — Full Name dapat badge khusus
+  if (questionText) {
+    if (q.isName) {
+      questionText.innerHTML = `${escapeHtml(q.text)}&nbsp;<span style="
+        display:inline-block;
+        font-size:10px; font-family:var(--font-mono);
+        background:rgba(204,255,0,0.12); color:var(--accent);
+        border:1px solid rgba(204,255,0,0.3); border-radius:4px;
+        padding:2px 7px; letter-spacing:0.06em; text-transform:uppercase;
+        vertical-align:middle;
+      ">For Certificate</span>`;
+    } else {
+      questionText.textContent = q.text;
+    }
+  }
+
   if (backBtn) backBtn.style.visibility = (studentSurveyIndex === 0) ? 'hidden' : 'visible';
-  // Label tombol lanjut berubah jadi "Finish" di pertanyaan terakhir.
   if (nextLabel) nextLabel.textContent = (studentSurveyIndex === questions.length - 1) ? 'Finish' : 'Next';
 
   const existingAnswer = studentSurveyAnswers[q.id] || '';
-
   if (!answerArea) return;
 
-  if (q.type === 'choice') {
+  if (q.type === 'text') {
+    answerArea.innerHTML = `
+      <div class="input-wrap" style="margin-bottom:4px;">
+        <input
+          class="input-field"
+          id="survey-text-input"
+          type="text"
+          value="${escapeHtml(existingAnswer)}"
+          placeholder="${q.isName ? 'e.g. Maria Antonia de Silva' : 'Tulis jawaban kamu...'}"
+          autocomplete="${q.isName ? 'name' : 'off'}"
+          spellcheck="false"
+          oninput="surveySetCurrentAnswer(this.value)"
+          style="font-size:${q.isName ? '16px' : '14px'}; ${q.isName ? 'font-weight:500;' : ''}"
+        />
+      </div>
+      ${q.isName ? `<p style="font-size:11.5px; color:var(--text-dim); margin-top:6px; line-height:1.5;">
+        ⚠️ Nama ini akan tercetak <strong style="color:var(--text);">persis seperti yang kamu tulis</strong> di sertifikat. Periksa ejaan dengan teliti.
+      </p>` : ''}
+    `;
+    setTimeout(() => {
+      const inp = document.getElementById('survey-text-input');
+      if (inp) {
+        inp.focus();
+        if (q.isName && existingAnswer) inp.select();
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') surveyGoNext(); });
+      }
+    }, 80);
+
+  } else if (q.type === 'choice') {
     answerArea.innerHTML = (q.options || []).map((opt, oi) => {
-      const checked = (existingAnswer === opt) ? 'checked' : '';
+      const isSelected = existingAnswer === opt;
       const optId = `survey-opt-${studentSurveyIndex}-${oi}`;
       return `
         <label for="${optId}" style="
           display:flex; align-items:center; gap:12px;
           padding:14px 16px; margin-bottom:10px;
-          background:rgba(255,255,255,0.03); border:1px solid var(--border-soft);
+          background:${isSelected ? 'rgba(204,255,0,0.04)' : 'rgba(255,255,255,0.03)'};
+          border:1px solid ${isSelected ? 'var(--accent)' : 'var(--border-soft)'};
           border-radius:var(--radius-md); cursor:pointer; transition:var(--transition);
         " onclick="this.style.borderColor='var(--accent)'; this.style.background='rgba(204,255,0,0.04)';">
-          <input type="radio" id="${optId}" name="survey-current-choice" value="${escapeHtml(opt)}" ${checked}
+          <input type="radio" id="${optId}" name="survey-current-choice" value="${escapeHtml(opt)}" ${isSelected ? 'checked' : ''}
             style="width:17px; height:17px; accent-color:var(--accent); flex-shrink:0; cursor:pointer;"
             onchange="surveySetCurrentAnswer(this.value)" />
           <span style="font-size:14px; color:var(--text);">${escapeHtml(opt)}</span>
@@ -2772,39 +2695,25 @@ function surveyRenderCurrentQuestion() {
     }).join('');
 
   } else if (q.type === 'checkbox') {
-    // Jawaban checkbox disimpan sebagai string CSV, mis. "Opsi A,Opsi C"
     const selected = existingAnswer ? existingAnswer.split(',').map(s => s.trim()) : [];
     answerArea.innerHTML = (q.options || []).map((opt, oi) => {
-      const isChecked = selected.includes(opt) ? 'checked' : '';
+      const isChecked = selected.includes(opt);
       const optId = `survey-cb-${studentSurveyIndex}-${oi}`;
       return `
         <label for="${optId}" style="
           display:flex; align-items:center; gap:12px;
           padding:14px 16px; margin-bottom:10px;
-          background:rgba(255,255,255,0.03); border:1px solid ${selected.includes(opt) ? 'var(--accent)' : 'var(--border-soft)'};
+          background:${isChecked ? 'rgba(204,255,0,0.04)' : 'rgba(255,255,255,0.03)'};
+          border:1px solid ${isChecked ? 'var(--accent)' : 'var(--border-soft)'};
           border-radius:var(--radius-md); cursor:pointer; transition:var(--transition);
         ">
-          <input type="checkbox" id="${optId}" name="survey-current-cb" value="${escapeHtml(opt)}" ${isChecked}
+          <input type="checkbox" id="${optId}" name="survey-current-cb" value="${escapeHtml(opt)}" ${isChecked ? 'checked' : ''}
             style="width:17px; height:17px; accent-color:var(--accent); flex-shrink:0; cursor:pointer;"
             onchange="surveyToggleCheckbox('${q.id}', '${escapeHtml(opt)}', this.checked, this)" />
           <span style="font-size:14px; color:var(--text);">${escapeHtml(opt)}</span>
         </label>
       `;
-    }).join('');
-
-  } else {
-    answerArea.innerHTML = `
-      <div class="input-wrap">
-        <textarea
-          class="input-field"
-          id="survey-text-input"
-          rows="3"
-          style="resize:vertical; font-family:var(--font-main); line-height:1.5;"
-          placeholder="Type your answer here..."
-          oninput="surveySetCurrentAnswer(this.value)"
-        >${escapeHtml(existingAnswer)}</textarea>
-      </div>
-    `;
+    }).join('') + `<p style="font-size:11.5px; color:var(--text-dim); margin-top:4px;">Boleh pilih lebih dari satu.</p>`;
   }
 }
 
@@ -2853,13 +2762,34 @@ window.surveyGoBack = function() {
 window.surveyGoNext = async function() {
   if (!studentSurveyConfig) return;
   const q = studentSurveyConfig.questions[studentSurveyIndex];
-  const answer = studentSurveyAnswers[q.id];
+  const answer = (studentSurveyAnswers[q.id] || '').trim();
   const validationMsg = document.getElementById('survey-validation-msg');
 
-  // Semua pertanyaan wajib dijawab — tidak bisa lanjut tanpa isi jawaban.
-  if (!answer || !answer.trim()) {
-    if (validationMsg) validationMsg.style.display = 'block';
+  // Semua pertanyaan wajib dijawab
+  if (!answer) {
+    if (validationMsg) {
+      validationMsg.textContent = q.isName
+        ? 'Please enter your full name before continuing.'
+        : 'Please answer this question before continuing.';
+      validationMsg.style.display = 'block';
+    }
     return;
+  }
+
+  // Validasi tambahan untuk Full Name: minimal 2 kata, max 80 karakter
+  if (q.isName) {
+    const cleaned = answer.replace(/\s+/g, ' ');
+    if (cleaned.length < 2) {
+      if (validationMsg) { validationMsg.textContent = 'Name too short.'; validationMsg.style.display = 'block'; }
+      return;
+    }
+    if (cleaned.length > 80) {
+      if (validationMsg) { validationMsg.textContent = 'Name too long (max 80 characters).'; validationMsg.style.display = 'block'; }
+      return;
+    }
+    // Simpan ke certName — inilah yang dipakai di sertifikat
+    certName = cleaned;
+    studentSurveyAnswers[q.id] = cleaned; // normalisasi spasi
   }
 
   const isLast = studentSurveyIndex === studentSurveyConfig.questions.length - 1;
@@ -2881,11 +2811,13 @@ async function surveyFinishAndGenerate() {
 
   // ── 1. KIRIM OTOMATIS KE GOOGLE SHEET (MENGGUNAKAN APPS SCRIPT ARRAY DINAMIS)
   try {
-    // Memetakan jawaban survei ke format array objek [{label, value}] sesuai pesanan Apps Script
-    const dynamicResponses = studentSurveyConfig.questions.map(q => ({
-      label: q.text,                            // Menjadi judul kolom di Google Sheets
-      value: studentSurveyAnswers[q.id] || ""   // Menjadi isi jawaban siswa
-    }));
+    // Memetakan jawaban survei ke format [{label, value}] — skip Full Name (sudah jadi namaSertifikat)
+    const dynamicResponses = studentSurveyConfig.questions
+      .filter(q => !q.isName)
+      .map(q => ({
+        label: q.text,
+        value: studentSurveyAnswers[q.id] || ""
+      }));
 
     // Ambil nama event dari config survei yang sudah di-set admin (field "Nama Event")
     const eventId = studentSurveyConfig?.eventName || 'General_Event';
@@ -2937,50 +2869,9 @@ async function surveyFinishAndGenerate() {
   if (nextBtn) nextBtn.disabled = false;
 }
 
-async function submitName() {
-  const raw  = document.getElementById('full-name').value.trim();
-  const name = raw.replace(/\s+/g, ' ');
-
-  if (!name || name.length < 2) {
-    showToast('warning', 'Name too short', 'Please enter your full name as it should appear on the certificate.');
-    return;
-  }
-  if (name.length > 80) {
-    showToast('warning', 'Name too long', 'Please shorten your name to under 80 characters.');
-    return;
-  }
-
-  // ── SweetAlert2 confirmation modal ──────────────────────────
-  const result = await Swal.fire({
-    title: 'Confirm your name',
-    html: `
-      <p style="color:var(--text-muted);font-size:14px;line-height:1.6;margin-bottom:4px;">
-        This name will be printed on your certificate exactly as shown below.
-      </p>
-      <span class="swal2-name-preview">${escapeHtml(name)}</span>
-      <p style="color:var(--text-muted);font-size:13px;">Is this correct?</p>
-    `,
-    showDenyButton:   true,
-    showCancelButton: false,
-    confirmButtonText: '✓ &nbsp;Sim, generate it!',
-    denyButtonText:    '✗ &nbsp;Lae, edit',
-    reverseButtons:    true,
-    focusConfirm:      false,
-    customClass: { popup: 'swal2-dark-custom' }
-  });
-
-  if (result.isConfirmed) {
-    certName = name;
-    // Jika admin sudah atur pertanyaan survei di panel "📝 Form", tampilkan
-    // screen-survey dulu (wajib dijawab semua). Jika belum ada survei sama
-    // sekali, langsung lanjut seperti behavior semula (backward compatible).
-    await surveyStart();
-  }
-  // If denied: modal closes, user edits name field
-}
 
 // ══════════════════════════════════════════════════════════════════
-// STEP 5: GENERATE FLATTENED PDF
+// STEP 4: GENERATE FLATTENED PDF
 // ══════════════════════════════════════════════════════════════════
 async function generateAndStore() {
   // 1. Tampilkan Progress Bar Modern Elegan (Simulasi 1.5 Detik)
@@ -3457,10 +3348,7 @@ function escapeHtml(str) {
     .replace(/'/g,  '&#039;');
 }
 
-// ── Enter key on name input ───────────────────────────────────────
-document.getElementById('full-name').addEventListener('keydown', e => {
-  if (e.key === 'Enter') submitName();
-});
+// (full-name input removed — name is now collected as Q1 of survey)
 
 // ════════════════════════════════════════════════════════════════
 //  ██████╗  ADMIN PORTAL JAVASCRIPT

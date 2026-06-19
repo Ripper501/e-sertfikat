@@ -76,6 +76,38 @@
     z-index: 0;
   }
 
+  /* ─── GALAXY / STARFIELD (ambient, di belakang grid+blob) ────────
+     3 layer titik bintang ukuran berbeda, drift super lambat ke arah
+     berlawanan supaya terasa "dalam" (parallax halus), plus twinkle
+     opacity acak. Murni CSS, tidak ada JS, sehingga ringan & tidak
+     mengganggu performa di semua screen student flow. */
+  .starfield {
+    position: fixed; inset: -10%;
+    width: 120%; height: 120%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .starfield span {
+    position: absolute;
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    background: #fff;
+    animation: starTwinkle 3.4s ease-in-out infinite;
+  }
+  .starfield.layer-far  { animation: starDrift 90s linear infinite; opacity: 0.5; }
+  .starfield.layer-mid  { animation: starDrift 60s linear infinite reverse; opacity: 0.7; }
+  .starfield.layer-near { animation: starDrift 40s linear infinite; opacity: 0.9; }
+  .starfield.layer-near span { width: 3px; height: 3px; box-shadow: 0 0 4px rgba(204,255,0,0.4); }
+
+  @keyframes starDrift {
+    from { transform: translate(0, 0); }
+    to   { transform: translate(-2%, -2%); }
+  }
+  @keyframes starTwinkle {
+    0%, 100% { opacity: 0.25; }
+    50%      { opacity: 1; }
+  }
+
   /* ─── AMBIENT BLOBS ──────────────────────────────────── */
   .blob {
     position: fixed;
@@ -370,6 +402,32 @@
     margin: 0 8px;
     min-width: 16px;
   }
+
+  /* ─── SURVEY PROGRESS BAR (roket) ─────────────────────── */
+  .survey-progress-track {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    border-radius: 99px;
+    background: rgba(255,255,255,0.06);
+    overflow: visible; /* roket boleh "nongol" sedikit di luar track */
+  }
+  .survey-progress-fill {
+    position: absolute; top: 0; left: 0; height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, rgba(204,255,0,0.5), var(--accent));
+    box-shadow: 0 0 12px var(--accent-glow);
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+  .survey-progress-rocket {
+    position: absolute;
+    top: 50%;
+    width: 22px; height: 22px;
+    transform: translate(-50%, -50%) rotate(90deg);
+    transition: left 0.5s cubic-bezier(0.4,0,0.2,1);
+    filter: drop-shadow(0 0 6px var(--accent-glow));
+  }
+  .survey-progress-rocket svg { width: 100%; height: 100%; }
 
   /* ─── SPINNER ─────────────────────────────────────────── */
   .spinner-wrap {
@@ -1347,6 +1405,11 @@
 <div class="blob blob-1"></div>
 <div class="blob blob-2"></div>
 
+<!-- Galaxy starfield — 3 layer parallax, isi span bintang digenerate JS saat load -->
+<div class="starfield layer-far" id="stars-far"></div>
+<div class="starfield layer-mid" id="stars-mid"></div>
+<div class="starfield layer-near" id="stars-near"></div>
+
 <!-- Hidden certificate template for canvas rendering -->
 <div id="cert-template">
   <canvas id="cert-canvas" width="900" height="636"></canvas>
@@ -1532,9 +1595,24 @@
         </div>
       </div>
 
-      <!-- Progress dot indicator (soal ke-berapa dari berapa) -->
-      <div id="survey-progress-label" style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:18px;">
-        Question 1 of 1
+      <!-- Progress bar bergaya "roket" — posisi roket & isi bar mengikuti
+           persentase soal ke-berapa, diupdate via JS di surveyRenderCurrentQuestion() -->
+      <div class="survey-progress-wrap" style="margin-bottom:18px;">
+        <div id="survey-progress-label" style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:10px;">
+          Question 1 of 1
+        </div>
+        <div class="survey-progress-track">
+          <div class="survey-progress-fill" id="survey-progress-fill" style="width:0%;"></div>
+          <div class="survey-progress-rocket" id="survey-progress-rocket" style="left:0%;">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2.5c2.5 1.8 4 5 4 8.5 0 1.6-.3 3-.8 4.2l-3.2 2.3-3.2-2.3c-.5-1.2-.8-2.6-.8-4.2 0-3.5 1.5-6.7 4-8.5z" fill="var(--accent)"/>
+              <circle cx="12" cy="10.5" r="1.6" fill="#0e0f14"/>
+              <path d="M8 13.5l-2.3 1.2.7-3" stroke="var(--accent)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M16 13.5l2.3 1.2-.7-3" stroke="var(--accent)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10.6 17.3l.5 2.7c.3.6.6.6.9 0l.5-2.7" fill="#ff8a3d"/>
+            </svg>
+          </div>
+        </div>
       </div>
 
       <h2 class="screen-title" style="font-size:20px; margin-bottom:24px;" id="survey-question-text">—</h2>
@@ -2455,16 +2533,60 @@
     transition: var(--transition);
   }
   .survey-q-insert:hover { background: rgba(204,255,0,0.18); }
-  /* Dropdown tipe — warna background gelap agar teks putih jelas */
-  .survey-type-select {
-    background: #2a2c42 !important;
-    color: var(--text) !important;
-    border-color: var(--border-soft) !important;
+  /* Dropdown tipe pertanyaan — custom (bukan native <select>), ikon SVG elegan */
+  .survey-type-trigger {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    flex: 0 0 178px; padding: 9px 11px; border-radius: 8px;
+    background: #2a2c42; border: 1px solid var(--border-soft);
+    color: var(--text); font-size: 13px; cursor: pointer; text-align: left;
+    transition: border-color .2s, background .2s;
+    font-family: inherit;
   }
-  .survey-type-select option {
-    background: #1e2033;
-    color: var(--text);
-    padding: 8px;
+  .survey-type-trigger:hover { border-color: rgba(204,255,0,0.35); }
+  .survey-type-trigger.open  { border-color: rgba(204,255,0,0.45); }
+  .survey-type-trigger-label { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .survey-type-trigger-label svg { flex-shrink: 0; color: var(--accent); }
+  .survey-type-trigger-chevron { flex-shrink: 0; color: rgba(255,255,255,0.4); transition: transform .2s; }
+  .survey-type-trigger.open .survey-type-trigger-chevron { transform: rotate(180deg); }
+
+  .survey-type-dropdown {
+    position: absolute; z-index: 50; margin-top: 4px;
+    min-width: 200px;
+    background: #1e2033; border: 1px solid rgba(204,255,0,0.18);
+    border-radius: 10px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  }
+  .survey-type-opt {
+    display: flex; align-items: center; gap: 11px;
+    width: 100%; padding: 9px 13px; cursor: pointer;
+    border: none; background: transparent; text-align: left;
+    color: var(--text); font-size: 13px; transition: background .15s;
+  }
+  .survey-type-opt svg { flex-shrink: 0; color: var(--text-dim); transition: color .15s; }
+  .survey-type-opt:hover { background: rgba(204,255,0,0.07); }
+  .survey-type-opt:hover svg { color: var(--accent); }
+  .survey-type-opt.active { background: rgba(204,255,0,0.1); }
+  .survey-type-opt.active svg { color: var(--accent); }
+
+  /* Linear scale builder */
+  .survey-scale-row {
+    display: flex; align-items: center; gap: 10px; margin-top: 10px;
+  }
+  .survey-scale-row .ced-input { margin: 0; }
+  .survey-scale-num { flex: 0 0 64px; text-align: center; }
+  .survey-scale-label-input { flex: 1; min-width: 0; }
+  .survey-scale-sep { color: var(--text-dim); font-size: 12px; flex-shrink: 0; }
+  .survey-scale-preview {
+    display: flex; align-items: center; gap: 6px; margin-top: 12px;
+    padding: 12px 4px; border-top: 1px solid var(--border-soft);
+  }
+  .survey-scale-preview-dot {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    flex: 1; font-size: 10.5px; color: var(--text-dim); font-family: var(--font-mono);
+  }
+  .survey-scale-preview-dot span:first-child {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--text-dim); opacity: 0.5;
   }
   .survey-q-row { display:flex; gap:8px; margin-top:8px; }
   .survey-q-row .ced-input, .survey-q-row .ced-select { margin:0; }
@@ -2501,7 +2623,7 @@
     </div>
     <div id="projector-qr-giant"></div>
     <div id="projector-qr-title">—</div>
-    <div id="projector-qr-subtitle">Click esc to close</div>
+    <div id="projector-qr-subtitle">Klik liur atu taka</div>
   </div>
 
   <div class="projector-label">Scan to claim your certificate</div>
@@ -2537,6 +2659,32 @@
 ════════════════════════════════════════════════════════ -->
 <script>
 // ════════════════════════════════════════════════════════
+// GALAXY STARFIELD — generate titik bintang acak untuk 3 layer
+// parallax (.layer-far/.layer-mid/.layer-near). Dijalankan duluan,
+// sebelum apa pun lain, supaya background hidup dari detik pertama
+// di semua screen (Auth, Checking, Survey, Success).
+// ════════════════════════════════════════════════════════
+(function generateStarfield() {
+  const layers = [
+    { id: 'stars-far',  count: 70  },
+    { id: 'stars-mid',  count: 45  },
+    { id: 'stars-near', count: 25  },
+  ];
+  layers.forEach(({ id, count }) => {
+    const container = document.getElementById(id);
+    if (!container) return;
+    let html = '';
+    for (let i = 0; i < count; i++) {
+      const top   = (Math.random() * 100).toFixed(2);
+      const left  = (Math.random() * 100).toFixed(2);
+      const delay = (Math.random() * 3.4).toFixed(2);
+      html += `<span style="top:${top}%; left:${left}%; animation-delay:-${delay}s;"></span>`;
+    }
+    container.innerHTML = html;
+  });
+})();
+
+// ════════════════════════════════════════════════════════
 // ██████╗  ██████╗ ███╗   ██╗███████╗██╗ ██████╗
 // ██╔════╝██╔═══██╗████╗  ██║██╔════╝██║██╔════╝
 // ██║     ██║   ██║██╔██╗ ██║█████╗  ██║██║  ███╗
@@ -2565,7 +2713,7 @@ const GEO_TARGET = {
 };
 
 // ── EVENT METADATA (used on the certificate) ───────────────────────
-const EVENT_NAME      = "FB Academy";
+const EVENT_NAME      = "Tech Summit Timor-Leste 2025";
 const EVENT_DATE      = "12 June 2025";
 const EVENT_LOCATION  = "Dili Convention Centre, Timor-Leste";
 
@@ -2941,6 +3089,19 @@ async function surveyStart() {
   }
 }
 
+// Palet warna kartu jawaban — dirotasi per-opsi berdasarkan index, supaya
+// tampilan lebih hidup & playful (terinspirasi gaya "card berwarna" custom),
+// tetap dalam nuansa gelap (tone rendah) agar match tema CertPortal yang ada.
+// Saat opsi DIPILIH, border tetap beralih ke var(--accent) [lime brand] —
+// warna kartu di sini hanya jadi "identitas visual" tiap opsi, bukan
+// indikator pilih/tidak.
+const SURVEY_CARD_PALETTE = [
+  { bg: 'rgba(59,130,246,0.10)',  border: 'rgba(59,130,246,0.35)',  glow: 'rgba(59,130,246,0.18)'  }, // biru
+  { bg: 'rgba(16,185,129,0.10)',  border: 'rgba(16,185,129,0.35)',  glow: 'rgba(16,185,129,0.18)'  }, // teal/hijau
+  { bg: 'rgba(249,115,22,0.10)',  border: 'rgba(249,115,22,0.35)',  glow: 'rgba(249,115,22,0.18)'  }, // orange
+  { bg: 'rgba(168,85,247,0.10)',  border: 'rgba(168,85,247,0.35)',  glow: 'rgba(168,85,247,0.18)'  }, // ungu
+];
+
 function surveyRenderCurrentQuestion() {
   if (!studentSurveyConfig) return;
   const questions = studentSurveyConfig.questions;
@@ -2956,6 +3117,15 @@ function surveyRenderCurrentQuestion() {
 
   if (progressLabel) progressLabel.textContent = `Question ${studentSurveyIndex + 1} of ${questions.length}`;
   if (validationMsg) validationMsg.style.display = 'none';
+
+  // Update progress bar + posisi roket sesuai soal ke-berapa.
+  const progressFill   = document.getElementById('survey-progress-fill');
+  const progressRocket = document.getElementById('survey-progress-rocket');
+  const progressPct    = questions.length > 1
+    ? (studentSurveyIndex / (questions.length - 1)) * 100
+    : 100;
+  if (progressFill)   progressFill.style.width = progressPct + '%';
+  if (progressRocket) progressRocket.style.left = progressPct + '%';
 
   // Judul pertanyaan — Full Name dapat badge khusus
   if (questionText) {
@@ -3011,14 +3181,18 @@ function surveyRenderCurrentQuestion() {
     answerArea.innerHTML = (q.options || []).map((opt, oi) => {
       const isSelected = existingAnswer === opt;
       const optId = `survey-opt-${studentSurveyIndex}-${oi}`;
+      const c = SURVEY_CARD_PALETTE[oi % SURVEY_CARD_PALETTE.length];
+      const bg     = isSelected ? 'rgba(204,255,0,0.06)' : c.bg;
+      const border = isSelected ? 'var(--accent)' : c.border;
+      const glow   = isSelected ? '0 0 18px var(--accent-glow)' : `0 0 14px ${c.glow}`;
       return `
-        <label for="${optId}" style="
+        <label for="${optId}" class="survey-answer-card" style="
           display:flex; align-items:center; gap:12px;
           padding:14px 16px; margin-bottom:10px;
-          background:${isSelected ? 'rgba(204,255,0,0.04)' : 'rgba(255,255,255,0.03)'};
-          border:1px solid ${isSelected ? 'var(--accent)' : 'var(--border-soft)'};
+          background:${bg}; border:1.5px solid ${border};
           border-radius:var(--radius-md); cursor:pointer; transition:var(--transition);
-        " onclick="this.style.borderColor='var(--accent)'; this.style.background='rgba(204,255,0,0.04)';">
+          box-shadow:${glow};
+        " onclick="this.style.borderColor='var(--accent)'; this.style.background='rgba(204,255,0,0.06)'; this.style.boxShadow='0 0 18px var(--accent-glow)';">
           <input type="radio" id="${optId}" name="survey-current-choice" value="${escapeHtml(opt)}" ${isSelected ? 'checked' : ''}
             style="width:17px; height:17px; accent-color:var(--accent); flex-shrink:0; cursor:pointer;"
             onchange="surveySetCurrentAnswer(this.value)" />
@@ -3032,13 +3206,17 @@ function surveyRenderCurrentQuestion() {
     answerArea.innerHTML = (q.options || []).map((opt, oi) => {
       const isChecked = selected.includes(opt);
       const optId = `survey-cb-${studentSurveyIndex}-${oi}`;
+      const c = SURVEY_CARD_PALETTE[oi % SURVEY_CARD_PALETTE.length];
+      const bg     = isChecked ? 'rgba(204,255,0,0.06)' : c.bg;
+      const border = isChecked ? 'var(--accent)' : c.border;
+      const glow   = isChecked ? '0 0 18px var(--accent-glow)' : `0 0 14px ${c.glow}`;
       return `
-        <label for="${optId}" style="
+        <label for="${optId}" class="survey-answer-card" data-checked="${isChecked}" style="
           display:flex; align-items:center; gap:12px;
           padding:14px 16px; margin-bottom:10px;
-          background:${isChecked ? 'rgba(204,255,0,0.04)' : 'rgba(255,255,255,0.03)'};
-          border:1px solid ${isChecked ? 'var(--accent)' : 'var(--border-soft)'};
+          background:${bg}; border:1.5px solid ${border};
           border-radius:var(--radius-md); cursor:pointer; transition:var(--transition);
+          box-shadow:${glow};
         ">
           <input type="checkbox" id="${optId}" name="survey-current-cb" value="${escapeHtml(opt)}" ${isChecked ? 'checked' : ''}
             style="width:17px; height:17px; accent-color:var(--accent); flex-shrink:0; cursor:pointer;"
@@ -3047,8 +3225,89 @@ function surveyRenderCurrentQuestion() {
         </label>
       `;
     }).join('') + `<p style="font-size:11.5px; color:var(--text-dim); margin-top:4px;">Boleh pilih lebih dari satu.</p>`;
+
+  } else if (q.type === 'dropdown') {
+    // Dropdown native <select> — opsi tetap diwarnai lewat trigger highlight,
+    // tapi karena <select> tidak bisa di-style per-opsi, kartu pembungkusnya
+    // diberi warna sesuai opsi yang SEDANG terpilih (dinamis saat ganti pilihan).
+    const selectedIndex = (q.options || []).findIndex(o => o === existingAnswer);
+    const c = SURVEY_CARD_PALETTE[selectedIndex >= 0 ? selectedIndex % SURVEY_CARD_PALETTE.length : 0];
+    answerArea.innerHTML = `
+      <div id="survey-dropdown-wrap" style="
+        position:relative;
+        padding:4px; border-radius:var(--radius-md);
+        background:${existingAnswer ? c.bg : 'rgba(255,255,255,0.03)'};
+        border:1.5px solid ${existingAnswer ? c.border : 'var(--border-soft)'};
+        box-shadow:${existingAnswer ? `0 0 14px ${c.glow}` : 'none'};
+        transition:var(--transition);
+      ">
+        <select id="survey-dropdown-input" onchange="surveySetCurrentAnswer(this.value); surveyRecolorDropdown(this);" style="
+          width:100%; padding:12px 38px 12px 14px; border-radius:14px;
+          background:transparent; border:none; color:var(--text);
+          font-family:var(--font-main); font-size:14px; cursor:pointer;
+          appearance:none; -webkit-appearance:none;
+        ">
+          <option value="" disabled ${!existingAnswer ? 'selected' : ''} style="background:#1e2033;">Pilih salah satu...</option>
+          ${(q.options || []).map(opt => `
+            <option value="${escapeHtml(opt)}" ${existingAnswer === opt ? 'selected' : ''} style="background:#1e2033; color:#fff;">${escapeHtml(opt)}</option>
+          `).join('')}
+        </select>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="
+          position:absolute; right:14px; top:50%; transform:translateY(-50%);
+          color:var(--text-muted); pointer-events:none;
+        "><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    `;
+
+  } else if (q.type === 'linear_scale') {
+    const min = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
+    const max = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
+    const selectedVal = existingAnswer !== '' ? Number(existingAnswer) : null;
+    const dots = [];
+    for (let v = min; v <= max; v++) dots.push(v);
+
+    answerArea.innerHTML = `
+      ${(q.scaleMinLabel || q.scaleMaxLabel) ? `
+        <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-muted); margin-bottom:14px;">
+          <span>${escapeHtml(q.scaleMinLabel || '')}</span>
+          <span>${escapeHtml(q.scaleMaxLabel || '')}</span>
+        </div>
+      ` : ''}
+      <div style="display:flex; gap:8px;">
+        ${dots.map((v, oi) => {
+          const isSelected = selectedVal === v;
+          const c = SURVEY_CARD_PALETTE[oi % SURVEY_CARD_PALETTE.length];
+          const bg     = isSelected ? 'rgba(204,255,0,0.08)' : c.bg;
+          const border = isSelected ? 'var(--accent)' : c.border;
+          const glow   = isSelected ? '0 0 16px var(--accent-glow)' : `0 0 10px ${c.glow}`;
+          return `
+            <button type="button" class="survey-scale-btn" data-val="${v}" onclick="surveySetCurrentAnswer('${v}'); surveyRenderCurrentQuestion();" style="
+              flex:1; padding:14px 4px; text-align:center;
+              background:${bg}; border:1.5px solid ${border};
+              border-radius:var(--radius-md); cursor:pointer; transition:var(--transition);
+              box-shadow:${glow};
+              color:${isSelected ? 'var(--accent)' : 'var(--text)'};
+              font-family:var(--font-mono); font-size:15px; font-weight:700;
+            ">${v}</button>
+          `;
+        }).join('')}
+      </div>
+    `;
   }
 }
+
+// Re-warnai bungkus dropdown saat opsi diganti (tanpa re-render penuh,
+// supaya <select> tidak kehilangan fokus / menutup sendiri di beberapa browser).
+window.surveyRecolorDropdown = function(selectEl) {
+  const wrap = document.getElementById('survey-dropdown-wrap');
+  if (!wrap) return;
+  const options = Array.from(selectEl.options).filter(o => o.value !== '');
+  const idx = options.findIndex(o => o.value === selectEl.value);
+  const c = SURVEY_CARD_PALETTE[idx >= 0 ? idx % SURVEY_CARD_PALETTE.length : 0];
+  wrap.style.background  = selectEl.value ? c.bg : 'rgba(255,255,255,0.03)';
+  wrap.style.borderColor = selectEl.value ? c.border : 'var(--border-soft)';
+  wrap.style.boxShadow   = selectEl.value ? `0 0 14px ${c.glow}` : 'none';
+};
 
 // Dipanggil oleh radio button / textarea saat user menjawab pertanyaan yang sedang tampil.
 window.surveySetCurrentAnswer = function(value) {
@@ -3076,12 +3335,10 @@ window.surveyToggleCheckbox = function(qid, opt, isChecked, el) {
   }
   studentSurveyAnswers[q.id] = selected.join(', ');
 
-  // Update border label secara visual tanpa re-render penuh
-  const label = el?.closest('label');
-  if (label) {
-    label.style.borderColor = isChecked ? 'var(--accent)' : 'var(--border-soft)';
-    label.style.background  = isChecked ? 'rgba(204,255,0,0.04)' : 'rgba(255,255,255,0.03)';
-  }
+  // Re-render penuh: checkbox bukan text input yang sedang diketik, jadi
+  // aman untuk rebuild seluruh area jawaban supaya warna kartu kembali ke
+  // warna kategorinya (bukan abu-abu polos) saat di-uncheck.
+  surveyRenderCurrentQuestion();
   const validationMsg = document.getElementById('survey-validation-msg');
   if (validationMsg && selected.length > 0) validationMsg.style.display = 'none';
 };
@@ -4235,6 +4492,8 @@ function _surveyDeepCloneQuestions() {
   return surveyQuestions.map(q => ({
     id: q.id, text: q.text || '', type: q.type || 'text',
     options: Array.isArray(q.options) ? q.options.slice() : [],
+    scaleMin: q.scaleMin, scaleMax: q.scaleMax,
+    scaleMinLabel: q.scaleMinLabel || '', scaleMaxLabel: q.scaleMaxLabel || '',
   }));
 }
 
@@ -4350,19 +4609,31 @@ function surveyRenderQuestions() {
   }
   if (empty) empty.style.display = 'none';
 
+  // Ikon SVG elegan per tipe pertanyaan (stroke-based, mewarisi warna via currentColor)
+  const TYPE_META = {
+    text:          { label: 'Teks bebas',    icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="17" y2="17"/></svg>' },
+    choice:        { label: 'Pilihan ganda', icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>' },
+    checkbox:      { label: 'Kotak centang', icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="4"/><polyline points="8.5 12.5 11 15 16 9.5"/></svg>' },
+    dropdown:      { label: 'Dropdown',      icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="3"/><polyline points="9 11 12 14 15 11"/></svg>' },
+    linear_scale:  { label: 'Skala linear',  icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><circle cx="7" cy="12" r="2.2" fill="currentColor" stroke="none"/><circle cx="17" cy="12" r="2.2" fill="none"/></svg>' },
+  };
+
   list.innerHTML = surveyQuestions.map((q, i) => {
-    const isChoice   = q.type === 'choice';
-    const isCheckbox = q.type === 'checkbox';
-    const hasOptions = isChoice || isCheckbox;
+    const isChoice       = q.type === 'choice';
+    const isCheckbox      = q.type === 'checkbox';
+    const isDropdown      = q.type === 'dropdown';
+    const isLinearScale   = q.type === 'linear_scale';
+    const hasOptions      = isChoice || isCheckbox || isDropdown;
 
     const optionsHtml = (q.options || []).map((opt, oi) => `
       <div class="survey-opt-row">
         <span style="
           display:inline-flex; align-items:center; justify-content:center;
           width:18px; height:18px; flex-shrink:0;
-          border:2px solid var(--text-dim); border-radius:${isCheckbox ? '4px' : '50%'};
+          border:2px solid var(--text-dim); border-radius:${isCheckbox ? '4px' : (isDropdown ? '4px' : '50%')};
           margin-right:2px; opacity:0.4;
-        "></span>
+          ${isDropdown ? 'font-size:10px; font-family:var(--font-mono); color:var(--text-dim); border-style:dashed;' : ''}
+        ">${isDropdown ? (oi + 1) : ''}</span>
         <input class="ced-input" type="text" placeholder="Opsi ${oi + 1}"
           value="${escapeHtml(opt)}"
           oninput="surveyUpdateOption('${q.id}', ${oi}, this.value)" />
@@ -4371,6 +4642,59 @@ function surveyRenderQuestions() {
         </button>
       </div>
     `).join('');
+
+    // Linear scale: builder min/max + label kiri-kanan + preview titik-titik
+    const scaleMin      = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
+    const scaleMax      = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
+    const scaleMinLabel = q.scaleMinLabel || '';
+    const scaleMaxLabel = q.scaleMaxLabel || '';
+    const scaleDots = [];
+    for (let v = scaleMin; v <= scaleMax; v++) scaleDots.push(v);
+
+    const linearScaleHtml = isLinearScale ? `
+      <div style="margin-top:10px;">
+        <div class="survey-scale-row">
+          <input class="ced-input survey-scale-num" type="number" placeholder="1" value="${scaleMin}"
+            oninput="surveyUpdateField('${q.id}', 'scaleMin', this.value === '' ? '' : Number(this.value))" />
+          <span class="survey-scale-sep">sampai</span>
+          <input class="ced-input survey-scale-num" type="number" placeholder="5" value="${scaleMax}"
+            oninput="surveyUpdateField('${q.id}', 'scaleMax', this.value === '' ? '' : Number(this.value))" />
+        </div>
+        <div class="survey-scale-row">
+          <input class="ced-input survey-scale-label-input" type="text" placeholder="Label kiri (opsional, mis. Sangat tidak setuju)"
+            value="${escapeHtml(scaleMinLabel)}"
+            oninput="surveyUpdateField('${q.id}', 'scaleMinLabel', this.value)" />
+          <input class="ced-input survey-scale-label-input" type="text" placeholder="Label kanan (opsional, mis. Sangat setuju)"
+            value="${escapeHtml(scaleMaxLabel)}"
+            oninput="surveyUpdateField('${q.id}', 'scaleMaxLabel', this.value)" />
+        </div>
+        <div class="survey-scale-preview">
+          ${scaleDots.map(v => `<div class="survey-scale-preview-dot"><span></span><span>${v}</span></div>`).join('')}
+        </div>
+      </div>
+    ` : '';
+
+    const currentMeta = TYPE_META[q.type] || TYPE_META.text;
+
+    const typeDropdownHtml = `
+      <div class="survey-type-wrap" style="position:relative; flex:0 0 178px;">
+        <button type="button" class="survey-type-trigger" onclick="surveyToggleTypeMenu('${q.id}', this)">
+          <span class="survey-type-trigger-label">
+            ${currentMeta.icon}
+            <span class="survey-type-trigger-text">${currentMeta.label}</span>
+          </span>
+          <svg class="survey-type-trigger-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="survey-type-dropdown" style="display:none;">
+          ${Object.entries(TYPE_META).map(([val, meta]) => `
+            <button type="button" class="survey-type-opt ${q.type === val ? 'active' : ''}" onclick="surveyPickType('${q.id}', '${val}')">
+              ${meta.icon}
+              <span>${meta.label}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
 
     return `
       <div class="survey-q-card" data-qid="${q.id}">
@@ -4388,7 +4712,7 @@ function surveyRenderQuestions() {
           </div>
         </div>
 
-        <!-- Baris utama: pertanyaan kiri + dropdown kanan -->
+        <!-- Baris utama: pertanyaan kiri + dropdown tipe kanan -->
         <div style="display:flex; gap:10px; align-items:center;">
           <input
             class="ced-input"
@@ -4399,15 +4723,7 @@ function surveyRenderQuestions() {
             onpaste="surveyHandlePaste('${q.id}', event)"
             style="flex:1; min-width:0;"
           />
-          <select
-            class="ced-input ced-select survey-type-select"
-            onchange="surveyUpdateField('${q.id}', 'type', this.value)"
-            style="flex:0 0 150px;"
-          >
-            <option value="text"     ${ q.type === 'text'     ? 'selected' : ''}>✏️  Teks bebas</option>
-            <option value="choice"   ${ q.type === 'choice'   ? 'selected' : ''}>🔘  Pilihan ganda</option>
-            <option value="checkbox" ${ q.type === 'checkbox' ? 'selected' : ''}>☑️  Kotak centang</option>
-          </select>
+          ${typeDropdownHtml}
         </div>
 
         ${hasOptions ? `
@@ -4419,6 +4735,7 @@ function surveyRenderQuestions() {
             </button>
           </div>
         ` : ''}
+        ${linearScaleHtml}
       </div>
     `;
   }).join('');
@@ -4460,14 +4777,49 @@ window.surveyUpdateField = function(qid, field, value) {
     surveySnapshotDebounced(); // ketikan teks biasa = debounce
   }
   q[field] = value;
-  // Saat ganti tipe ke "choice" atau "checkbox" dan belum ada opsi, beri 2 slot kosong.
-  if (field === 'type' && (value === 'choice' || value === 'checkbox') && (!q.options || q.options.length === 0)) {
+  // Saat ganti tipe ke tipe berbasis opsi dan belum ada opsi, beri 2 slot kosong.
+  if (field === 'type' && ['choice','checkbox','dropdown'].includes(value) && (!q.options || q.options.length === 0)) {
     q.options = ['', ''];
   }
+  // Saat ganti tipe ke skala linear, beri default 1–5 kalau belum diset.
+  if (field === 'type' && value === 'linear_scale') {
+    if (!Number.isFinite(q.scaleMin)) q.scaleMin = 1;
+    if (!Number.isFinite(q.scaleMax)) q.scaleMax = 5;
+  }
   if (field === 'type') {
-    surveyRenderQuestions(); // re-render agar area opsi muncul/hilang
+    surveyRenderQuestions(); // re-render agar area opsi/skala muncul/hilang
   }
 };
+
+// ── Custom dropdown tipe pertanyaan (ikon SVG, bukan <select> native) ──
+// Hanya 1 menu yang boleh terbuka dalam satu waktu.
+window.surveyToggleTypeMenu = function(qid, triggerBtn) {
+  const allMenus = document.querySelectorAll('.survey-type-dropdown');
+  const allTriggers = document.querySelectorAll('.survey-type-trigger');
+  const thisMenu = triggerBtn.parentElement.querySelector('.survey-type-dropdown');
+  const willOpen = thisMenu.style.display === 'none';
+
+  allMenus.forEach(m => m.style.display = 'none');
+  allTriggers.forEach(t => t.classList.remove('open'));
+
+  if (willOpen) {
+    thisMenu.style.display = 'block';
+    triggerBtn.classList.add('open');
+  }
+};
+
+window.surveyPickType = function(qid, value) {
+  surveyUpdateField(qid, 'type', value);
+  // surveyRenderQuestions() di dalam surveyUpdateField akan membangun ulang DOM,
+  // jadi dropdown otomatis tertutup (elemen lama lenyap) — tidak perlu close manual.
+};
+
+// Tutup dropdown tipe pertanyaan saat klik di luar area-nya.
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.survey-type-wrap')) return;
+  document.querySelectorAll('.survey-type-dropdown').forEach(m => m.style.display = 'none');
+  document.querySelectorAll('.survey-type-trigger').forEach(t => t.classList.remove('open'));
+});
 
 // ══════════════════════════════════════════════════════════════════
 // SMART PASTE: deteksi pertanyaan + pilihan ganda dari teks yang
@@ -4690,8 +5042,12 @@ async function surveyLoadFromFirestore() {
     surveyQuestions = Array.isArray(d.questions) ? d.questions.map(q => ({
       id:      q.id || _surveyNewId(),
       text:    q.text || '',
-      type:    ['choice','checkbox'].includes(q.type) ? q.type : 'text',
+      type:    ['choice','checkbox','dropdown','linear_scale'].includes(q.type) ? q.type : 'text',
       options: Array.isArray(q.options) ? q.options.slice() : [],
+      scaleMin:      Number.isFinite(q.scaleMin) ? q.scaleMin : 1,
+      scaleMax:      Number.isFinite(q.scaleMax) ? q.scaleMax : 5,
+      scaleMinLabel: q.scaleMinLabel || '',
+      scaleMaxLabel: q.scaleMaxLabel || '',
     })) : [];
 
     surveyRenderQuestions();

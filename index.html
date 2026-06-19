@@ -832,6 +832,11 @@
     background: #fff; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden; flex-shrink: 0;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  #admin-qr-box:hover {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 3px var(--accent), 0 4px 16px rgba(0,0,0,0.3);
   }
   #admin-qr-box canvas, #admin-qr-box img { width: 100%; height: 100%; }
   .admin-qr-info { min-width: 0; }
@@ -903,29 +908,43 @@
     max-width: 560px;
     background: #fff;
     border-radius: 28px;
-    padding: 32px 32px 24px;
+    padding: 28px 32px 24px;
     display: flex; flex-direction: column; align-items: center;
     box-shadow: 0 0 120px rgba(204,255,0,0.25), 0 20px 60px rgba(0,0,0,0.5);
   }
   #projector-claimed-badge {
-    position: absolute;
-    top: 18px; left: 18px;
-    display: flex; flex-direction: column; align-items: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    align-self: center;
+    margin-bottom: 18px;
+    padding: 8px 18px 8px 10px;
+    background: #0e0f14;
+    border-radius: 999px;
     line-height: 1;
-    z-index: 2;
+  }
+  #projector-claimed-badge::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    flex-shrink: 0;
   }
   #projector-claimed-count {
     font-family: var(--font-mono);
-    font-size: 30px; font-weight: 700;
-    color: #0e0f14;
-    letter-spacing: -0.02em;
+    font-size: 16px; font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.01em;
   }
   .projector-claimed-label {
-    margin-top: 3px;
     font-family: var(--font-mono);
-    font-size: 9px; font-weight: 700;
-    color: #8a8d9e;
-    letter-spacing: 0.12em;
+    font-size: 10px; font-weight: 600;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding-left: 9px;
+    border-left: 1px solid rgba(255,255,255,0.15);
   }
   #projector-qr-giant {
     width: 100%;
@@ -1768,10 +1787,10 @@
 
     <!-- QR Row -->
     <div class="admin-qr-row">
-      <div id="admin-qr-box"></div>
+      <div id="admin-qr-box" onclick="openProjectorModal()" style="cursor: pointer;" title="Click to open Projector Mode (full-screen QR)"></div>
       <div class="admin-qr-info">
         <div class="admin-qr-url" id="admin-qr-url-text">—</div>
-        <p class="admin-qr-hint">Students scan this QR code with their phone camera. The code opens the student authentication flow. Click <strong style="color:var(--accent)">Projector Mode</strong> to display it full-screen for the whole room to scan.</p>
+        <p class="admin-qr-hint">Students scan this QR code with their phone camera. The code opens the student authentication flow. <strong style="color:var(--accent)">Click the QR code</strong> to display it full-screen for the whole room to scan.</p>
       </div>
     </div>
 
@@ -2482,7 +2501,7 @@
     </div>
     <div id="projector-qr-giant"></div>
     <div id="projector-qr-title">—</div>
-    <div id="projector-qr-subtitle">Klik liur atu taka</div>
+    <div id="projector-qr-subtitle">Click esc to close</div>
   </div>
 
   <div class="projector-label">Scan to claim your certificate</div>
@@ -2546,7 +2565,7 @@ const GEO_TARGET = {
 };
 
 // ── EVENT METADATA (used on the certificate) ───────────────────────
-const EVENT_NAME      = "Tech Summit Timor-Leste 2025";
+const EVENT_NAME      = "FB Academy";
 const EVENT_DATE      = "12 June 2025";
 const EVENT_LOCATION  = "Dili Convention Centre, Timor-Leste";
 
@@ -4199,6 +4218,90 @@ function _surveyNewId() {
   return 'sq_' + Date.now() + '_' + _surveyQIdCounter;
 }
 
+// ══════════════════════════════════════════════════════════════════
+// UNDO / REDO HISTORY (Ctrl+Z / Ctrl+Y) — Form Builder
+// Strategi: snapshot berbasis state. Setiap aksi yang mengubah
+// surveyQuestions memanggil _surveySnapshot() SEBELUM perubahan
+// diterapkan, sehingga undo bisa mengembalikan ke kondisi sebelumnya.
+// Untuk ketikan teks (input pertanyaan/opsi), snapshot di-debounce agar
+// tidak push history di setiap huruf yang diketik.
+// ══════════════════════════════════════════════════════════════════
+let surveyHistory = [];
+let surveyHistoryIndex = -1;
+let _surveyTypingDebounce = null;
+const SURVEY_HISTORY_LIMIT = 100;
+
+function _surveyDeepCloneQuestions() {
+  return surveyQuestions.map(q => ({
+    id: q.id, text: q.text || '', type: q.type || 'text',
+    options: Array.isArray(q.options) ? q.options.slice() : [],
+  }));
+}
+
+// Reset history — dipanggil saat panel form pertama kali dibuka / data baru dimuat.
+function surveyHistoryReset() {
+  surveyHistory = [_surveyDeepCloneQuestions()];
+  surveyHistoryIndex = 0;
+}
+
+// Simpan snapshot KONDISI SAAT INI ke history, sebelum perubahan baru terjadi.
+// Dipanggil di awal setiap fungsi yang mengubah surveyQuestions.
+function surveySnapshot() {
+  // Buang cabang redo lama begitu ada aksi baru dari titik tengah history.
+  if (surveyHistoryIndex < surveyHistory.length - 1) {
+    surveyHistory = surveyHistory.slice(0, surveyHistoryIndex + 1);
+  }
+  surveyHistory.push(_surveyDeepCloneQuestions());
+  surveyHistoryIndex = surveyHistory.length - 1;
+  if (surveyHistory.length > SURVEY_HISTORY_LIMIT) {
+    surveyHistory.shift();
+    surveyHistoryIndex--;
+  }
+}
+
+// Versi debounce untuk dipakai pada event "oninput" (ketikan teks).
+// Snapshot diambil dari state SEBELUM keystroke saat ini diterapkan —
+// makanya dipanggil duluan, baru field-nya diupdate.
+function surveySnapshotDebounced() {
+  if (_surveyTypingDebounce) return; // sudah ada snapshot pending utk sesi mengetik ini
+  surveySnapshot();
+  _surveyTypingDebounce = setTimeout(() => { _surveyTypingDebounce = null; }, 700);
+}
+
+window.surveyUndo = function() {
+  if (surveyHistoryIndex <= 0) return; // sudah di awal
+  surveyHistoryIndex--;
+  surveyQuestions = surveyHistory[surveyHistoryIndex].map(q => ({ ...q, options: q.options.slice() }));
+  surveyRenderQuestions();
+};
+
+window.surveyRedo = function() {
+  if (surveyHistoryIndex >= surveyHistory.length - 1) return; // sudah di akhir
+  surveyHistoryIndex++;
+  surveyQuestions = surveyHistory[surveyHistoryIndex].map(q => ({ ...q, options: q.options.slice() }));
+  surveyRenderQuestions();
+};
+
+// Listener global: Ctrl+Z (undo) & Ctrl+Y / Ctrl+Shift+Z (redo).
+// Hanya aktif kalau panel Form Builder sedang terbuka, supaya tidak
+// mengganggu undo/redo bawaan browser di bagian lain halaman.
+document.addEventListener('keydown', function(e) {
+  const panel = document.getElementById('survey-editor-panel');
+  if (!panel || !panel.classList.contains('is-open')) return;
+
+  const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+  if (!isCtrlOrCmd) return;
+
+  const key = e.key.toLowerCase();
+  if (key === 'z' && !e.shiftKey) {
+    e.preventDefault();
+    surveyUndo();
+  } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+    e.preventDefault();
+    surveyRedo();
+  }
+});
+
 function toggleSurveyEditor() {
   const panel = document.getElementById('survey-editor-panel');
   const btn   = document.getElementById('btn-survey-form');
@@ -4322,11 +4425,13 @@ function surveyRenderQuestions() {
 }
 
 window.surveyAddQuestion = function() {
+  surveySnapshot();
   surveyQuestions.push({ id: _surveyNewId(), text: '', type: 'text', options: [] });
   surveyRenderQuestions();
 };
 
 window.surveyRemoveQuestion = function(qid) {
+  surveySnapshot();
   surveyQuestions = surveyQuestions.filter(q => q.id !== qid);
   surveyRenderQuestions();
 };
@@ -4335,6 +4440,7 @@ window.surveyRemoveQuestion = function(qid) {
 window.surveyInsertAfter = function(qid) {
   const idx = surveyQuestions.findIndex(q => q.id === qid);
   if (idx === -1) return;
+  surveySnapshot();
   const newQ = { id: _surveyNewId(), text: '', type: 'text', options: [] };
   surveyQuestions.splice(idx + 1, 0, newQ);
   surveyRenderQuestions();
@@ -4348,6 +4454,11 @@ window.surveyInsertAfter = function(qid) {
 window.surveyUpdateField = function(qid, field, value) {
   const q = surveyQuestions.find(q => q.id === qid);
   if (!q) return;
+  if (field === 'type') {
+    surveySnapshot(); // ganti tipe = aksi diskrit, snapshot langsung (bukan debounce)
+  } else {
+    surveySnapshotDebounced(); // ketikan teks biasa = debounce
+  }
   q[field] = value;
   // Saat ganti tipe ke "choice" atau "checkbox" dan belum ada opsi, beri 2 slot kosong.
   if (field === 'type' && (value === 'choice' || value === 'checkbox') && (!q.options || q.options.length === 0)) {
@@ -4381,6 +4492,7 @@ window.surveyHandlePaste = function(qid, event) {
   const q = surveyQuestions.find(q => q.id === qid);
   if (!q) return;
 
+  surveySnapshot();
   q.text    = parsed.question;
   q.type    = 'choice';
   q.options = parsed.options;
@@ -4396,32 +4508,41 @@ window.surveyHandlePaste = function(qid, event) {
 };
 
 // Parser inti: pisahkan teks jadi { question, options[] }.
-// Strategi: scan tiap baris. Baris berawalan HURUF + titik/kurung
-// (A. / A) / (A) / a.) dianggap opsi pilihan ganda. Baris berawalan
-// ANGKA + titik/kurung (1. / 1)) dianggap nomor urut soal — angka ini
-// dipangkas dan sisanya masuk sebagai bagian teks pertanyaan, BUKAN opsi,
-// supaya "1. Apa yang dimaksud..." tidak salah dikira opsi nomor 1.
+// Strategi: scan tiap baris, deteksi 2 jenis penanda opsi:
+//   1) Huruf + titik/kurung   → A. / A) / (A) / a.
+//   2) Bullet generik         → * / - / • / · / . (polos, tanpa huruf di depan)
+//      Ini menangani hasil copy-paste dari Word/Google Docs yang list bullet-nya
+//      kehilangan format asli dan cuma tersisa simbol bullet polos.
+// Baris berawalan ANGKA + titik/kurung (1. / 1)) di LUAR options-zone dianggap
+// nomor urut soal — angka ini dipangkas dan sisanya masuk teks pertanyaan,
+// BUKAN opsi, supaya "1. Apa yang dimaksud..." tidak salah dikira opsi nomor 1.
 function surveySmartParsePaste(rawText) {
   const lines = rawText.split(/\r\n|\r|\n/).map(l => l.trim()).filter(l => l.length > 0);
   if (lines.length < 2) return null;
 
-  const letterMarker  = /^\(?([A-Za-z])\)?[.)]\s*(.+)$/;  // A.  A)  (A)  a.
-  const leadingNumber = /^\d{1,3}[.)]\s*/;                 // 1.  1)  — nomor soal, bukan opsi
+  const letterMarker  = /^\(?([A-Za-z])\)?[.)]\s*(.+)$/;   // A.  A)  (A)  a.
+  const bulletMarker  = /^[*\-•·]\s*(.+)$/;                 // *  -  •  ·
+  const dotMarker     = /^\.\s+(.+)$/;                      // "." diikuti spasi+teks (bullet Word yg rusak)
+  const leadingNumber = /^\d{1,3}[.)]\s*/;                  // 1.  1)  — nomor soal, bukan opsi
 
   const questionLines = [];
   const options = [];
   let inOptionsZone = false;
 
   for (const line of lines) {
-    const m = line.match(letterMarker);
-    if (m && m[2] && m[2].trim()) {
+    const mLetter = line.match(letterMarker);
+    const mBullet = !mLetter ? line.match(bulletMarker) : null;
+    const mDot    = (!mLetter && !mBullet) ? line.match(dotMarker) : null;
+    const m = mLetter || mBullet || mDot;
+
+    if (m && m[m.length - 1] && m[m.length - 1].trim()) {
       inOptionsZone = true;
-      options.push(m[2].trim());
+      options.push(m[m.length - 1].trim());
     } else if (!inOptionsZone) {
       // Bagian dari pertanyaan — buang nomor urut soal di depan jika ada.
       questionLines.push(line.replace(leadingNumber, ''));
     } else {
-      // Baris di tengah opsi yang tidak match marker huruf — anggap
+      // Baris di tengah opsi yang tidak match marker apa pun — anggap
       // kelanjutan opsi sebelumnya (opsi yang teksnya lebih dari 1 baris).
       if (options.length > 0) {
         options[options.length - 1] += ' ' + line;
@@ -4429,15 +4550,56 @@ function surveySmartParsePaste(rawText) {
     }
   }
 
-  const question = questionLines.join(' ').trim();
+  let question = questionLines.join(' ').trim();
+
+  // Kasus khusus: semua opsi ter-merge jadi SATU baris panjang, dipisah
+  // tanda " . " di tengah kalimat (bukan di awal baris) — terjadi saat
+  // paste dari sumber yang list-nya kehilangan newline antar item, hanya
+  // menyisakan separator titik. Contoh:
+  // ". Assets = Revenue + Expenses . Equity = Assets + Revenue . ..."
+  if (options.length === 1 && / \. /.test(options[0])) {
+    const split = options[0].split(/\s\.\s/).map(s => s.replace(/^\.\s*/, '').trim()).filter(Boolean);
+    if (split.length >= 2) {
+      options.length = 0;
+      options.push(...split);
+    }
+  }
+  // Variasi: pola di atas muncul bukan sebagai "opsi" tapi malah nempel
+  // di questionLines (karena baris diawali "." langsung tanpa spasi setelah
+  // pertanyaan, sehingga dotMarker di atas tidak match pada parse pertama).
+  if (options.length < 2) {
+    const mergedMatch = question.match(/^(.*?)\s*\.\s*(.+\s\.\s.+)$/);
+    if (mergedMatch) {
+      const candidateOptions = mergedMatch[2].split(/\s\.\s/).map(s => s.trim()).filter(Boolean);
+      if (candidateOptions.length >= 2) {
+        question = mergedMatch[1].trim();
+        options.length = 0;
+        options.push(...candidateOptions);
+      }
+    }
+  }
+
+  // Fallback: kalau sama sekali tidak ada penanda opsi terdeteksi (huruf/bullet/dot),
+  // tapi ada >= 3 baris total, anggap baris pertama = pertanyaan dan sisanya = opsi
+  // tanpa label apa pun (kasus paste yang benar-benar polos, 1 opsi per baris).
+  if (options.length < 2 && lines.length >= 3) {
+    const [first, ...rest] = lines;
+    const fallbackQuestion = first.replace(leadingNumber, '').trim();
+    if (fallbackQuestion && rest.length >= 2) {
+      return { question: fallbackQuestion, options: rest };
+    }
+  }
+
   if (!question || options.length < 2) return null;
 
   return { question, options };
 }
 
+
 window.surveyAddOption = function(qid) {
   const q = surveyQuestions.find(q => q.id === qid);
   if (!q) return;
+  surveySnapshot();
   if (!q.options) q.options = [];
   q.options.push('');
   surveyRenderQuestions();
@@ -4446,6 +4608,7 @@ window.surveyAddOption = function(qid) {
 window.surveyRemoveOption = function(qid, optIndex) {
   const q = surveyQuestions.find(q => q.id === qid);
   if (!q || !q.options) return;
+  surveySnapshot();
   q.options.splice(optIndex, 1);
   surveyRenderQuestions();
 };
@@ -4453,6 +4616,7 @@ window.surveyRemoveOption = function(qid, optIndex) {
 window.surveyUpdateOption = function(qid, optIndex, value) {
   const q = surveyQuestions.find(q => q.id === qid);
   if (!q || !q.options) return;
+  surveySnapshotDebounced(); // ketikan opsi = debounce, sama seperti ketikan teks pertanyaan
   q.options[optIndex] = value;
   // Tidak perlu re-render penuh di sini — cukup update array, hindari kehilangan fokus input saat mengetik.
 };
@@ -4516,6 +4680,7 @@ async function surveyLoadFromFirestore() {
     if (!snap.exists) {
       surveyQuestions = [];
       surveyRenderQuestions();
+      surveyHistoryReset();
       return;
     }
     const d = snap.data();
@@ -4530,10 +4695,12 @@ async function surveyLoadFromFirestore() {
     })) : [];
 
     surveyRenderQuestions();
+    surveyHistoryReset();
   } catch (e) {
     console.warn('[Survey] surveyLoadFromFirestore failed:', e.message);
     surveyQuestions = [];
     surveyRenderQuestions();
+    surveyHistoryReset();
   }
 }
 

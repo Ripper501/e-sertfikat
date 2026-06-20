@@ -429,15 +429,15 @@
   }
   .survey-progress-rocket svg { width: 100%; height: 100%; }
 
-  /* ─── SURVEY ANSWER GRID (2 kolom, kartu berwarna) ────────────
+  /* ─── SURVEY ANSWER GRID (2 kolom, kartu solid berwarna) ──────
      Layout grid: 4 opsi → 2x2, 5 opsi → 2x2+1 (opsi ke-5 melebar
      full-width otomatis lewat nth-child terakhir ganjil), dst.
-     Mengikuti gaya referensi: kotak vertikal, radio/check di kiri-atas,
-     teks di bawahnya, boleh wrap 2 baris. */
+     Gaya kartu: gradient solid vivid per-kategori, radio/check sejajar
+     horizontal di kiri + teks di kanan (vertically centered). */
   .survey-answer-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 14px;
     margin-bottom: 4px;
   }
   /* Kalau jumlah opsi ganjil, opsi terakhir melebar 2 kolom supaya tidak
@@ -448,51 +448,36 @@
 
   .survey-answer-card {
     position: relative;
-    display: flex; flex-direction: column; justify-content: center;
-    gap: 10px;
-    padding: 16px 16px 18px;
-    min-height: 86px;
-    border-radius: var(--radius-md);
+    display: flex; flex-direction: row; align-items: center;
+    gap: 13px;
+    padding: 18px 16px;
+    min-height: 92px;
+    border-radius: 16px;
     cursor: pointer;
-    transition: var(--transition);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   }
+  .survey-answer-card:active { transform: scale(0.97); }
   .survey-answer-card input[type="radio"],
   .survey-answer-card input[type="checkbox"] {
     position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
   }
   .survey-answer-radio-dot {
-    width: 19px; height: 19px; flex-shrink: 0;
+    width: 22px; height: 22px; flex-shrink: 0;
     border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.55);
+    border: 2px solid rgba(255,255,255,0.75);
     display: inline-block;
-    position: relative;
-    transition: var(--transition);
   }
-  .survey-answer-card input[type="radio"]:checked ~ .survey-answer-radio-dot {
-    border-color: var(--accent);
-  }
-  .survey-answer-card input[type="radio"]:checked ~ .survey-answer-radio-dot::after {
-    content: '';
-    position: absolute; inset: 3px;
+  .survey-answer-check-circle {
+    width: 22px; height: 22px; flex-shrink: 0;
     border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 6px var(--accent-glow);
-  }
-  .survey-answer-check-box {
-    width: 19px; height: 19px; flex-shrink: 0;
-    border-radius: 5px;
-    border: 2px solid rgba(255,255,255,0.55);
+    border: 2px solid #fff;
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 0 10px rgba(255,255,255,0.55);
     display: inline-flex; align-items: center; justify-content: center;
-    transition: var(--transition);
   }
-  .survey-answer-card input[type="checkbox"]:checked ~ .survey-answer-check-box {
-    border-color: var(--accent);
-    background: var(--accent);
-  }
-  .survey-answer-check-box svg { opacity: 0; transition: opacity .15s; }
-  .survey-answer-card input[type="checkbox"]:checked ~ .survey-answer-check-box svg { opacity: 1; }
   .survey-answer-card-text {
-    font-size: 14px; color: var(--text); line-height: 1.35;
+    font-size: 15px; font-weight: 600; color: #fff; line-height: 1.3;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.25);
   }
 
   /* ─── SPINNER ─────────────────────────────────────────── */
@@ -3138,17 +3123,16 @@ async function surveyStart() {
   }
 }
 
-// Palet warna kartu jawaban — dirotasi per-opsi berdasarkan index, supaya
-// tampilan lebih hidup & playful (terinspirasi gaya "card berwarna" custom),
-// tetap dalam nuansa gelap (tone rendah) agar match tema CertPortal yang ada.
-// Saat opsi DIPILIH, border tetap beralih ke var(--accent) [lime brand] —
-// warna kartu di sini hanya jadi "identitas visual" tiap opsi, bukan
-// indikator pilih/tidak.
+// Palet warna kartu jawaban — SOLID gradient vivid (persis gaya referensi:
+// kartu berwarna penuh dengan gradient diagonal terang→gelap, efek glossy),
+// dirotasi per-opsi berdasarkan index. Saat opsi DIPILIH, border & ring
+// beralih ke var(--accent) [lime brand] dengan glow kuat — warna kartu di
+// sini adalah identitas visual permanen tiap opsi, bukan indikator pilih/tidak.
 const SURVEY_CARD_PALETTE = [
-  { bg: 'rgba(59,130,246,0.10)',  border: 'rgba(59,130,246,0.35)',  glow: 'rgba(59,130,246,0.18)'  }, // biru
-  { bg: 'rgba(16,185,129,0.10)',  border: 'rgba(16,185,129,0.35)',  glow: 'rgba(16,185,129,0.18)'  }, // teal/hijau
-  { bg: 'rgba(249,115,22,0.10)',  border: 'rgba(249,115,22,0.35)',  glow: 'rgba(249,115,22,0.18)'  }, // orange
-  { bg: 'rgba(168,85,247,0.10)',  border: 'rgba(168,85,247,0.35)',  glow: 'rgba(168,85,247,0.18)'  }, // ungu
+  { grad: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',  border: 'rgba(96,165,250,0.5)',  glow: 'rgba(37,99,235,0.35)'  }, // biru
+  { grad: 'linear-gradient(135deg, #14B8A6 0%, #0F766E 100%)',  border: 'rgba(45,212,191,0.5)',  glow: 'rgba(13,148,136,0.35)' }, // teal
+  { grad: 'linear-gradient(135deg, #F97316 0%, #C2410C 100%)',  border: 'rgba(251,146,60,0.5)',  glow: 'rgba(194,65,12,0.35)'  }, // orange
+  { grad: 'linear-gradient(135deg, #A855F7 0%, #7E22CE 100%)',  border: 'rgba(192,132,252,0.5)', glow: 'rgba(126,34,206,0.35)' }, // ungu
 ];
 
 function surveyRenderCurrentQuestion() {
@@ -3231,16 +3215,17 @@ function surveyRenderCurrentQuestion() {
       const isSelected = existingAnswer === opt;
       const optId = `survey-opt-${studentSurveyIndex}-${oi}`;
       const c = SURVEY_CARD_PALETTE[oi % SURVEY_CARD_PALETTE.length];
-      const bg     = isSelected ? 'rgba(204,255,0,0.06)' : c.bg;
       const border = isSelected ? 'var(--accent)' : c.border;
-      const glow   = isSelected ? '0 0 18px var(--accent-glow)' : `0 0 14px ${c.glow}`;
+      const glow   = isSelected ? `0 0 0 1px var(--accent), 0 0 22px var(--accent-glow), 0 8px 18px rgba(0,0,0,0.35)` : `0 8px 18px rgba(0,0,0,0.35), 0 0 14px ${c.glow}`;
       return `
         <label for="${optId}" class="survey-answer-card" style="
-          background:${bg}; border:1.5px solid ${border}; box-shadow:${glow};
+          background:${c.grad}; border:1.5px solid ${border}; box-shadow:${glow};
         ">
           <input type="radio" id="${optId}" name="survey-current-choice" value="${escapeHtml(opt)}" ${isSelected ? 'checked' : ''}
             onchange="surveySetCurrentAnswer(this.value); surveyRenderCurrentQuestion();" />
-          <span class="survey-answer-radio-dot"></span>
+          ${isSelected
+            ? `<span class="survey-answer-check-circle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`
+            : `<span class="survey-answer-radio-dot"></span>`}
           <span class="survey-answer-card-text">${escapeHtml(opt)}</span>
         </label>
       `;
@@ -3252,42 +3237,42 @@ function surveyRenderCurrentQuestion() {
       const isChecked = selected.includes(opt);
       const optId = `survey-cb-${studentSurveyIndex}-${oi}`;
       const c = SURVEY_CARD_PALETTE[oi % SURVEY_CARD_PALETTE.length];
-      const bg     = isChecked ? 'rgba(204,255,0,0.06)' : c.bg;
       const border = isChecked ? 'var(--accent)' : c.border;
-      const glow   = isChecked ? '0 0 18px var(--accent-glow)' : `0 0 14px ${c.glow}`;
+      const glow   = isChecked ? `0 0 0 1px var(--accent), 0 0 22px var(--accent-glow), 0 8px 18px rgba(0,0,0,0.35)` : `0 8px 18px rgba(0,0,0,0.35), 0 0 14px ${c.glow}`;
       return `
         <label for="${optId}" class="survey-answer-card" data-checked="${isChecked}" style="
-          background:${bg}; border:1.5px solid ${border}; box-shadow:${glow};
+          background:${c.grad}; border:1.5px solid ${border}; box-shadow:${glow};
         ">
           <input type="checkbox" id="${optId}" name="survey-current-cb" value="${escapeHtml(opt)}" ${isChecked ? 'checked' : ''}
             onchange="surveyToggleCheckbox('${q.id}', '${escapeHtml(opt)}', this.checked, this)" />
-          <span class="survey-answer-check-box">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0e0f14" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </span>
+          ${isChecked
+            ? `<span class="survey-answer-check-circle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`
+            : `<span class="survey-answer-radio-dot"></span>`}
           <span class="survey-answer-card-text">${escapeHtml(opt)}</span>
         </label>
       `;
-    }).join('') + `</div>` + `<p style="font-size:11.5px; color:var(--text-dim); margin-top:10px;">Boleh pilih lebih dari satu.</p>`;
+    }).join('') + `</div>` + `<p style="font-size:11.5px; color:rgba(255,255,255,0.4); margin-top:10px;">Boleh pilih lebih dari satu.</p>`;
 
   } else if (q.type === 'dropdown') {
-    // Dropdown native <select> — opsi tetap diwarnai lewat trigger highlight,
-    // tapi karena <select> tidak bisa di-style per-opsi, kartu pembungkusnya
-    // diberi warna sesuai opsi yang SEDANG terpilih (dinamis saat ganti pilihan).
+    // Dropdown native <select> — kartu pembungkus diwarnai gradient solid
+    // sesuai opsi yang SEDANG terpilih (dinamis saat ganti pilihan),
+    // konsisten dengan gaya kartu choice/checkbox.
     const selectedIndex = (q.options || []).findIndex(o => o === existingAnswer);
     const c = SURVEY_CARD_PALETTE[selectedIndex >= 0 ? selectedIndex % SURVEY_CARD_PALETTE.length : 0];
     answerArea.innerHTML = `
       <div id="survey-dropdown-wrap" style="
         position:relative;
-        padding:4px; border-radius:var(--radius-md);
-        background:${existingAnswer ? c.bg : 'rgba(255,255,255,0.03)'};
-        border:1.5px solid ${existingAnswer ? c.border : 'var(--border-soft)'};
-        box-shadow:${existingAnswer ? `0 0 14px ${c.glow}` : 'none'};
+        padding:4px; border-radius:16px;
+        background:${existingAnswer ? c.grad : 'rgba(255,255,255,0.05)'};
+        border:1.5px solid ${existingAnswer ? 'var(--accent)' : 'var(--border-soft)'};
+        box-shadow:${existingAnswer ? `0 0 0 1px var(--accent), 0 0 18px var(--accent-glow)` : 'none'};
         transition:var(--transition);
       ">
         <select id="survey-dropdown-input" onchange="surveySetCurrentAnswer(this.value); surveyRecolorDropdown(this);" style="
-          width:100%; padding:12px 38px 12px 14px; border-radius:14px;
-          background:transparent; border:none; color:var(--text);
-          font-family:var(--font-main); font-size:14px; cursor:pointer;
+          width:100%; padding:14px 38px 14px 16px; border-radius:14px;
+          background:transparent; border:none;
+          color:${existingAnswer ? '#fff' : 'var(--text)'};
+          font-family:var(--font-main); font-size:15px; font-weight:${existingAnswer ? '600' : '400'}; cursor:pointer;
           appearance:none; -webkit-appearance:none;
         ">
           <option value="" disabled ${!existingAnswer ? 'selected' : ''} style="background:#1e2033;">Pilih salah satu...</option>
@@ -3297,7 +3282,7 @@ function surveyRenderCurrentQuestion() {
         </select>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="
           position:absolute; right:14px; top:50%; transform:translateY(-50%);
-          color:var(--text-muted); pointer-events:none;
+          color:${existingAnswer ? '#fff' : 'var(--text-muted)'}; pointer-events:none;
         "><polyline points="6 9 12 15 18 9"/></svg>
       </div>
     `;
@@ -3320,17 +3305,16 @@ function surveyRenderCurrentQuestion() {
         ${dots.map((v, oi) => {
           const isSelected = selectedVal === v;
           const c = SURVEY_CARD_PALETTE[oi % SURVEY_CARD_PALETTE.length];
-          const bg     = isSelected ? 'rgba(204,255,0,0.08)' : c.bg;
           const border = isSelected ? 'var(--accent)' : c.border;
-          const glow   = isSelected ? '0 0 16px var(--accent-glow)' : `0 0 10px ${c.glow}`;
+          const glow   = isSelected ? `0 0 0 1px var(--accent), 0 0 18px var(--accent-glow), 0 6px 14px rgba(0,0,0,0.3)` : `0 6px 14px rgba(0,0,0,0.3), 0 0 10px ${c.glow}`;
           return `
             <button type="button" class="survey-scale-btn" data-val="${v}" onclick="surveySetCurrentAnswer('${v}'); surveyRenderCurrentQuestion();" style="
-              flex:1; padding:14px 4px; text-align:center;
-              background:${bg}; border:1.5px solid ${border};
-              border-radius:var(--radius-md); cursor:pointer; transition:var(--transition);
+              flex:1; padding:16px 4px; text-align:center;
+              background:${c.grad}; border:1.5px solid ${border};
+              border-radius:14px; cursor:pointer; transition:var(--transition);
               box-shadow:${glow};
-              color:${isSelected ? 'var(--accent)' : 'var(--text)'};
-              font-family:var(--font-mono); font-size:15px; font-weight:700;
+              color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.25);
+              font-family:var(--font-mono); font-size:16px; font-weight:700;
             ">${v}</button>
           `;
         }).join('')}
@@ -3347,9 +3331,14 @@ window.surveyRecolorDropdown = function(selectEl) {
   const options = Array.from(selectEl.options).filter(o => o.value !== '');
   const idx = options.findIndex(o => o.value === selectEl.value);
   const c = SURVEY_CARD_PALETTE[idx >= 0 ? idx % SURVEY_CARD_PALETTE.length : 0];
-  wrap.style.background  = selectEl.value ? c.bg : 'rgba(255,255,255,0.03)';
-  wrap.style.borderColor = selectEl.value ? c.border : 'var(--border-soft)';
-  wrap.style.boxShadow   = selectEl.value ? `0 0 14px ${c.glow}` : 'none';
+  const hasValue = !!selectEl.value;
+  wrap.style.background  = hasValue ? c.grad : 'rgba(255,255,255,0.05)';
+  wrap.style.borderColor  = hasValue ? 'var(--accent)' : 'var(--border-soft)';
+  wrap.style.boxShadow    = hasValue ? `0 0 0 1px var(--accent), 0 0 18px var(--accent-glow)` : 'none';
+  selectEl.style.color      = hasValue ? '#fff' : 'var(--text)';
+  selectEl.style.fontWeight = hasValue ? '600' : '400';
+  const chevron = wrap.querySelector('svg');
+  if (chevron) chevron.style.color = hasValue ? '#fff' : 'var(--text-muted)';
 };
 
 // Dipanggil oleh radio button / textarea saat user menjawab pertanyaan yang sedang tampil.

@@ -439,6 +439,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 14px;
     margin-bottom: 4px;
+    width: 100%;
   }
   /* Kalau jumlah opsi ganjil, opsi terakhir melebar 2 kolom supaya tidak
      menyisakan 1 slot kosong yang janggal (mis. 3 opsi → 2 atas + 1 lebar). */
@@ -455,6 +456,9 @@
     border-radius: 16px;
     cursor: pointer;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    min-width: 0;   /* cegah grid item melebar ngikutin konten teks panjang */
+    width: 100%;
+    box-sizing: border-box;
   }
   .survey-answer-card:active { transform: scale(0.97); }
   .survey-answer-card input[type="radio"],
@@ -478,6 +482,20 @@
   .survey-answer-card-text {
     font-size: 15px; font-weight: 600; color: #fff; line-height: 1.3;
     text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    min-width: 0;          /* izinkan flex item ini menyusut & wrap, bukan mendorong card melebar */
+    flex: 1 1 auto;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+  }
+
+  /* Di layar sangat sempit (HP kecil), turunkan jadi 1 kolom supaya teks
+     panjang punya ruang lebih lega tanpa harus mengecilkan font drastis. */
+  @media (max-width: 380px) {
+    .survey-answer-grid { grid-template-columns: 1fr; }
+    .survey-answer-grid .survey-answer-card:last-child:nth-child(odd) {
+      grid-column: auto;
+    }
   }
 
   /* ─── SPINNER ─────────────────────────────────────────── */
@@ -1173,6 +1191,81 @@
     animation: fadeUp 0.2s ease both;
   }
   #geo-violations-modal.open { display: flex; }
+
+  /* ─── SURVEY RESULTS MODAL (reuse layout .gv-modal-* yang sama) ── */
+  #survey-results-modal {
+    display: none;
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+    padding: 20px;
+    animation: fadeUp 0.2s ease both;
+  }
+  #survey-results-modal.open { display: flex; }
+  #survey-results-modal .gv-modal-card { max-width: 640px; }
+
+  /* ─── ADMIN SETTINGS MODAL ────────────────────────────────── */
+  #admin-settings-modal {
+    display: none;
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+    padding: 20px;
+    animation: fadeUp 0.2s ease both;
+  }
+  #admin-settings-modal.open { display: flex; }
+
+  .as-section-label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 700; color: var(--text);
+    margin-bottom: 4px;
+  }
+  .as-section-label svg { color: var(--accent); flex-shrink: 0; }
+  .as-section-desc {
+    font-size: 11.5px; color: var(--text-muted);
+    line-height: 1.5; margin-bottom: 14px;
+  }
+  .as-field-label {
+    display: block; font-size: 10.5px; font-family: var(--font-mono);
+    color: var(--text-dim); letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .as-locate-btn {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 9px;
+    background: rgba(204,255,0,0.06);
+    border: 1px solid rgba(204,255,0,0.25);
+    border-radius: var(--radius-sm, 12px);
+    color: var(--accent);
+    padding: 12px;
+    font-family: var(--font-main); font-size: 13.5px; font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .as-locate-btn:hover { background: rgba(204,255,0,0.12); border-color: var(--accent); }
+  .as-locate-btn:disabled { opacity: 0.5; cursor: wait; }
+  .as-locate-btn svg { flex-shrink: 0; }
+  .as-locate-btn.spinning svg { animation: spin 0.9s linear infinite; }
+
+  .as-divider {
+    height: 1px; background: var(--border-soft);
+    margin: 20px 0 16px;
+  }
+
+  .as-logout-btn {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 9px;
+    background: rgba(255,77,109,0.06);
+    border: 1px solid rgba(255,77,109,0.25);
+    border-radius: var(--radius-sm, 12px);
+    color: var(--danger);
+    padding: 12px;
+    font-family: var(--font-main); font-size: 13.5px; font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .as-logout-btn:hover { background: rgba(255,77,109,0.14); border-color: var(--danger); }
+
   .gv-modal-card {
     width: 100%; max-width: 560px; max-height: 82vh;
     background: var(--bg-card, #15161e);
@@ -1937,12 +2030,12 @@
           </svg>
           E-Certificate
         </button>
-        <button class="btn-admin btn-admin-danger" onclick="adminLockDashboard()">
+        <button class="btn-admin btn-admin-outline" id="btn-admin-settings" onclick="openAdminSettingsModal()" title="Settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
-          Lock
+          Settings
         </button>
       </div>
     </div>
@@ -1957,7 +2050,7 @@
         <div class="stat-label">Geo Violations</div>
         <div class="stat-value danger" id="stat-violations">—</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" id="stat-survey-card" onclick="openSurveyResultsModal()" title="Click to see survey response breakdown">
         <div class="stat-label">Survey Responses</div>
         <div class="stat-value" id="stat-survey-summary" style="font-size:20px;">—</div>
       </div>
@@ -1972,20 +2065,8 @@
       </div>
     </div>
 
-    <!-- Survey Results — breakdown semua pertanyaan & jumlah jawaban tiap
-         opsi, dihitung live dari survey_answers yang tersimpan di Firestore
-         tiap peserta. Tampil sekaligus ke bawah (bukan dropdown/per-klik). -->
-    <div class="table-header" style="margin-top:24px;">
-      <div class="table-title">Survey Results</div>
-      <div class="table-count" id="survey-results-count">—</div>
-    </div>
-    <div id="survey-results-wrap" style="margin-bottom:8px;">
-      <div class="admin-table-empty" style="
-        background:rgba(255,255,255,0.03); border:1px solid var(--border-soft);
-        border-radius:var(--radius-md); padding:20px; text-align:center;
-        color:var(--text-muted); font-size:13px;
-      ">Loading survey results…</div>
-    </div>
+    <!-- Survey Results dipindah ke dalam modal (klik stat card "Survey Responses")
+         agar tampilan awal dashboard tetap bersih — lihat #survey-results-modal di bawah. -->
 
     <!-- Participant table -->
     <div class="table-header">
@@ -2768,6 +2849,114 @@
   </div>
 </div>
 
+<!-- ── SURVEY RESULTS MODAL ───────────────────────────────────
+     Berisi breakdown semua pertanyaan survei & jumlah jawaban tiap
+     opsi, dihitung live dari survey_answers tiap peserta. Konten ini
+     dirender oleh renderSurveyResults() yang sama persis seperti
+     sebelumnya — hanya wadahnya yang dipindah ke dalam modal supaya
+     tampilan awal dashboard tetap bersih. -->
+<div id="survey-results-modal">
+  <div class="gv-modal-card">
+    <div class="gv-modal-header">
+      <div>
+        <div class="gv-modal-title">📊 Survey Results</div>
+        <div class="gv-modal-subtitle" id="survey-results-count">Loading…</div>
+      </div>
+      <button class="gv-modal-close" onclick="closeSurveyResultsModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="gv-modal-body" id="survey-results-wrap">
+      <div class="admin-table-empty" style="
+        background:rgba(255,255,255,0.03); border:1px solid var(--border-soft);
+        border-radius:var(--radius-md); padding:20px; text-align:center;
+        color:var(--text-muted); font-size:13px;
+      ">Loading survey results…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADMIN SETTINGS MODAL ───────────────────────────────────
+     Berisi: Location (geofence target lat/lng + radius, bisa diisi
+     manual atau via GPS "Use Current Location"), dan Logout/Lock.
+     Tujuan: admin tidak perlu lagi buka kode JS untuk pindah lokasi
+     event — cukup lewat UI ini, tersimpan ke Firestore. -->
+<div id="admin-settings-modal">
+  <div class="gv-modal-card" style="max-width:480px;">
+    <div class="gv-modal-header">
+      <div>
+        <div class="gv-modal-title">⚙️ Settings</div>
+        <div class="gv-modal-subtitle">Configure event location & session</div>
+      </div>
+      <button class="gv-modal-close" onclick="closeAdminSettingsModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="gv-modal-body">
+
+      <!-- ── LOCATION SECTION ───────────────────────────── -->
+      <div class="as-section-label">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+        Geofence Location
+      </div>
+      <p class="as-section-desc">Lokasi pusat event. Audiens harus berada dalam radius ini untuk klaim sertifikat.</p>
+
+      <div style="display:flex; gap:10px; margin-bottom:10px;">
+        <div style="flex:1;">
+          <label class="as-field-label">Latitude</label>
+          <input class="ced-input" id="as-geo-lat" type="text" inputmode="decimal" placeholder="-8.545971" style="font-family:var(--font-mono); font-size:13px;" />
+        </div>
+        <div style="flex:1;">
+          <label class="as-field-label">Longitude</label>
+          <input class="ced-input" id="as-geo-lng" type="text" inputmode="decimal" placeholder="125.543172" style="font-family:var(--font-mono); font-size:13px;" />
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label class="as-field-label">Radius (meter)</label>
+        <input class="ced-input" id="as-geo-radius" type="number" inputmode="numeric" placeholder="50000" style="font-family:var(--font-mono); font-size:13px;" />
+      </div>
+
+      <button type="button" class="as-locate-btn" onclick="asUseCurrentLocation()" id="as-locate-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+          <circle cx="12" cy="12" r="8"/>
+        </svg>
+        <span id="as-locate-label">Lokasi saat ini</span>
+      </button>
+
+      <div id="as-geo-status" style="font-size:11.5px; margin-top:8px; min-height:16px;"></div>
+
+      <button type="button" class="btn-admin btn-admin-primary" style="width:100%; justify-content:center; margin-top:12px;" onclick="asSaveLocation()" id="as-save-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Save Location
+      </button>
+
+      <div class="as-divider"></div>
+
+      <!-- ── LOGOUT SECTION ─────────────────────────────── -->
+      <button type="button" class="as-logout-btn" onclick="closeAdminSettingsModal(); adminLockDashboard();">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Log Out
+      </button>
+
+    </div>
+  </div>
+</div>
+
 
 <!-- ════════════════════════════════════════════════════════
      JAVASCRIPT
@@ -2820,11 +3009,13 @@ const FIREBASE_CONFIG = {
 };
 
 // ── EVENT GEOFENCE ─────────────────────────────────────────────────
-// Set your event's GPS coordinates and allowed radius here
-const GEO_TARGET = {
-  lat:    -8.545971253827894,   // <-- PERBAIKAN: Wajib ada tanda koma di sini!
+// Nilai default — akan di-OVERWRITE otomatis oleh loadGeoTargetFromFirestore()
+// saat halaman dibuka, dan bisa diubah admin lewat Settings ⚙️ → Location
+// tanpa perlu edit kode ini lagi.
+let GEO_TARGET = {
+  lat:    -8.545971253827894,
   lng:    125.5431727032313,
-  radius: 50000          // Meters – max allowed distance from venue center -8.545971253827894, 125.5431727032313
+  radius: 50000          // Meters – jarak maksimum dari venue
 };
 
 // ── EVENT METADATA (used on the certificate) ───────────────────────
@@ -2843,6 +3034,12 @@ firebase.initializeApp(FIREBASE_CONFIG);
 const auth      = firebase.auth();
 const db        = firebase.firestore();
 const functions = firebase.functions();
+
+// Muat lokasi geofence terbaru dari Firestore sesegera mungkin (async,
+// tidak memblokir render halaman). Dipanggil di sini supaya GEO_TARGET
+// sudah ter-update sebelum student menjalankan runGeofenceCheck() atau
+// admin membuka Settings modal.
+loadGeoTargetFromFirestore();
 
 
 // ══════════════════════════════════════════════════════════════════
@@ -3140,6 +3337,168 @@ function closeGeoViolationsModal() {
 
 function gvEscHandler(e) {
   if (e.key === 'Escape') closeGeoViolationsModal();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ADMIN: SURVEY RESULTS MODAL (klik stat card "Survey Responses")
+// Konten di dalamnya (#survey-results-wrap, #survey-results-count)
+// sudah otomatis ter-update real-time oleh renderSurveyResults() yang
+// dipanggil dari listener Firestore utama — modal ini cuma
+// menampilkan/menyembunyikan wadahnya saja.
+// ══════════════════════════════════════════════════════════════════
+function openSurveyResultsModal() {
+  const modal = document.getElementById('survey-results-modal');
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', srEscHandler);
+}
+
+function closeSurveyResultsModal() {
+  const modal = document.getElementById('survey-results-modal');
+  modal.classList.remove('open');
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', srEscHandler);
+}
+
+function srEscHandler(e) {
+  if (e.key === 'Escape') closeSurveyResultsModal();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ADMIN: SETTINGS MODAL (klik tombol ⚙️ Settings di header dashboard)
+// Berisi pengaturan Geofence Location (lat/lng/radius — bisa diisi
+// manual atau via GPS) dan Log Out. Tujuannya supaya admin tidak perlu
+// lagi membuka kode JavaScript untuk memindahkan lokasi event.
+// ══════════════════════════════════════════════════════════════════
+function openAdminSettingsModal() {
+  const modal = document.getElementById('admin-settings-modal');
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', asEscHandler);
+
+  // Isi field dengan nilai GEO_TARGET yang sedang aktif saat ini
+  document.getElementById('as-geo-lat').value    = GEO_TARGET.lat;
+  document.getElementById('as-geo-lng').value    = GEO_TARGET.lng;
+  document.getElementById('as-geo-radius').value = GEO_TARGET.radius;
+  document.getElementById('as-geo-status').textContent = '';
+}
+
+function closeAdminSettingsModal() {
+  const modal = document.getElementById('admin-settings-modal');
+  modal.classList.remove('open');
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', asEscHandler);
+}
+
+function asEscHandler(e) {
+  if (e.key === 'Escape') closeAdminSettingsModal();
+}
+
+// ── Ambil lokasi GPS perangkat saat ini, isi otomatis ke field lat/lng ──
+function asUseCurrentLocation() {
+  const btn    = document.getElementById('as-locate-btn');
+  const label  = document.getElementById('as-locate-label');
+  const status = document.getElementById('as-geo-status');
+
+  if (!navigator.geolocation) {
+    status.textContent = '✗ Browser ini tidak mendukung geolocation.';
+    status.style.color = 'var(--danger)';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.classList.add('spinning');
+  label.textContent = 'Mencari lokasi…';
+  status.textContent = '';
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      document.getElementById('as-geo-lat').value = pos.coords.latitude;
+      document.getElementById('as-geo-lng').value = pos.coords.longitude;
+
+      btn.disabled = false;
+      btn.classList.remove('spinning');
+      label.textContent = 'Lokasi saat ini';
+      status.textContent = `✓ Lokasi ditemukan (akurasi ±${Math.round(pos.coords.accuracy)}m). Klik "Save Location" untuk menyimpan.`;
+      status.style.color = 'var(--success)';
+    },
+    (err) => {
+      btn.disabled = false;
+      btn.classList.remove('spinning');
+      label.textContent = 'Lokasi saat ini';
+      status.textContent = `✗ Gagal ambil lokasi: ${err.message}`;
+      status.style.color = 'var(--danger)';
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+}
+
+// ── Simpan lat/lng/radius ke Firestore, langsung update GEO_TARGET ──
+async function asSaveLocation() {
+  const saveBtn = document.getElementById('as-save-btn');
+  const status  = document.getElementById('as-geo-status');
+
+  const lat    = parseFloat(document.getElementById('as-geo-lat').value);
+  const lng    = parseFloat(document.getElementById('as-geo-lng').value);
+  const radius = parseInt(document.getElementById('as-geo-radius').value, 10);
+
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    status.textContent = '✗ Latitude tidak valid (-90 sampai 90).';
+    status.style.color = 'var(--danger)';
+    return;
+  }
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+    status.textContent = '✗ Longitude tidak valid (-180 sampai 180).';
+    status.style.color = 'var(--danger)';
+    return;
+  }
+  if (!Number.isFinite(radius) || radius <= 0) {
+    status.textContent = '✗ Radius harus angka positif (meter).';
+    status.style.color = 'var(--danger)';
+    return;
+  }
+
+  saveBtn.disabled = true;
+  status.textContent = '⏳ Menyimpan lokasi…';
+  status.style.color = 'var(--accent)';
+
+  try {
+    await db.collection('settings').doc('geo_target').set({
+      lat, lng, radius,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    // Update langsung di memori — efektif seketika tanpa perlu reload halaman
+    GEO_TARGET.lat    = lat;
+    GEO_TARGET.lng    = lng;
+    GEO_TARGET.radius = radius;
+
+    status.textContent = '✓ Lokasi tersimpan! Geofence langsung aktif.';
+    status.style.color = 'var(--success)';
+    showToast('success', 'Location saved', `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)} · radius ${radius.toLocaleString('id-ID')}m`);
+  } catch (err) {
+    status.textContent = '✗ Gagal menyimpan: ' + err.message;
+    status.style.color = 'var(--danger)';
+  } finally {
+    saveBtn.disabled = false;
+  }
+}
+
+// ── Muat GEO_TARGET dari Firestore saat halaman dibuka ───────────
+// Dipanggil sekali di awal load admin dashboard. Kalau belum pernah
+// disimpan sama sekali, GEO_TARGET tetap pakai nilai default di atas.
+async function loadGeoTargetFromFirestore() {
+  try {
+    const snap = await db.collection('settings').doc('geo_target').get();
+    if (snap.exists) {
+      const d = snap.data();
+      if (Number.isFinite(d.lat))    GEO_TARGET.lat    = d.lat;
+      if (Number.isFinite(d.lng))    GEO_TARGET.lng    = d.lng;
+      if (Number.isFinite(d.radius)) GEO_TARGET.radius = d.radius;
+    }
+  } catch (e) {
+    console.warn('[GeoTarget] Gagal load dari Firestore, pakai default:', e.message);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════

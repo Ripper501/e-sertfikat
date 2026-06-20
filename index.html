@@ -471,6 +471,15 @@
     border: 2px solid rgba(255,255,255,0.75);
     display: inline-block;
   }
+  /* Indikator kotak untuk checkbox (boleh pilih >1) — beda bentuk dari
+     radio dot bulat (choice, pilih 1) supaya audiens tidak salah kira
+     ini pilihan ganda biasa. */
+  .survey-answer-box-empty {
+    width: 22px; height: 22px; flex-shrink: 0;
+    border-radius: 6px;
+    border: 2px solid rgba(255,255,255,0.75);
+    display: inline-block;
+  }
   .survey-answer-check-circle {
     width: 22px; height: 22px; flex-shrink: 0;
     border-radius: 50%;
@@ -479,14 +488,24 @@
     box-shadow: 0 0 10px rgba(255,255,255,0.55);
     display: inline-flex; align-items: center; justify-content: center;
   }
+  /* Versi kotak dari check-circle, dipakai saat checkbox SUDAH dicentang */
+  .survey-answer-check-box {
+    width: 22px; height: 22px; flex-shrink: 0;
+    border-radius: 6px;
+    border: 2px solid #fff;
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 0 10px rgba(255,255,255,0.55);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
   .survey-answer-card-text {
-    font-size: 15px; font-weight: 600; color: #fff; line-height: 1.3;
+    font-size: 15px; font-weight: 600; color: #fff; line-height: 1.35;
     text-shadow: 0 1px 3px rgba(0,0,0,0.25);
     min-width: 0;          /* izinkan flex item ini menyusut & wrap, bukan mendorong card melebar */
     flex: 1 1 auto;
-    overflow-wrap: break-word;
-    word-break: break-word;
+    overflow-wrap: break-word;  /* hanya pecah 1 kata jika memang lebih lebar dari card (sangat jarang) */
     white-space: normal;
+    hyphens: none;               /* jangan tambahkan tanda hubung saat wrap */
+    -webkit-hyphens: none;
   }
 
   /* Di layar sangat sempit (HP kecil), turunkan jadi 1 kolom supaya teks
@@ -3686,12 +3705,12 @@ function surveyRenderCurrentQuestion() {
           <input type="checkbox" id="${optId}" name="survey-current-cb" value="${escapeHtml(opt)}" ${isChecked ? 'checked' : ''}
             onchange="surveyToggleCheckbox('${q.id}', '${escapeHtml(opt)}', this.checked, this)" />
           ${isChecked
-            ? `<span class="survey-answer-check-circle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`
-            : `<span class="survey-answer-radio-dot"></span>`}
+            ? `<span class="survey-answer-check-box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`
+            : `<span class="survey-answer-box-empty"></span>`}
           <span class="survey-answer-card-text">${escapeHtml(opt)}</span>
         </label>
       `;
-    }).join('') + `</div>` + `<p style="font-size:11.5px; color:rgba(255,255,255,0.4); margin-top:10px;">Boleh pilih lebih dari satu.</p>`;
+    }).join('') + `</div>` + `<p style="font-size:11.5px; color:rgba(255,255,255,0.4); margin-top:10px;">☑️ Boleh pilih lebih dari satu.</p>`;
 
   } else if (q.type === 'dropdown') {
     // Dropdown native <select> — kartu pembungkus diwarnai gradient solid

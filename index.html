@@ -926,6 +926,72 @@
     transform: translateY(-1px);
   }
 
+  /* ─── SURVEY RESULTS BREAKDOWN ───────────────────────────────
+     Tiap pertanyaan = 1 blok kartu, tiap opsi jawaban = 1 baris
+     dengan bar persentase (gaya "poll result"), warnanya rotasi
+     mengikuti palet yang sama dipakai di student survey, supaya
+     identitas visual tiap opsi konsisten di kedua sisi. */
+  .survey-result-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    margin-bottom: 12px;
+  }
+  .survey-result-question {
+    font-size: 13.5px; font-weight: 600; color: var(--text);
+    margin-bottom: 12px; line-height: 1.4;
+  }
+  .survey-result-question .survey-result-qtype {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;
+    margin-left: 8px;
+  }
+  .survey-result-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 8px;
+  }
+  .survey-result-row:last-child { margin-bottom: 0; }
+  .survey-result-label {
+    flex: 0 0 38%;
+    font-size: 12.5px; color: var(--text-dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .survey-result-bar-track {
+    flex: 1;
+    height: 18px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+  }
+  .survey-result-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.5s ease;
+    min-width: 3px;
+  }
+  .survey-result-count {
+    flex: 0 0 64px;
+    text-align: right;
+    font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;
+    color: var(--text-muted);
+  }
+  .survey-result-count b { color: var(--text); }
+  .survey-result-empty-text {
+    font-size: 12px; color: var(--text-dim); text-align: center; padding: 8px 0;
+  }
+  .survey-result-textlist {
+    max-height: 160px; overflow-y: auto;
+    border: 1px solid var(--border-soft); border-radius: 8px;
+    padding: 8px 12px;
+  }
+  .survey-result-textlist div {
+    font-size: 12px; color: var(--text-dim); padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .survey-result-textlist div:last-child { border-bottom: none; }
+
   /* ─── QR SECTION ─────────────────────────────────────────── */
   .admin-qr-row {
     display: grid; grid-template-columns: auto 1fr;
@@ -1892,8 +1958,8 @@
         <div class="stat-value danger" id="stat-violations">—</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Session URL</div>
-        <div class="stat-value" style="font-size:12px; font-family:var(--font-mono); color:var(--text-muted); margin-top:4px; word-break:break-all;" id="stat-url">—</div>
+        <div class="stat-label">Survey Responses</div>
+        <div class="stat-value" id="stat-survey-summary" style="font-size:20px;">—</div>
       </div>
     </div>
 
@@ -1904,6 +1970,21 @@
         <div class="admin-qr-url" id="admin-qr-url-text">—</div>
         <p class="admin-qr-hint">Students scan this QR code with their phone camera. The code opens the student authentication flow. <strong style="color:var(--accent)">Click the QR code</strong> to display it full-screen for the whole room to scan.</p>
       </div>
+    </div>
+
+    <!-- Survey Results — breakdown semua pertanyaan & jumlah jawaban tiap
+         opsi, dihitung live dari survey_answers yang tersimpan di Firestore
+         tiap peserta. Tampil sekaligus ke bawah (bukan dropdown/per-klik). -->
+    <div class="table-header" style="margin-top:24px;">
+      <div class="table-title">Survey Results</div>
+      <div class="table-count" id="survey-results-count">—</div>
+    </div>
+    <div id="survey-results-wrap" style="margin-bottom:8px;">
+      <div class="admin-table-empty" style="
+        background:rgba(255,255,255,0.03); border:1px solid var(--border-soft);
+        border-radius:var(--radius-md); padding:20px; text-align:center;
+        color:var(--text-muted); font-size:13px;
+      ">Loading survey results…</div>
     </div>
 
     <!-- Participant table -->
@@ -3485,6 +3566,8 @@ async function surveyFinishAndGenerate() {
       questionId:   q.id,
       questionText: q.text,
       answer:       studentSurveyAnswers[q.id] || '',
+      type:         q.type || 'text',     // dipakai dashboard admin utk tahu cara rekap (bar chart vs daftar teks)
+      isName:       !!q.isName,           // pertanyaan "Nama lengkap" selalu free-text, jangan pernah di-bar-chart
     }));
     await db.collection(USERS_COLLECTION).doc(currentUser.uid).set({
       survey_answers:    answersForFirestore,
@@ -4239,8 +4322,7 @@ function showAdminDashboard() {
   dash.style.display = 'block';
   if (!overlay.contains(dash)) overlay.appendChild(dash);
 
-  // Populate URL stat
-  document.getElementById('stat-url').textContent = PORTAL_STUDENT_URL;
+  // Populate URL stat (ditampilkan di QR section & projector mode, bukan lagi di stat card)
   document.getElementById('admin-qr-url-text').textContent = PORTAL_STUDENT_URL;
   document.getElementById('projector-url-label').textContent = PORTAL_STUDENT_URL;
 
@@ -4339,6 +4421,12 @@ function adminRefreshTable() {
             console.warn('[Admin] Violations fetch failed:', ve.message);
           }
 
+          // Hitung & render breakdown Survey Results dari survey_answers
+          // tiap peserta — dilakukan SEBELUM percabangan rows.length di bawah,
+          // supaya tetap ter-render (sebagai "belum ada data") walau belum
+          // ada satu pun peserta yang klaim sertifikat.
+          renderSurveyResults(rows);
+
           if (rows.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">No certificates claimed yet.</td></tr>`;
             return;
@@ -4390,7 +4478,155 @@ function adminRefreshTable() {
   }
 }
 
-// ── Auto-lock ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+// SURVEY RESULTS BREAKDOWN — dihitung dari survey_answers tiap peserta
+// (sudah ikut terbawa dalam `rows` yang sama dipakai tabel Participants,
+// jadi tidak perlu query Firestore tambahan & otomatis ikut live-update).
+// ══════════════════════════════════════════════════════════════════
+
+// Palet warna bar — sama dengan SURVEY_CARD_PALETTE di sisi student,
+// supaya identitas visual tiap opsi konsisten antara form siswa & dashboard.
+const ADMIN_SURVEY_PALETTE = [
+  '#3B82F6', // biru
+  '#14B8A6', // teal
+  '#F97316', // orange
+  '#A855F7', // ungu
+];
+
+function renderSurveyResults(rows) {
+  const wrap     = document.getElementById('survey-results-wrap');
+  const countEl  = document.getElementById('survey-results-count');
+  const summaryEl = document.getElementById('stat-survey-summary');
+  if (!wrap) return;
+
+  // Kumpulkan semua survey_answers yang valid dari tiap peserta.
+  const allAnswers = []; // { questionId, questionText, answer }
+  rows.forEach(r => {
+    if (Array.isArray(r.survey_answers)) {
+      r.survey_answers.forEach(a => allAnswers.push(a));
+    }
+  });
+
+  if (allAnswers.length === 0) {
+    wrap.innerHTML = `<div class="admin-table-empty" style="
+      background:rgba(255,255,255,0.03); border:1px solid var(--border-soft);
+      border-radius:var(--radius-md); padding:20px; text-align:center;
+      color:var(--text-muted); font-size:13px;
+    ">No survey responses yet.</div>`;
+    if (countEl) countEl.textContent = '0 responses';
+    if (summaryEl) summaryEl.textContent = '0 responses';
+    return;
+  }
+
+  // Group jawaban per pertanyaan (urutan tampil = urutan pertama kali
+  // questionId itu muncul, supaya konsisten dengan urutan asli di form).
+  const questionOrder = []; // [questionId, ...]
+  const questionTextById = {}; // { questionId: questionText }
+  const questionTypeById = {}; // { questionId: type|null }  -- null = data lama, belum ada field type
+  const answersByQuestion = {}; // { questionId: [answerString, ...] }
+
+  allAnswers.forEach(a => {
+    const qid = a.questionId || a.questionText; // fallback kalau questionId kosong
+    if (!qid) return;
+    if (!answersByQuestion[qid]) {
+      answersByQuestion[qid] = [];
+      questionOrder.push(qid);
+      questionTextById[qid] = a.questionText || '(Untitled question)';
+      // a.type hanya ada di data yang disimpan SETELAH perbaikan ini.
+      // Data lama tidak punya field ini → null, ditangani via heuristik fallback di bawah.
+      questionTypeById[qid] = a.isName ? 'text' : (a.type || null);
+    }
+    if (a.answer && String(a.answer).trim()) {
+      answersByQuestion[qid].push(String(a.answer).trim());
+    }
+  });
+
+  if (countEl) countEl.textContent = `${questionOrder.length} question${questionOrder.length !== 1 ? 's' : ''}`;
+  if (summaryEl) summaryEl.textContent = `${questionOrder.length} Q · ${allAnswers.length} A`;
+
+  wrap.innerHTML = questionOrder.map(qid => {
+    const questionText = escapeHtml(questionTextById[qid]);
+    const rawAnswers   = answersByQuestion[qid];
+    const knownType    = questionTypeById[qid]; // 'text' | 'choice' | 'checkbox' | 'dropdown' | 'linear_scale' | null
+
+    if (rawAnswers.length === 0) {
+      return `
+        <div class="survey-result-card">
+          <div class="survey-result-question">${questionText}</div>
+          <div class="survey-result-empty-text">No responses yet for this question.</div>
+        </div>
+      `;
+    }
+
+    // Pecah jawaban checkbox (dipisah koma) jadi entri terpisah, supaya
+    // peserta yang memilih 2 opsi terhitung di masing-masing opsi tersebut —
+    // perilaku standar untuk rekap pertanyaan multi-select. Untuk tipe yang
+    // SUDAH PASTI bukan checkbox, jangan split koma (nama/teks bebas bisa
+    // mengandung koma tanpa itu berarti multi-pilihan).
+    const tally = {}; // { optionLabel: count }
+    const shouldSplitComma = knownType === 'checkbox' || (knownType === null); // data lama: tetap coba split, ditangkap ulang oleh fallback heuristik
+
+    rawAnswers.forEach(ans => {
+      const parts = shouldSplitComma && ans.includes(',')
+        ? ans.split(',').map(s => s.trim()).filter(Boolean)
+        : [ans];
+      parts.forEach(p => {
+        tally[p] = (tally[p] || 0) + 1;
+      });
+    });
+
+    const uniqueOptions = Object.keys(tally);
+    const totalTally    = Object.values(tally).reduce((a, b) => a + b, 0);
+
+    // Tentukan free-text vs kategorikal:
+    // 1. Kalau tipe sudah PASTI diketahui (knownType bukan null) → ikuti itu,
+    //    tidak perlu menerka. 'text' selalu free-text, sisanya selalu bar chart.
+    // 2. Kalau tipe tidak diketahui (data lama sebelum field `type` ada) →
+    //    fallback ke heuristik keberagaman jawaban seperti sebelumnya.
+    const isLikelyFreeText = knownType !== null
+      ? knownType === 'text'
+      : (uniqueOptions.length > 8 && uniqueOptions.length >= rawAnswers.length * 0.7);
+
+    if (isLikelyFreeText) {
+      const listHtml = rawAnswers.slice(0, 100).map(a => `<div>${escapeHtml(a)}</div>`).join('');
+      return `
+        <div class="survey-result-card">
+          <div class="survey-result-question">${questionText}<span class="survey-result-qtype">${rawAnswers.length} responses · free text</span></div>
+          <div class="survey-result-textlist">${listHtml}</div>
+        </div>
+      `;
+    }
+
+    // Urutkan opsi dari yang paling banyak dipilih
+    const sortedOptions = uniqueOptions.sort((a, b) => tally[b] - tally[a]);
+    const maxCount = Math.max(...sortedOptions.map(o => tally[o]));
+
+    const rowsHtml = sortedOptions.map((opt, idx) => {
+      const count = tally[opt];
+      const pct   = totalTally > 0 ? Math.round((count / totalTally) * 100) : 0;
+      const widthPct = maxCount > 0 ? Math.max((count / maxCount) * 100, 4) : 4;
+      const color = ADMIN_SURVEY_PALETTE[idx % ADMIN_SURVEY_PALETTE.length];
+      return `
+        <div class="survey-result-row">
+          <div class="survey-result-label" title="${escapeHtml(opt)}">${escapeHtml(opt)}</div>
+          <div class="survey-result-bar-track">
+            <div class="survey-result-bar-fill" style="width:${widthPct}%; background:${color};"></div>
+          </div>
+          <div class="survey-result-count"><b>${count}</b> · ${pct}%</div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="survey-result-card">
+        <div class="survey-result-question">${questionText}<span class="survey-result-qtype">${totalTally} response${totalTally !== 1 ? 's' : ''}</span></div>
+        ${rowsHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+
 function resetAdminAutoLock() {
   clearTimeout(adminAutoLockTimer);
   adminAutoLockTimer = setTimeout(() => {

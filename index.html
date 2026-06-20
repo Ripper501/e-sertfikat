@@ -5018,9 +5018,9 @@ async function surveySaveConfig() {
     status.style.color = 'var(--danger)';
     return;
   }
-  const invalidChoice = surveyQuestions.find(q => (q.type === 'choice' || q.type === 'checkbox') && (!q.options || q.options.filter(o => o && o.trim()).length < 2));
+  const invalidChoice = surveyQuestions.find(q => ['choice','checkbox','dropdown'].includes(q.type) && (!q.options || q.options.filter(o => o && o.trim()).length < 2));
   if (invalidChoice) {
-    status.textContent = '✗ Pilihan ganda & kotak centang butuh minimal 2 opsi terisi.';
+    status.textContent = '✗ Pilihan ganda, kotak centang, & dropdown butuh minimal 2 opsi terisi.';
     status.style.color = 'var(--danger)';
     return;
   }
@@ -5030,12 +5030,24 @@ async function surveySaveConfig() {
   status.style.color = 'var(--accent)';
 
   // Bersihkan opsi kosong sebelum simpan
-  const cleanQuestions = surveyQuestions.map(q => ({
-    id:      q.id,
-    text:    q.text.trim(),
-    type:    ['choice','checkbox'].includes(q.type) ? q.type : 'text',
-    options: ['choice','checkbox'].includes(q.type) ? (q.options || []).map(o => o.trim()).filter(o => o) : [],
-  }));
+  const OPTION_BASED_TYPES = ['choice', 'checkbox', 'dropdown'];
+  const VALID_TYPES = ['choice', 'checkbox', 'dropdown', 'linear_scale', 'text'];
+  const cleanQuestions = surveyQuestions.map(q => {
+    const type = VALID_TYPES.includes(q.type) ? q.type : 'text';
+    const base = {
+      id:      q.id,
+      text:    q.text.trim(),
+      type:    type,
+      options: OPTION_BASED_TYPES.includes(type) ? (q.options || []).map(o => o.trim()).filter(o => o) : [],
+    };
+    if (type === 'linear_scale') {
+      base.scaleMin      = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
+      base.scaleMax      = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
+      base.scaleMinLabel = (q.scaleMinLabel || '').trim();
+      base.scaleMaxLabel = (q.scaleMaxLabel || '').trim();
+    }
+    return base;
+  });
 
   const payload = {
     eventName: eventNameRaw,

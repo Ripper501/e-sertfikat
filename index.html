@@ -3924,16 +3924,28 @@ async function surveyFinishAndGenerate() {
     // Ambil nama event dari config survei yang sudah di-set admin (field "Nama Event")
     const eventId = studentSurveyConfig?.eventName || 'General_Event';
 
+    // Waktu terbit, dicatat di sisi client (ISO string) — dipakai sebagai
+    // kolom "Issued At" di Google Sheet. Beda dari issued_at di Firestore
+    // (yang pakai serverTimestamp), tapi cukup akurat untuk arsip Sheet
+    // dan tidak butuh round-trip tambahan ke server sebelum payload dikirim.
+    const issuedAtIso = new Date().toISOString();
+
     // Susun payload agar pas dengan variabel di Google Apps Script Anda
+    // uid & issuedAt ditambahkan supaya Sheet bisa jadi ARSIP PERMANEN:
+    // begitu dokumen Firestore di cert_users dihapus admin (mis. saat
+    // bersih-bersih data lama), verify.html masih bisa menemukan sertifikat
+    // ini lewat fallback ke Apps Script (doGet) yang mencari berdasarkan uid.
     const payload = {
       eventId: eventId,
       namaSertifikat: certName,
       email: currentUser?.email || "No Email",
+      uid: currentUser?.uid || "",
+      issuedAt: issuedAtIso,
       dynamicResponses: dynamicResponses
     };
 
     // ⚠️ MASUKKAN URL WEB APP YANG BERAKHIRAN /exec DI SINI! ⚠️
-    const urlAppsScript = "https://script.google.com/macros/s/AKfycbyX04INT6lW1Uh_giq63P3o60BsUPBt35oL7CtDKM5E6I6mO7eH1Fbs3rxUa39_5d6c_A/exec";
+    const urlAppsScript = "https://script.google.com/macros/s/AKfycbwe6ztZkhI4S0CcxQCxNG520jFFjAMyA3KO3fO_24SkjGaH6oT2Mtl9augFpXs2Crh5og/exec";
 
     // Gunakan text/plain untuk membungkus JSON agar bypass CORS (Anti-Blokir Browser)
     // PENTING: Gunakan text/plain dan no-cors untuk membungkus JSON agar bypass CORS (Anti-Blokir Browser)

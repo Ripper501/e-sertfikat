@@ -530,15 +530,6 @@
     }
   }
 
-  /* Di layar sangat sempit (HP kecil), turunkan jadi 1 kolom supaya teks
-     panjang punya ruang lebih lega tanpa harus mengecilkan font drastis. */
-  @media (max-width: 380px) {
-    .survey-answer-grid { grid-template-columns: 1fr; }
-    .survey-answer-grid .survey-answer-card:last-child:nth-child(odd) {
-      grid-column: auto;
-    }
-  }
-
   /* ─── SPINNER ─────────────────────────────────────────── */
   .spinner-wrap {
     display: flex;

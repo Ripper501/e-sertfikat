@@ -384,6 +384,13 @@
             </svg>
           </div>
         </div>
+
+        <!-- Tampil HANYA kalau data diambil dari fallback Google Sheet
+             (dokumen Firestore sudah tidak ada / dihapus admin) — murni
+             info kecil, tidak mengubah validitas sertifikat sama sekali. -->
+        <p id="archive-note" style="display:none; margin-top:14px; font-size:10.5px; color:var(--text-muted); text-align:center; letter-spacing:0.04em;">
+          Retrieved from permanent archive
+        </p>
       </div>
 
       <!-- Error -->
@@ -458,27 +465,93 @@
       }); // e.g. "17 June 2026"
     }
 
+    // ════════════════════════════════════════════════════════════
+    // FALLBACK: Google Sheet via Apps Script (doGet)
+    //
+    // Dipanggil HANYA ketika dokumen Firestore TIDAK DITEMUKAN
+    // (doc.exists === false) — bukan saat error jaringan, karena kalau
+    // Firestore gagal akibat koneksi, fallback ke Sheet kemungkinan besar
+    // akan gagal dengan alasan yang sama, dan pesannya harus tetap
+    // "network error", bukan "not found", supaya tidak menyesatkan audiens.
+    //
+    // Sheet ini berfungsi sebagai ARSIP PERMANEN: meskipun admin menghapus
+    // dokumen di Firestore (cert_users) untuk bersih-bersih data, sertifikat
+    // tetap bisa diverifikasi lewat Apps Script yang membaca Google Sheet
+    // (yang tidak ikut terhapus). Endpoint yang sama (URL /exec) juga
+    // dipakai index_v9.html untuk doPost (tulis), di sini dipakai utk doGet.
+    // ════════════════════════════════════════════════════════════
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwe6ztZkhI4S0CcxQCxNG520jFFjAMyA3KO3fO_24SkjGaH6oT2Mtl9augFpXs2Crh5og/exec";
+
+    function fetchFromSheetFallback(uid) {
+      return fetch(`${APPS_SCRIPT_URL}?id=${encodeURIComponent(uid)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.status === 'success' && data.found) {
+            return {
+              cert_name: data.cert_name || '—',
+              email:     data.email     || '—',
+              issued_at: data.issued_at || null, // string ISO dari Sheet, formatDate() sudah menangani ini
+              source:    'sheet',
+              event:     data.event || null,
+            };
+          }
+          return null; // tidak ketemu di Sheet juga
+        })
+        .catch(err => {
+          console.error('[Verify] Sheet fallback fetch failed:', err);
+          return null;
+        });
+    }
+
     if (!studentId) {
       showState('error');
       document.getElementById('error-msg').textContent =
         'No certificate ID found in this URL. Please scan the QR code again.';
     } else {
+      // ── Render hasil ke kartu (dipakai baik dari Firestore maupun fallback Sheet) ──
+      function renderCertificate(data) {
+        document.getElementById('cert-name').textContent  = data.cert_name || '—';
+        document.getElementById('cert-email').textContent = data.email     || '—';
+        document.getElementById('cert-uid').textContent   = studentId;
+        document.getElementById('cert-issue').textContent = formatDate(data.issued_at);
+
+        const archiveNote = document.getElementById('archive-note');
+        if (archiveNote) archiveNote.style.display = data.source === 'sheet' ? 'block' : 'none';
+
+        showState('success');
+      }
+
       db.collection('cert_users').doc(studentId).get()
         .then(doc => {
           if (doc.exists) {
             const d = doc.data();
-            document.getElementById('cert-name').textContent  = d.cert_name  || '—';
-            document.getElementById('cert-email').textContent = d.email       || '—';
-            document.getElementById('cert-uid').textContent   = studentId;
-            document.getElementById('cert-issue').textContent = formatDate(d.issued_at);
-            showState('success');
-          } else {
-            showState('error');
-            document.getElementById('error-msg').textContent =
-              `No certificate registered with ID "${studentId}".`;
+            renderCertificate({
+              cert_name: d.cert_name,
+              email:     d.email,
+              issued_at: d.issued_at,
+              source:    'firestore',
+            });
+            return;
           }
+
+          // ── Dokumen Firestore tidak ditemukan → coba fallback ke Sheet ──
+          // (mis. admin sudah menghapus dokumen lama untuk bersih-bersih data,
+          // tapi sertifikat ini tetap pernah sah diterbitkan & tercatat di Sheet)
+          return fetchFromSheetFallback(studentId).then(sheetData => {
+            if (sheetData) {
+              renderCertificate(sheetData);
+            } else {
+              showState('error');
+              document.getElementById('error-msg').textContent =
+                `No certificate registered with ID "${studentId}".`;
+            }
+          });
         })
         .catch(err => {
+          // Error JARINGAN saat query Firestore — TIDAK mencoba fallback Sheet,
+          // karena kemungkinan besar gagal dengan alasan koneksi yang sama;
+          // pesannya tetap "network error", bukan "not found", agar tidak
+          // menyesatkan audiens yang sebenarnya cuma sedang offline.
           console.error(err);
           showState('error');
           document.getElementById('error-msg').textContent =

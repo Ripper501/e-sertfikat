@@ -1080,6 +1080,81 @@
   }
   .table-title { font-size: 14px; font-weight: 600; color: var(--text); }
   .table-count { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.06em; }
+
+  /* Search bar + menu titik-tiga, pengganti "N participants" di header tabel */
+  .admin-search-wrap { display: flex; align-items: center; gap: 8px; }
+  .admin-search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border-soft);
+    border-radius: 8px; padding: 7px 11px;
+    width: 240px; transition: var(--transition);
+  }
+  .admin-search-box:focus-within { border-color: rgba(204,255,0,0.4); }
+  .admin-search-box svg { color: var(--text-dim); flex-shrink: 0; }
+  .admin-search-box input {
+    background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 12.5px; font-family: var(--font-main);
+    width: 100%;
+  }
+  .admin-search-box input::placeholder { color: var(--text-dim); }
+  .admin-search-box button {
+    background: transparent; border: none; color: var(--text-dim);
+    cursor: pointer; display: flex; padding: 0; flex-shrink: 0;
+  }
+  .admin-search-box button:hover { color: var(--text); }
+
+  .admin-menu-trigger {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border-soft);
+    color: var(--text-muted); cursor: pointer; transition: var(--transition);
+  }
+  .admin-menu-trigger:hover { border-color: rgba(204,255,0,0.35); color: var(--text); }
+  .admin-menu-dropdown {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 40;
+    min-width: 170px;
+    background: #1e2033; border: 1px solid rgba(204,255,0,0.18);
+    border-radius: 10px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  }
+  .admin-menu-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 10px 14px; cursor: pointer;
+    border: none; background: transparent; text-align: left;
+    color: var(--text); font-size: 13px; transition: background .15s;
+  }
+  .admin-menu-item:hover { background: rgba(204,255,0,0.07); }
+  .admin-menu-item-danger { color: var(--danger); }
+  .admin-menu-item-danger:hover { background: rgba(255,77,109,0.08); }
+
+  /* Toolbar mode Select (checkbox + tombol Delete Selected / Cancel) */
+  #admin-select-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px; padding: 9px 14px;
+    background: rgba(204,255,0,0.05); border: 1px solid rgba(204,255,0,0.25);
+    border-radius: 8px;
+  }
+  .admin-select-all-label {
+    display: flex; align-items: center; gap: 9px; cursor: pointer;
+    font-size: 12.5px; color: var(--text); font-family: var(--font-mono);
+  }
+  .admin-select-all-label input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .btn-admin-select-cancel, .btn-admin-select-delete {
+    padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: var(--transition); border: 1px solid var(--border-soft);
+  }
+  .btn-admin-select-cancel { background: transparent; color: var(--text-muted); }
+  .btn-admin-select-cancel:hover { color: var(--text); border-color: var(--text-muted); }
+  .btn-admin-select-delete {
+    background: var(--danger); color: #fff; border-color: var(--danger);
+  }
+  .btn-admin-select-delete:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-admin-select-delete:not(:disabled):hover { box-shadow: 0 0 14px rgba(255,77,109,0.4); }
+
+  .admin-th-checkbox { width: 36px; }
+  .admin-td-checkbox { width: 36px; text-align: center; }
+  .admin-row-checkbox { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+
   .admin-table-wrap { overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--border-soft); }
   .admin-table {
     width: 100%; border-collapse: collapse;
@@ -2103,12 +2178,58 @@
     <!-- Participant table -->
     <div class="table-header">
       <div class="table-title">Participants</div>
-      <div class="table-count" id="admin-table-count">Loading…</div>
+      <div class="admin-search-wrap">
+        <div class="admin-search-box">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="admin-search-input" placeholder="Search name or email…" oninput="adminApplySearchFilter(this.value)" />
+          <button type="button" id="admin-search-clear" onclick="adminClearSearch()" title="Clear search" style="display:none;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="admin-menu-wrap" style="position:relative;">
+          <button type="button" class="admin-menu-trigger" onclick="adminToggleTableMenu(this)" title="More options">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none"/>
+              <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+              <circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"/>
+            </svg>
+          </button>
+          <div class="admin-menu-dropdown" id="admin-table-menu" style="display:none;">
+            <button type="button" class="admin-menu-item" onclick="adminEnterSelectMode()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              Select
+            </button>
+            <button type="button" class="admin-menu-item admin-menu-item-danger" onclick="adminConfirmDeleteAll()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+              Delete All
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- Toolbar mode Select — tampil HANYA saat mode select aktif -->
+    <div id="admin-select-toolbar" style="display:none;">
+      <label class="admin-select-all-label">
+        <input type="checkbox" id="admin-select-all-checkbox" onchange="adminToggleSelectAll(this.checked)" />
+        <span id="admin-select-count">0 selected</span>
+      </label>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn-admin-select-cancel" onclick="adminExitSelectMode()">Cancel</button>
+        <button type="button" class="btn-admin-select-delete" id="admin-delete-selected-btn" onclick="adminConfirmDeleteSelected()" disabled>
+          Delete Selected
+        </button>
+      </div>
+    </div>
+
+    <div class="table-count" id="admin-table-count" style="margin-bottom:8px;">Loading…</div>
     <div class="admin-table-wrap">
       <table class="admin-table">
         <thead>
           <tr>
+            <th class="admin-th-checkbox" id="admin-th-checkbox" style="display:none;"></th>
             <th>#</th>
             <th>Name on Certificate</th>
             <th>Email / UID</th>
@@ -2117,7 +2238,7 @@
           </tr>
         </thead>
         <tbody id="admin-table-body">
-          <tr><td colspan="5" class="admin-table-empty">Loading participants…</td></tr>
+          <tr><td colspan="6" class="admin-table-empty">Loading participants…</td></tr>
         </tbody>
       </table>
     </div>
@@ -3945,7 +4066,7 @@ async function surveyFinishAndGenerate() {
     };
 
     // ⚠️ MASUKKAN URL WEB APP YANG BERAKHIRAN /exec DI SINI! ⚠️
-    const urlAppsScript = "https://script.google.com/macros/s/AKfycbxDEcr_BwQpXyTbCLU2c20MzjcrLvyTlO2EHOCVbP2t0GK0VO2GHGHZSNaNaSbvq_QIWw/exec";
+    const urlAppsScript = "https://script.google.com/macros/s/AKfycbyX04INT6lW1Uh_giq63P3o60BsUPBt35oL7CtDKM5E6I6mO7eH1Fbs3rxUa39_5d6c_A/exec";
 
     // Gunakan text/plain untuk membungkus JSON agar bypass CORS (Anti-Blokir Browser)
     // PENTING: Gunakan text/plain dan no-cors untuk membungkus JSON agar bypass CORS (Anti-Blokir Browser)
@@ -4777,6 +4898,13 @@ function buildAdminQR() {
 // ── Participant Table ────────────────────────────────────────────
 let adminTableListener = null;
 
+// State untuk search & select mode — dipisah dari data Firestore mentah,
+// supaya search/filter murni operasi tampilan (tidak query ulang server).
+let adminAllRows = [];          // seluruh rows dari snapshot Firestore terakhir
+let adminSearchQuery = '';      // teks pencarian aktif saat ini
+let adminSelectMode = false;    // apakah toolbar Select sedang aktif
+let adminSelectedIds = new Set(); // doc.id yang sedang dicentang
+
 function adminRefreshTable() {
   const tbody    = document.getElementById('admin-table-body');
   const countEl  = document.getElementById('admin-table-count');
@@ -4809,7 +4937,6 @@ function adminRefreshTable() {
           });
 
           claimedEl.textContent = rows.length;
-          countEl.textContent   = `${rows.length} participant${rows.length !== 1 ? 's' : ''}`;
 
           // Sinkronkan juga angka di badge Projector Mode, kalau-kalau sedang terbuka
           const projCountEl = document.getElementById('projector-claimed-count');
@@ -4830,26 +4957,13 @@ function adminRefreshTable() {
           // ada satu pun peserta yang klaim sertifikat.
           renderSurveyResults(rows);
 
-          if (rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">No certificates claimed yet.</td></tr>`;
-            return;
-          }
-
-          tbody.innerHTML = rows.map((r, i) => {
-            const name  = escapeHtml(r.cert_name || '—');
-            const email = escapeHtml(r.email || r.id);
-            const ts    = r.issued_at
-              ? new Date(r.issued_at.seconds * 1000).toLocaleString('id-ID')
-              : '—';
-            const badge = `<span class="tbl-badge claimed">✓ Claimed</span>`;
-            return `<tr>
-              <td style="color:var(--text-muted);font-family:var(--font-mono);font-size:11px;">${i + 1}</td>
-              <td><div class="tbl-cert-name">${name}</div></td>
-              <td><div class="tbl-email">${email}</div></td>
-              <td>${badge}</td>
-              <td><div class="tbl-time">${ts}</div></td>
-            </tr>`;
-          }).join('');
+          // Simpan rows mentah ke state global, lalu render lewat fungsi
+          // terpisah yang otomatis menghormati search query & select mode
+          // yang sedang aktif (supaya update real-time tidak mereset
+          // pencarian admin yang sedang mengetik, atau membatalkan
+          // centang yang sudah dipilih di mode Select).
+          adminAllRows = rows;
+          adminRenderTableRows();
 
         } catch(innerErr) {
           tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty" style="color:var(--danger);">
@@ -4878,6 +4992,258 @@ function adminRefreshTable() {
       Gagal setup listener: ${escapeHtml(err.message)}
     </td></tr>`;
     console.error('[Admin] adminRefreshTable setup error:', err);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SEARCH + SELECT MODE + DELETE — Participant Table
+//
+// adminAllRows menyimpan snapshot Firestore TERAKHIR secara penuh (tidak
+// terfilter). adminRenderTableRows() yang menggabungkan filter pencarian
+// + mode select setiap kali dipanggil, baik dari onSnapshot (data baru
+// masuk) maupun dari interaksi admin (mengetik di search box, klik
+// checkbox, dst) — sehingga search/select TIDAK PERNAH query ulang ke
+// Firestore, murni operasi di memori atas data yang sudah ada.
+// ══════════════════════════════════════════════════════════════════
+
+function adminRenderTableRows() {
+  const tbody   = document.getElementById('admin-table-body');
+  const countEl = document.getElementById('admin-table-count');
+  if (!tbody) return;
+
+  // ── Terapkan filter search (nama ATAU email/UID, case-insensitive) ──
+  const q = adminSearchQuery.trim().toLowerCase();
+  const filteredRows = q === ''
+    ? adminAllRows
+    : adminAllRows.filter(r => {
+        const name  = (r.cert_name || '').toLowerCase();
+        const email = (r.email || '').toLowerCase();
+        const uid   = (r.id || '').toLowerCase();
+        return name.includes(q) || email.includes(q) || uid.includes(q);
+      });
+
+  const colCount = adminSelectMode ? 6 : 5;
+
+  if (countEl) {
+    countEl.textContent = q
+      ? `${filteredRows.length} of ${adminAllRows.length} participant${adminAllRows.length !== 1 ? 's' : ''} match "${adminSearchQuery.trim()}"`
+      : `${adminAllRows.length} participant${adminAllRows.length !== 1 ? 's' : ''}`;
+  }
+
+  if (adminAllRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${colCount}" class="admin-table-empty">No certificates claimed yet.</td></tr>`;
+    return;
+  }
+  if (filteredRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${colCount}" class="admin-table-empty">No participants match "${escapeHtml(adminSearchQuery.trim())}".</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filteredRows.map((r, i) => {
+    const name  = escapeHtml(r.cert_name || '—');
+    const email = escapeHtml(r.email || r.id);
+    const ts    = r.issued_at
+      ? new Date(r.issued_at.seconds * 1000).toLocaleString('id-ID')
+      : '—';
+    const badge = `<span class="tbl-badge claimed">✓ Claimed</span>`;
+    const isChecked = adminSelectedIds.has(r.id);
+    const checkboxCell = adminSelectMode
+      ? `<td class="admin-td-checkbox"><input type="checkbox" class="admin-row-checkbox" data-uid="${escapeHtml(r.id)}" ${isChecked ? 'checked' : ''} onchange="adminToggleRowSelect('${escapeHtml(r.id)}', this.checked)" /></td>`
+      : '';
+    return `<tr>
+      ${checkboxCell}
+      <td style="color:var(--text-muted);font-family:var(--font-mono);font-size:11px;">${i + 1}</td>
+      <td><div class="tbl-cert-name">${name}</div></td>
+      <td><div class="tbl-email">${email}</div></td>
+      <td>${badge}</td>
+      <td><div class="tbl-time">${ts}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Search box ──
+window.adminApplySearchFilter = function(value) {
+  adminSearchQuery = value;
+  const clearBtn = document.getElementById('admin-search-clear');
+  if (clearBtn) clearBtn.style.display = value ? 'flex' : 'none';
+  adminRenderTableRows();
+};
+
+window.adminClearSearch = function() {
+  adminSearchQuery = '';
+  const input = document.getElementById('admin-search-input');
+  if (input) input.value = '';
+  document.getElementById('admin-search-clear').style.display = 'none';
+  adminRenderTableRows();
+};
+
+// ── Menu titik-tiga (dropdown Select / Delete All) ──
+window.adminToggleTableMenu = function(triggerBtn) {
+  const menu = document.getElementById('admin-table-menu');
+  const willOpen = menu.style.display === 'none';
+  menu.style.display = willOpen ? 'block' : 'none';
+};
+
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.admin-menu-wrap')) return;
+  const menu = document.getElementById('admin-table-menu');
+  if (menu) menu.style.display = 'none';
+});
+
+// ── Mode Select ──
+window.adminEnterSelectMode = function() {
+  adminSelectMode = true;
+  adminSelectedIds.clear();
+  document.getElementById('admin-table-menu').style.display = 'none';
+  document.getElementById('admin-select-toolbar').style.display = 'flex';
+  document.getElementById('admin-th-checkbox').style.display = '';
+  document.getElementById('admin-select-all-checkbox').checked = false;
+  adminUpdateSelectCount();
+  adminRenderTableRows();
+};
+
+window.adminExitSelectMode = function() {
+  adminSelectMode = false;
+  adminSelectedIds.clear();
+  document.getElementById('admin-select-toolbar').style.display = 'none';
+  document.getElementById('admin-th-checkbox').style.display = 'none';
+  adminRenderTableRows();
+};
+
+window.adminToggleRowSelect = function(uid, checked) {
+  if (checked) adminSelectedIds.add(uid);
+  else adminSelectedIds.delete(uid);
+  adminUpdateSelectCount();
+};
+
+window.adminToggleSelectAll = function(checked) {
+  // "Select all" hanya berlaku pada baris yang SEDANG TAMPIL (hasil
+  // filter search saat ini), bukan seluruh peserta — supaya konsisten
+  // dengan apa yang admin lihat di layar saat itu.
+  const q = adminSearchQuery.trim().toLowerCase();
+  const visibleRows = q === ''
+    ? adminAllRows
+    : adminAllRows.filter(r => {
+        const name  = (r.cert_name || '').toLowerCase();
+        const email = (r.email || '').toLowerCase();
+        const uid   = (r.id || '').toLowerCase();
+        return name.includes(q) || email.includes(q) || uid.includes(q);
+      });
+
+  if (checked) visibleRows.forEach(r => adminSelectedIds.add(r.id));
+  else visibleRows.forEach(r => adminSelectedIds.delete(r.id));
+
+  adminUpdateSelectCount();
+  adminRenderTableRows();
+};
+
+function adminUpdateSelectCount() {
+  const countSpan = document.getElementById('admin-select-count');
+  const deleteBtn = document.getElementById('admin-delete-selected-btn');
+  if (countSpan) countSpan.textContent = `${adminSelectedIds.size} selected`;
+  if (deleteBtn) deleteBtn.disabled = adminSelectedIds.size === 0;
+}
+
+// ── Konfirmasi & eksekusi DELETE ──
+//
+// PENTING: kedua fungsi hapus ini HANYA menghapus dokumen di Firestore
+// collection cert_users. Google Sheet (arsip permanen via Apps Script)
+// TIDAK PERNAH disentuh oleh kode ini — itu memang desain yang disengaja,
+// supaya sertifikat tetap bisa diverifikasi lewat verify.html meski admin
+// membersihkan data lama di Firestore.
+
+window.adminConfirmDeleteSelected = function() {
+  const n = adminSelectedIds.size;
+  if (n === 0) return;
+  Swal.fire({
+    icon: 'warning',
+    title: `Delete ${n} participant${n !== 1 ? 's' : ''}?`,
+    html: `<p style="font-size:13px; color:var(--text-muted); line-height:1.6;">
+             This permanently removes the selected name(s) and email(s) from Firestore.<br><br>
+             <b style="color:var(--accent)">Google Sheet records are NOT affected</b> — certificates can still be verified there.
+           </p>`,
+    showCancelButton: true,
+    confirmButtonText: `Delete ${n}`,
+    confirmButtonColor: 'var(--danger)',
+    cancelButtonText: 'Cancel',
+    customClass: { popup: 'swal2-dark-custom' }
+  }).then(result => {
+    if (result.isConfirmed) adminExecuteDelete(Array.from(adminSelectedIds));
+  });
+};
+
+window.adminConfirmDeleteAll = function() {
+  document.getElementById('admin-table-menu').style.display = 'none';
+  const total = adminAllRows.length;
+  if (total === 0) {
+    showToast('error', 'Nothing to delete', 'There are no participants yet.');
+    return;
+  }
+  Swal.fire({
+    icon: 'warning',
+    title: `Delete ALL ${total} participants?`,
+    html: `<p style="font-size:13px; color:var(--text-muted); line-height:1.6;">
+             This permanently removes <b style="color:var(--danger)">every</b> name and email from Firestore —
+             this ignores any active search filter.<br><br>
+             <b style="color:var(--accent)">Google Sheet records are NOT affected</b> and cannot be deleted this way.<br><br>
+             Type <b style="color:var(--text)">DELETE</b> below to confirm.
+           </p>`,
+    input: 'text',
+    inputPlaceholder: 'Type DELETE to confirm',
+    showCancelButton: true,
+    confirmButtonText: 'Delete All',
+    confirmButtonColor: 'var(--danger)',
+    cancelButtonText: 'Cancel',
+    customClass: { popup: 'swal2-dark-custom' },
+    preConfirm: (value) => {
+      if (value !== 'DELETE') {
+        Swal.showValidationMessage('You must type DELETE exactly to confirm.');
+        return false;
+      }
+      return true;
+    }
+  }).then(result => {
+    if (result.isConfirmed) {
+      // Delete All selalu mengabaikan filter search aktif — hapus SEMUA
+      // peserta dari adminAllRows (data lengkap, bukan filteredRows).
+      adminExecuteDelete(adminAllRows.map(r => r.id));
+    }
+  });
+};
+
+async function adminExecuteDelete(uids) {
+  if (!uids || uids.length === 0) return;
+
+  Swal.fire({
+    title: 'Deleting…',
+    html: `<div class="spinner" style="margin:12px auto;"></div>`,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    customClass: { popup: 'swal2-dark-custom' }
+  });
+
+  try {
+    // Batch delete — Firestore batch maksimal 500 operasi, di-chunk
+    // supaya aman walau suatu saat jumlah peserta sangat banyak.
+    const chunkSize = 450;
+    for (let i = 0; i < uids.length; i += chunkSize) {
+      const chunk = uids.slice(i, i + chunkSize);
+      const batch = db.batch();
+      chunk.forEach(uid => batch.delete(db.collection(USERS_COLLECTION).doc(uid)));
+      await batch.commit();
+    }
+
+    adminSelectedIds.clear();
+    adminExitSelectMode();
+    Swal.close();
+    showToast('success', 'Deleted', `${uids.length} participant${uids.length !== 1 ? 's' : ''} removed from Firestore.`);
+    // adminAllRows & tabel akan otomatis ter-update lewat onSnapshot listener
+    // yang sudah berjalan — tidak perlu refresh manual di sini.
+  } catch (err) {
+    Swal.close();
+    console.error('[Admin] Delete failed:', err);
+    showToast('error', 'Delete failed', err.message || 'Please try again.');
   }
 }
 

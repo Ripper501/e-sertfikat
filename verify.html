@@ -652,8 +652,6 @@
 
   </div><!-- /.card -->
 
-  <p class="wordmark">E-Certificate System</p>
-
   <div class="site-cta reveal-on-scroll" id="site-cta">
     <div class="site-cta-divider"></div>
     <span class="site-cta-label">More Courses &amp; Information</span>
@@ -666,6 +664,8 @@
     </a>
     <p class="site-cta-sub">Discover full course details, schedules, and certification programs at our official website.</p>
   </div>
+
+  <p class="wordmark">E-Certificate System</p>
 
   <script>
     const firebaseConfig = {
@@ -697,51 +697,29 @@
 
     const studentId = getStudentId();
 
-    // ── Scroll-direction-based reveal for social bar & site CTA ─
-    // Muncul halus saat scroll ke bawah, hilang halus saat scroll jauh ke atas.
-    // Pakai threshold + hysteresis biar tidak "flicker" akibat momentum
-    // scroll di HP (yang suka mengirim event naik-turun kecil/noise).
+    // ── Reveal social bar & site CTA on first scroll ───────────
+    // Begitu user mulai gulir sedikit saja, langsung tampil mulus
+    // dan tetap tampil (tidak ada logika sembunyi lagi => tidak ada
+    // kemungkinan flicker/macet di HP akibat momentum scroll).
     (function setupScrollReveal() {
       const targets = document.querySelectorAll('.reveal-on-scroll');
       if (!targets.length) return;
 
-      let lastDecisionY = window.scrollY;
-      let ticking = false;
-      const DOWN_THRESHOLD = 6;   // px kecil cukup utk memunculkan
-      const UP_THRESHOLD   = 80;  // perlu scroll ke atas yg cukup jauh utk menyembunyikan
+      const SCROLL_TRIGGER = 8; // px kecil sudah cukup
+      let revealed = false;
 
-      function showIfInView() {
-        targets.forEach(el => {
-          const rect = el.getBoundingClientRect();
-          const inView = rect.top < window.innerHeight * 0.95 && rect.bottom > 0;
-          if (inView) el.classList.add('is-visible');
-        });
-      }
-
-      function hideAll() {
-        targets.forEach(el => el.classList.remove('is-visible'));
+      function reveal() {
+        if (revealed) return;
+        revealed = true;
+        targets.forEach(el => el.classList.add('is-visible'));
+        window.removeEventListener('scroll', onScroll);
       }
 
       function onScroll() {
-        const currentY = window.scrollY;
-        const delta = currentY - lastDecisionY;
-
-        if (delta >= DOWN_THRESHOLD) {
-          showIfInView();
-          lastDecisionY = currentY;
-        } else if (delta <= -UP_THRESHOLD) {
-          hideAll();
-          lastDecisionY = currentY;
-        }
-        ticking = false;
+        if (window.scrollY > SCROLL_TRIGGER) reveal();
       }
 
-      window.addEventListener('scroll', () => {
-        if (!ticking) {
-          window.requestAnimationFrame(onScroll);
-          ticking = true;
-        }
-      }, { passive: true });
+      window.addEventListener('scroll', onScroll, { passive: true });
     })();
 
     // ── WhatsApp popover toggle ────────────────────────────────

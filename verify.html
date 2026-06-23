@@ -339,7 +339,18 @@
     }
 
     @media (max-width: 480px) {
-      .card-body { padding: 28px 24px 24px; }
+      body { padding: 16px 16px; justify-content: flex-start; }
+      .card-body { padding: 22px 20px 18px; }
+      .badge-verified { margin-bottom: 22px; }
+      .cert-name { margin-bottom: 18px; font-size: clamp(28px, 7vw, 38px); }
+      .divider { margin-bottom: 18px; }
+      .info-block { margin-bottom: 18px; gap: 12px; }
+      .social-bar { margin-top: 16px; gap: 10px; }
+      .social-link { width: 36px; height: 36px; }
+      .site-cta { margin-top: 18px; gap: 9px; }
+      .site-cta-link { padding: 10px 20px; font-size: 12.5px; }
+      .site-cta-sub { font-size: 10.5px; max-width: 280px; }
+      .wordmark { margin-top: 16px; margin-bottom: 16px; }
     }
 
     /* ── Social bar ─────────────────────────────────────────── */
@@ -697,29 +708,36 @@
 
     const studentId = getStudentId();
 
-    // ── Reveal social bar & site CTA on first scroll ───────────
-    // Begitu user mulai gulir sedikit saja, langsung tampil mulus
-    // dan tetap tampil (tidak ada logika sembunyi lagi => tidak ada
-    // kemungkinan flicker/macet di HP akibat momentum scroll).
+    // ── Reveal social bar & site CTA based on scroll position ──
+    // Pakai POSISI absolut scrollY (bukan delta per-frame), sehingga
+    // tidak gampang flicker akibat micro-jitter scroll momentum di HP.
     (function setupScrollReveal() {
       const targets = document.querySelectorAll('.reveal-on-scroll');
       if (!targets.length) return;
 
-      const SCROLL_TRIGGER = 8; // px kecil sudah cukup
-      let revealed = false;
+      const SHOW_AT = 10; // muncul begitu scroll turun sedikit
+      const HIDE_AT = 4;  // sembunyi lagi begitu kembali dekat ke atas
+      let ticking = false;
+      let visible = false;
 
-      function reveal() {
-        if (revealed) return;
-        revealed = true;
-        targets.forEach(el => el.classList.add('is-visible'));
-        window.removeEventListener('scroll', onScroll);
+      function update() {
+        const y = window.scrollY;
+        if (!visible && y > SHOW_AT) {
+          visible = true;
+          targets.forEach(el => el.classList.add('is-visible'));
+        } else if (visible && y < HIDE_AT) {
+          visible = false;
+          targets.forEach(el => el.classList.remove('is-visible'));
+        }
+        ticking = false;
       }
 
-      function onScroll() {
-        if (window.scrollY > SCROLL_TRIGGER) reveal();
-      }
-
-      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          window.requestAnimationFrame(update);
+          ticking = true;
+        }
+      }, { passive: true });
     })();
 
     // ── WhatsApp popover toggle ────────────────────────────────

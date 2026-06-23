@@ -1728,7 +1728,7 @@
 
 <!-- Hidden certificate template for canvas rendering -->
 <div id="cert-template">
-  <canvas id="cert-canvas" width="2970" height="2099"></canvas>
+  <canvas id="cert-canvas" width="6250" height="4419"></canvas>
 </div>
 
 <div id="qrcode-helper" style="display: none;"></div>
@@ -4120,9 +4120,10 @@ async function surveyFinishAndGenerate() {
 // Dipanggil setelah QR code digambar di canvas sertifikat. Menggambar
 // lingkaran putih kecil di tengah QR sebagai "bantalan" kontras, lalu
 // logo.png di atasnya dipotong (clip) menjadi bentuk bulat.
-// Ukuran logo dijaga ±22% dari lebar QR — cukup kecil sehingga modul QR
-// di sekitarnya (correctLevel M, toleransi error ~15%) tetap terbaca
-// oleh scanner kamera HP.
+// Ukuran logo dijaga 30% dari lebar QR — cukup besar agar detail logo
+// (termasuk teks melingkar di pinggirnya) tetap terbaca saat di-zoom,
+// dan tetap aman untuk scan kamera HP karena QR pakai correctLevel H
+// (toleransi error ~30%).
 let _qrLogoImgCache = null;
 function _loadQrLogoImage() {
   if (_qrLogoImgCache) return Promise.resolve(_qrLogoImgCache);
@@ -4138,8 +4139,8 @@ function _loadQrLogoImage() {
 async function drawLogoOnQRCenter(ctx, qrX, qrY, qrW, qrH) {
   const logoImg = await _loadQrLogoImage();
 
-  // Diameter logo bulat: 22% dari lebar QR (aman untuk correctLevel M/H)
-  const logoDiameter = qrW * 0.22;
+  // Diameter logo bulat: 30% dari lebar QR (aman karena correctLevel H)
+  const logoDiameter = qrW * 0.30;
   const centerX = qrX + qrW / 2;
   const centerY = qrY + qrH / 2;
   const logoRadius = logoDiameter / 2;
@@ -4299,15 +4300,16 @@ async function generateAndStore() {
       const qrHScaled = cfgQrH * SCALE;
 
       // Ukuran, posisi & warna QR berdasarkan setting Admin yang tersimpan di Firestore.
-      // correctLevel M (bukan H): pola QR lebih ringkas/tidak terlalu padat secara visual,
-      // tetap punya toleransi error ~15% sehingga aman untuk kamera HP yang scan agak miring/blur.
+      // correctLevel H: toleransi error ~30% (paling tinggi pada standar QR),
+      // diperlukan karena logo di tengah sekarang lebih besar (30% lebar QR)
+      // sehingga menutup area tengah lebih banyak — H menjaga QR tetap aman discan.
       const qrcode = new QRCode(qrHelper, {
         text: verificationUrl,
         width: qrWScaled,
         height: qrHScaled,
         colorDark : cfgQrColor,
         colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.M
+        correctLevel : QRCode.CorrectLevel.H
       });
 
       await new Promise(resolve => setTimeout(resolve, 250));
@@ -4322,8 +4324,8 @@ async function generateAndStore() {
         ctx.drawImage(qrImage, qrXScaled, qrYScaled, qrWScaled, qrHScaled);
 
         // MENEMPELKAN LOGO BULAT DI TENGAH QR CODE (logo.png, sama dengan brand icon)
-        // correctLevel M masih punya toleransi error ~15%, jadi menutup sedikit
-        // area tengah dengan logo (sekitar 22% dari lebar QR) masih aman untuk discan.
+        // correctLevel H (toleransi error ~30%), logo menutup ~30% lebar QR —
+        // masih aman discan, dan detail logo jadi lebih jelas terbaca saat di-zoom.
         try {
           await drawLogoOnQRCenter(ctx, qrXScaled, qrYScaled, qrWScaled, qrHScaled);
         } catch (e) {
@@ -4336,7 +4338,7 @@ async function generateAndStore() {
     const imgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
     certPreviewUrl = imgDataUrl; // simpan untuk preview di screen-done
 
-    // Build Flattened PDF — dimensi PDF ikut mengikuti resolusi canvas (2970x2099, ~300dpi)
+    // Build Flattened PDF — dimensi PDF ikut mengikuti resolusi canvas (6250x4419, sepadan template asli)
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height], hotfixes: ['px_scaling'] });
     pdf.addImage(imgDataUrl, 'JPEG', 0, 0, canvas.width, canvas.height);
@@ -4386,15 +4388,15 @@ function loadTemplateImage(src) {
 // Falls back gracefully to built-in defaults when no config exists.
 async function drawCertificateOnCanvas(canvas, name) {
   const ctx = canvas.getContext('2d');
-  const W   = canvas.width;   // 2970 (= 900 * SCALE)
-  const H   = canvas.height;  // 2099 (= 636 * SCALE)
+  const W   = canvas.width;   // 6250 (= 900 * SCALE)
+  const H   = canvas.height;  // 4419 (= 636 * SCALE, sepadan resolusi asli template Cloudinary)
 
   // ── SCALE FACTOR ────────────────────────────────────────────────
   // Semua koordinat (bbox, QR) disimpan di Firestore dalam skala LAMA
   // (900x636), supaya Admin Editor & data lama tetap kompatibel.
   // Canvas sekarang dirender lebih besar (untuk hasil cetak tajam),
   // jadi setiap koordinat/ukuran dari Firestore dikali SCALE di sini.
-  const SCALE = W / 900; // 3.3
+  const SCALE = W / 900; // dinamis: ikut nilai canvas.width saat ini (misal 6250/900 ≈ 6.94)
 
   // ── Fetch config dari Firestore — SATU SUMBER KEBENARAN: bbox ──
   let cfgSrc       = 'sertifikat-template.png';

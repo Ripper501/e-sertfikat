@@ -4115,6 +4115,94 @@ async function surveyFinishAndGenerate() {
 
 
 // ══════════════════════════════════════════════════════════════════
+// LOGO DI TENGAH QR CODE SERTIFIKAT (logo.png, bentuk bulat + border putih)
+// ══════════════════════════════════════════════════════════════════
+// Dipanggil setelah QR code digambar di canvas sertifikat. Menggambar
+// lingkaran putih kecil di tengah QR sebagai "bantalan" kontras, lalu
+// logo.png di atasnya dipotong (clip) menjadi bentuk bulat.
+// Ukuran logo dijaga ±22% dari lebar QR — cukup kecil sehingga modul QR
+// di sekitarnya (correctLevel M, toleransi error ~15%) tetap terbaca
+// oleh scanner kamera HP.
+let _qrLogoImgCache = null;
+function _loadQrLogoImage() {
+  if (_qrLogoImgCache) return Promise.resolve(_qrLogoImgCache);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { _qrLogoImgCache = img; resolve(img); };
+    img.onerror = () => reject(new Error('logo.png gagal dimuat'));
+    img.src = 'logo.png';
+  });
+}
+
+async function drawLogoOnQRCenter(ctx, qrX, qrY, qrW, qrH) {
+  const logoImg = await _loadQrLogoImage();
+
+  // Diameter logo bulat: 22% dari lebar QR (aman untuk correctLevel M/H)
+  const logoDiameter = qrW * 0.22;
+  const centerX = qrX + qrW / 2;
+  const centerY = qrY + qrH / 2;
+  const logoRadius = logoDiameter / 2;
+
+  // Bantalan putih (sedikit lebih besar dari logo) supaya logo kontras
+  // dengan modul QR hitam/putih di sekitarnya.
+  const paddingRadius = logoRadius + Math.max(3, qrW * 0.025);
+
+  ctx.save();
+
+  // 1. Bantalan bulat putih
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, paddingRadius, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  // 2. Border tipis di sekeliling bantalan putih (opsional, biar logo "berdiri")
+  ctx.lineWidth = Math.max(1, qrW * 0.008);
+  ctx.strokeStyle = '#ffffff';
+  ctx.stroke();
+
+  // 3. Clip ke bentuk bulat, lalu gambar logo di dalamnya (object-fit: cover)
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, logoRadius, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+
+  // Hitung "cover" crop supaya logo (apapun rasio aslinya) mengisi
+  // penuh lingkaran tanpa distorsi, sama seperti CSS object-fit: cover.
+  const srcW = logoImg.naturalWidth || logoImg.width;
+  const srcH = logoImg.naturalHeight || logoImg.height;
+  const srcRatio = srcW / srcH;
+  const dstSize = logoDiameter; // area gambar persegi yang mengisi lingkaran
+  let drawW, drawH, srcX, srcY, sW, sH;
+
+  if (srcRatio > 1) {
+    // Logo lebih lebar daripada tinggi: crop kiri-kanan
+    sH = srcH;
+    sW = srcH; // ambil bagian tengah persegi
+    srcX = (srcW - sW) / 2;
+    srcY = 0;
+  } else {
+    // Logo lebih tinggi daripada lebar (atau persegi): crop atas-bawah
+    sW = srcW;
+    sH = srcW;
+    srcX = 0;
+    srcY = (srcH - sH) / 2;
+  }
+
+  ctx.drawImage(
+    logoImg,
+    srcX, srcY, sW, sH,                                   // area sumber (crop persegi tengah)
+    centerX - dstSize / 2, centerY - dstSize / 2,          // posisi tujuan
+    dstSize, dstSize                                       // ukuran tujuan
+  );
+
+  ctx.restore(); // lepas clip
+  ctx.restore(); // lepas save terluar
+}
+
+// ══════════════════════════════════════════════════════════════════
 // STEP 4: GENERATE FLATTENED PDF
 // ══════════════════════════════════════════════════════════════════
 async function generateAndStore() {
@@ -4221,6 +4309,15 @@ async function generateAndStore() {
         
         // MENEMPELKAN QR CODE BERDASARKAN KOORDINAT YANG DISIMPAN ADMIN DI FIRESTORE
         ctx.drawImage(qrImage, cfgQrX, cfgQrY, cfgQrW, cfgQrH);
+
+        // MENEMPELKAN LOGO BULAT DI TENGAH QR CODE (logo.png, sama dengan brand icon)
+        // correctLevel M masih punya toleransi error ~15%, jadi menutup sedikit
+        // area tengah dengan logo (sekitar 22% dari lebar QR) masih aman untuk discan.
+        try {
+          await drawLogoOnQRCenter(ctx, cfgQrX, cfgQrY, cfgQrW, cfgQrH);
+        } catch (e) {
+          console.warn('[QR Logo] Gagal menempel logo di tengah QR:', e.message);
+        }
       }
     }
 

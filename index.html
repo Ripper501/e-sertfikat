@@ -3262,22 +3262,28 @@ function haversine(lat1, lng1, lat2, lng2) {
 // STEP 1: AUTH
 // ══════════════════════════════════════════════════════════════════
 
-// signInWithRedirect ternyata BERMASALAH KHUSUS di Android Chrome modern:
-// Chrome Android menerapkan storage partitioning yang memblokir
-// sessionStorage/IndexedDB yang Firebase butuh untuk menyimpan state
-// sebelum redirect ke accounts.google.com. Saat browser kembali, Firebase
-// tidak bisa membaca state itu lagi dan GAGAL TOTAL dengan error
-// "missing initial state" — kegagalan ini terjadi DI HALAMAN GOOGLE/
-// FIREBASE SENDIRI (sebelum sempat balik ke index.html), sehingga
-// getRedirectResult().catch() di sisi kita tidak pernah kebagian
-// menangkapnya. User cuma terlempar balik ke layar login tanpa pesan
-// error apa pun (dikonfirmasi lewat screenshot error Firebase langsung).
+// signInWithRedirect bermasalah di DUA platform sekarang:
 //
-// iOS Safari TIDAK menunjukkan masalah ini (sudah dites & terbukti lancar
-// dengan redirect) — jadi perilaku iOS TIDAK diubah, supaya tidak merusak
-// yang sudah bekerja. Hanya Android yang dipindah ke signInWithPopup,
-// yang tidak terkena masalah storage-partitioning karena seluruh proses
-// login tetap di window/tab yang sama (tidak ada redirect lintas-domain).
+// 1. Android Chrome: storage partitioning memblokir IndexedDB lintas-domain
+//    sehingga Firebase kehilangan state saat kembali dari accounts.google.com
+//    → error "missing initial state", user terlempar ke login tanpa pesan.
+//
+// 2. iOS Safari 16.4+: Apple memperketat ITP (Intelligent Tracking Prevention)
+//    — redirect ke accounts.google.com lalu kembali ke GitHub Pages dianggap
+//    third-party tracking, Safari memblokir cookies/storage yang Firebase
+//    butuhkan → user keluar ke beranda Safari atau login gagal diam-diam.
+//
+// Solusi untuk keduanya: signInWithPopup.
+// - Di Android: popup tetap di tab yang sama, tidak ada redirect lintas-domain.
+// - Di iOS Safari: popup dibuka sebagai window baru di tab tersendiri,
+//   tidak kena ITP karena first-party origin tidak berubah.
+//
+// SYARAT PENTING signInWithPopup di iOS Safari:
+// Harus dipanggil SYNCHRONOUS dari user gesture (onclick). Jangan ada
+// `await` atau setTimeout sebelum memanggil signInWithPopup — iOS Safari
+// akan menganggap ini bukan gesture langsung dan memblokir popup window.
+// Oleh karena itu signInWithGoogle() TIDAK boleh async, dan signInWithPopup
+// harus jadi baris pertama di try block.
 //
 // In-app browser (WhatsApp, Instagram, dll) tetap pakai redirect karena
 // popup window diblokir total di browser tersebut — tidak ada pilihan lain.
@@ -3288,43 +3294,38 @@ function isAndroid() {
   return /Android/i.test(navigator.userAgent || '');
 }
 function isInAppBrowser() {
-  // WebView umum yang dipakai aplikasi share-link (Instagram, FB, WhatsApp, Line, dll)
   return /FBAN|FBAV|Instagram|Line\/|WhatsApp|Twitter|MicroMessenger/i.test(navigator.userAgent || '');
 }
-// Dipertahankan untuk kompatibilitas nama lama, tapi logikanya sudah
-// dipersempit: hanya iOS & in-app browser yang pakai redirect sekarang.
-function isMobileOrInAppBrowser() {
-  return isIOS() || isInAppBrowser();
-}
 
-async function signInWithGoogle() {
+function signInWithGoogle() {
+  // ⚠️ Fungsi ini SENGAJA tidak async — iOS Safari memblokir signInWithPopup
+  // jika ada await sebelum pemanggilannya (putus rantai user gesture).
   const provider = new firebase.auth.GoogleAuthProvider();
-  try {
-    if (isMobileOrInAppBrowser()) {
-      // iOS Safari & in-app browser: redirect (terbukti reliable di iOS,
-      // dan satu-satunya opsi yang berfungsi di in-app browser).
-      await auth.signInWithRedirect(provider);
-      // Halaman akan reload; sisanya ditangani oleh getRedirectResult() di bawah.
-    } else {
-      // Android Chrome & semua browser desktop: popup. Tidak terkena
-      // masalah storage-partitioning yang merusak redirect di Android.
-      await auth.signInWithPopup(provider);
-      // onAuthStateChanged handles the rest
-    }
-  } catch (e) {
-    // Jaga-jaga: kalau popup diblokir manual oleh user/pengaturan browser
-    // tertentu di Android, fallback ke redirect daripada gagal total.
-    if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) {
-      try {
-        await auth.signInWithRedirect(provider);
-        return;
-      } catch (e2) {
-        showToast('error', 'Sign-in cancelled or failed. Please try again.', `${e2.code || ''} ${e2.message}`.trim());
-        return;
-      }
-    }
-    showToast('error', 'Sign-in cancelled or failed. Please try again.', `${e.code || ''} ${e.message}`.trim());
+
+  if (isInAppBrowser()) {
+    // In-app browser: popup diblokir total, satu-satunya opsi adalah redirect.
+    auth.signInWithRedirect(provider).catch(e => {
+      showToast('error', 'Sign-in failed.', `${e.code || ''} ${e.message || ''}`.trim());
+    });
+    return;
   }
+
+  // iOS Safari, Android Chrome, dan semua desktop: pakai popup.
+  // Popup tidak terkena ITP (iOS) maupun storage-partitioning (Android).
+  auth.signInWithPopup(provider).catch(e => {
+    if (e && (e.code === 'auth/popup-blocked' ||
+              e.code === 'auth/operation-not-supported-in-this-environment')) {
+      // Popup diblokir oleh pengaturan browser — fallback ke redirect
+      auth.signInWithRedirect(provider).catch(e2 => {
+        showToast('error', 'Sign-in cancelled or failed.', `${e2.code || ''} ${e2.message || ''}`.trim());
+      });
+      return;
+    }
+    if (e && e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+      // Abaikan error "user sengaja tutup popup" — itu bukan error, itu pilihan user.
+      showToast('error', 'Sign-in cancelled or failed. Please try again.', `${e.code || ''} ${e.message || ''}`.trim());
+    }
+  });
 }
 
 async function signInWithApple() {

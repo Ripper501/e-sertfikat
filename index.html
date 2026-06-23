@@ -4367,25 +4367,57 @@ async function generateAndStore() {
         correctLevel : QRCode.CorrectLevel.H
       });
 
-      await new Promise(resolve => setTimeout(resolve, 250));
+      // Tunggu QRCode.js selesai render. Library ini bersifat sync tapi
+      // penambahan elemen ke DOM bisa butuh 1 frame — await rAF lebih aman
+      // daripada setTimeout(250) yang kadang masih terlalu cepat di Android.
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => requestAnimationFrame(resolve)); // 2 frame untuk aman
+
+      // ── Ambil bitmap QR: coba canvas dulu (Android Chrome), fallback ke img (iOS/desktop) ──
+      // QRCode.js menghasilkan <canvas> di beberapa browser dan <img> di yang lain.
+      // Mengambil langsung dari <canvas> via toDataURL() adalah cara paling reliable
+      // di semua platform karena tidak bergantung pada load event <img>.
+      let qrDataUrl = null;
+      const qrCanvas = qrHelper.querySelector('canvas');
       const qrImgElement = qrHelper.querySelector('img');
 
-      if (qrImgElement && qrImgElement.src) {
+      if (qrCanvas) {
+        // Path Android Chrome & desktop — canvas sudah ada dan langsung bisa dibaca
+        qrDataUrl = qrCanvas.toDataURL('image/png');
+      } else if (qrImgElement && qrImgElement.src) {
+        // Path iOS Safari — QRCode.js render sebagai <img> dengan data URL
+        if (qrImgElement.complete) {
+          qrDataUrl = qrImgElement.src;
+        } else {
+          // Belum selesai load — tunggu dengan timeout safety 2 detik
+          qrDataUrl = await new Promise(resolve => {
+            const timer = setTimeout(() => resolve(qrImgElement.src || null), 2000);
+            qrImgElement.onload = () => { clearTimeout(timer); resolve(qrImgElement.src); };
+            qrImgElement.onerror = () => { clearTimeout(timer); resolve(null); };
+          });
+        }
+      }
+
+      if (qrDataUrl) {
         const qrImage = new Image();
-        qrImage.src = qrImgElement.src;
-        await new Promise(resolve => qrImage.onload = resolve);
+        qrImage.src = qrDataUrl;
+        await new Promise(resolve => {
+          qrImage.onload = resolve;
+          qrImage.onerror = resolve; // tetap lanjut meski gagal load
+          setTimeout(resolve, 3000); // safety timeout
+        });
         
         // MENEMPELKAN QR CODE BERDASARKAN KOORDINAT YANG DISIMPAN ADMIN DI FIRESTORE (di-scale)
         ctx.drawImage(qrImage, qrXScaled, qrYScaled, qrWScaled, qrHScaled);
 
         // MENEMPELKAN LOGO BULAT DI TENGAH QR CODE (logo.png, sama dengan brand icon)
-        // correctLevel H (toleransi error ~30%), logo menutup ~30% lebar QR —
-        // masih aman discan, dan detail logo jadi lebih jelas terbaca saat di-zoom.
         try {
           await drawLogoOnQRCenter(ctx, qrXScaled, qrYScaled, qrWScaled, qrHScaled);
         } catch (e) {
           console.warn('[QR Logo] Gagal menempel logo di tengah QR:', e.message);
         }
+      } else {
+        console.warn('[QR] Tidak bisa ambil QR bitmap dari qrHelper — QR tidak ditempel ke canvas.');
       }
     }
 

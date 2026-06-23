@@ -309,6 +309,27 @@
     margin-top: 12px;
   }
 
+  /* ── Saat survey selesai & sedang generate sertifikat: tombol Back
+     menyusut & memudar, tombol Next/Processing melebar mengambil alih
+     seluruh baris. Pakai grid-template-columns dengan transition (didukung
+     browser modern) supaya pelebarannya terasa halus, bukan "jeplak". ──── */
+  .btn-row {
+    transition: grid-template-columns 0.35s cubic-bezier(0.22,1,0.36,1);
+  }
+  .btn-row.processing {
+    grid-template-columns: 0fr 1fr;
+    gap: 0;
+  }
+  .btn-row.processing #btn-survey-back {
+    opacity: 0;
+    pointer-events: none;
+    padding-left: 0;
+    padding-right: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity 0.2s ease;
+  }
+
   .btn-icon {
     width: 22px; height: 22px;
     flex-shrink: 0;
@@ -1905,7 +1926,7 @@
         Please answer this question before continuing.
       </p>
 
-      <div class="btn-row" style="margin-top:16px;">
+      <div class="btn-row" id="survey-btn-row" style="margin-top:16px;">
         <button class="btn btn-outline" id="btn-survey-back" onclick="surveyGoBack()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
           Back
@@ -4027,8 +4048,12 @@ async function surveyFinishAndGenerate() {
   const nextLabel  = document.getElementById('survey-next-label');
   const nextArrow  = document.getElementById('survey-next-arrow');
   const nextSpinner = document.getElementById('survey-next-spinner');
+  const btnRow      = document.getElementById('survey-btn-row');
 
   // ── Tampilkan loading state di tombol Finish ──────────────────
+  // Tombol Back disembunyikan & tombol Next/Processing melebar penuh
+  // mengambil alih seluruh baris (lihat CSS .btn-row.processing).
+  if (btnRow)      btnRow.classList.add('processing');
   if (nextBtn)     { nextBtn.disabled = true; nextBtn.style.opacity = '0.85'; }
   if (nextLabel)   nextLabel.textContent = 'Processing...';
   if (nextArrow)   nextArrow.style.display = 'none';
@@ -4207,54 +4232,7 @@ async function drawLogoOnQRCenter(ctx, qrX, qrY, qrW, qrH) {
 // STEP 4: GENERATE FLATTENED PDF
 // ══════════════════════════════════════════════════════════════════
 async function generateAndStore() {
-  // 1. Tampilkan Progress Bar Modern Elegan (Simulasi 1.5 Detik)
-  await Swal.fire({
-    title: '⚡ Menyusun Sertifikat',
-    html: `
-      <p style="color:var(--text-muted); font-size:13px; text-align:left; margin-bottom:15px; line-height:1.5;">
-        Mengamankan kunci kriptografi identitas dan merender berkas PDF cetak beresolusi tinggi...
-      </p>
-      <div style="margin-top: 15px;">
-        <div style="width: 100%; background: rgba(255,255,255,0.05); height: 6px; border-radius: 99px; overflow: hidden; border: 1px solid rgba(255,255,255,0.07); position: relative;">
-          <div id="swal-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ccff00, #00e5a0); box-shadow: 0 0 14px rgba(204,255,0,0.5); transition: width 0.08s ease-out;"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-family: var(--font-mono); font-size: 11px;">
-          <span style="color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase;">Vector Engine v2.4</span>
-          <span id="swal-progress-text" style="color: var(--accent); font-weight: 700;">0%</span>
-        </div>
-      </div>
-    `,
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    showConfirmButton: false,
-    customClass: { popup: 'swal2-dark-custom' },
-    didOpen: () => {
-      // Sembunyikan spinner bawaan Swal yang berputar biasa
-      const defaultLoader = Swal.getLoader();
-      if (defaultLoader) defaultLoader.style.display = 'none';
-
-      const progressBar = document.getElementById('swal-progress-bar');
-      const progressText = document.getElementById('swal-progress-text');
-      let progress = 0;
-
-      // Hitung cepat menuju 100% dengan lompatan acak yang organik
-      const interval = setInterval(() => {
-        progress += Math.floor(Math.random() * 8) + 5; 
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
-          setTimeout(() => {
-            Swal.close(); // Tutup setelah menyentuh 100%
-          }, 150);
-        }
-        
-        if (progressBar) progressBar.style.width = progress + '%';
-        if (progressText) progressText.textContent = progress + '%';
-      }, 50); // Kecepatan update frame per mili-detik
-    }
-  });
-
-  // 2. Eksekusi Pembuatan PDF & Penyimpanan (Berjalan Instan Setelah Loading Selesai)
+  // 2. Eksekusi Pembuatan PDF & Penyimpanan
   try {
     // Render Certificate ke Canvas
     const canvas = document.getElementById('cert-canvas');

@@ -698,31 +698,41 @@
     const studentId = getStudentId();
 
     // ── Scroll-direction-based reveal for social bar & site CTA ─
-    // Muncul halus saat scroll ke bawah, hilang halus saat scroll ke atas.
+    // Muncul halus saat scroll ke bawah, hilang halus saat scroll jauh ke atas.
+    // Pakai threshold + hysteresis biar tidak "flicker" akibat momentum
+    // scroll di HP (yang suka mengirim event naik-turun kecil/noise).
     (function setupScrollReveal() {
       const targets = document.querySelectorAll('.reveal-on-scroll');
       if (!targets.length) return;
 
-      let lastY = window.scrollY;
+      let lastDecisionY = window.scrollY;
       let ticking = false;
+      const DOWN_THRESHOLD = 6;   // px kecil cukup utk memunculkan
+      const UP_THRESHOLD   = 80;  // perlu scroll ke atas yg cukup jauh utk menyembunyikan
 
-      function applyDirection(direction) {
+      function showIfInView() {
         targets.forEach(el => {
           const rect = el.getBoundingClientRect();
-          const inView = rect.top < window.innerHeight * 0.92 && rect.bottom > 0;
-          if (direction === 'down' && inView) {
-            el.classList.add('is-visible');
-          } else if (direction === 'up') {
-            el.classList.remove('is-visible');
-          }
+          const inView = rect.top < window.innerHeight * 0.95 && rect.bottom > 0;
+          if (inView) el.classList.add('is-visible');
         });
+      }
+
+      function hideAll() {
+        targets.forEach(el => el.classList.remove('is-visible'));
       }
 
       function onScroll() {
         const currentY = window.scrollY;
-        const direction = currentY > lastY ? 'down' : (currentY < lastY ? 'up' : null);
-        if (direction) applyDirection(direction);
-        lastY = currentY;
+        const delta = currentY - lastDecisionY;
+
+        if (delta >= DOWN_THRESHOLD) {
+          showIfInView();
+          lastDecisionY = currentY;
+        } else if (delta <= -UP_THRESHOLD) {
+          hideAll();
+          lastDecisionY = currentY;
+        }
         ticking = false;
       }
 

@@ -512,6 +512,26 @@
       max-width: 320px;
       line-height: 1.6;
     }
+
+    /* ── Scroll reveal ──────────────────────────────────────── */
+    .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(22px);
+      filter: blur(3px);
+      transition:
+        opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+        filter 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: opacity, transform, filter;
+    }
+    .reveal-on-scroll.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+      filter: blur(0);
+    }
+    .site-cta.reveal-on-scroll.is-visible {
+      transition-delay: 0.12s;
+    }
   </style>
 </head>
 <body>
@@ -588,7 +608,7 @@
 
     </div><!-- /.card-body -->
 
-    <div class="social-bar">
+    <div class="social-bar reveal-on-scroll" id="social-bar">
       <a class="social-link" href="https://www.instagram.com/fantiber.balance/" target="_blank" rel="noopener" aria-label="Instagram">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="5"/>
@@ -632,7 +652,9 @@
 
   </div><!-- /.card -->
 
-  <div class="site-cta">
+  <p class="wordmark">E-Certificate System</p>
+
+  <div class="site-cta reveal-on-scroll" id="site-cta">
     <div class="site-cta-divider"></div>
     <span class="site-cta-label">More Courses &amp; Information</span>
     <a class="site-cta-link" href="https://www.fbacademytimorleste.com/" target="_blank" rel="noopener">
@@ -644,8 +666,6 @@
     </a>
     <p class="site-cta-sub">Discover full course details, schedules, and certification programs at our official website.</p>
   </div>
-
-  <p class="wordmark">E-Certificate System</p>
 
   <script>
     const firebaseConfig = {
@@ -676,6 +696,25 @@
     }
 
     const studentId = getStudentId();
+
+    // ── Smooth scroll-reveal for social bar & site CTA ─────────
+    (function setupScrollReveal() {
+      const targets = document.querySelectorAll('.reveal-on-scroll');
+      if (!targets.length) return;
+      if (!('IntersectionObserver' in window)) {
+        targets.forEach(el => el.classList.add('is-visible'));
+        return;
+      }
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+      targets.forEach(el => observer.observe(el));
+    })();
 
     // ── WhatsApp popover toggle ────────────────────────────────
     const waToggle   = document.getElementById('wa-toggle');

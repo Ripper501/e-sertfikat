@@ -3,7 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Certificate Verification</title>
+  <title>Certificate Verification — FB Academy</title>
+
+  <!-- ── Open Graph meta tags ─────────────────────────────────────
+       Dibaca oleh WhatsApp/LinkedIn/Facebook/Telegram saat link ini
+       dishare, untuk menampilkan preview kartu (judul, deskripsi,
+       gambar) bukan cuma teks URL polos. Murni tag HTML statis,
+       tidak butuh server/API tambahan apa pun — gratis sepenuhnya.
+
+       CATATAN: karena file ini statis (bukan rendering per-orang di
+       server), gambar & judul di sini bersifat GENERIK untuk semua
+       link verifikasi (memakai logo FB Academy), bukan foto/nama
+       spesifik tiap penerima sertifikat — itu butuh server-side
+       rendering dinamis yang di luar lingkup file HTML statis ini. -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:title"       content="Certificate Verification — FB Academy" />
+  <meta property="og:description" content="Officially verified certificate issued by Fantiber Balance Academy, Timor-Leste." />
+  <meta property="og:image"       content="https://ripper501.github.io/e-sertfikat/logo.png" />
+  <meta property="og:site_name"   content="FB Academy" />
+
+  <meta name="twitter:card"        content="summary" />
+  <meta name="twitter:title"       content="Certificate Verification — FB Academy" />
+  <meta name="twitter:description" content="Officially verified certificate issued by Fantiber Balance Academy, Timor-Leste." />
+  <meta name="twitter:image"       content="https://ripper501.github.io/e-sertfikat/logo.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -525,14 +547,19 @@
     }
 
     /* ── Scroll reveal ──────────────────────────────────────── */
+    /* Durasi dipersingkat (0.9s → 0.35s) dan blur dikurangi (3px → 1.5px).
+       filter:blur() jauh lebih berat dirender di Android Chrome daripada
+       di Safari iOS (kurang teroptimasi GPU-nya), sehingga durasi panjang
+       + blur besar terasa lancar di iPhone tapi nyendat di Android.
+       Versi ini tetap halus di iOS, dan jadi jauh lebih responsif di Android. */
     .reveal-on-scroll {
       opacity: 0;
-      transform: translateY(22px);
-      filter: blur(3px);
+      transform: translateY(14px);
+      filter: blur(1.5px);
       transition:
-        opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
-        transform 0.9s cubic-bezier(0.22, 1, 0.36, 1),
-        filter 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+        opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        filter 0.35s cubic-bezier(0.22, 1, 0.36, 1);
       will-change: opacity, transform, filter;
     }
     .reveal-on-scroll.is-visible {
@@ -541,8 +568,66 @@
       filter: blur(0);
     }
     .site-cta.reveal-on-scroll.is-visible {
-      transition-delay: 0.12s;
+      transition-delay: 0.05s;
     }
+
+    /* ── Brand header: logo + "FB Academy" ─────────────────────
+       Tampil di semua state (loading/success/error) karena
+       diletakkan di luar 3 div state, langsung di dalam card-body. */
+    .brand-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+      position: relative;
+      z-index: 2;
+    }
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 1px solid var(--gold-line);
+      background: var(--surface-2);
+    }
+    .brand-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14.5px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: var(--text);
+    }
+
+    /* ── Add to LinkedIn button ──────────────────────────────── */
+    .linkedin-add {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      margin-top: 18px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: 1px solid rgba(10,102,194,0.4);
+      background: rgba(10,102,194,0.08);
+      color: #5fb4ff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      text-decoration: none;
+      transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+      position: relative;
+      z-index: 2;
+    }
+    .linkedin-add:hover,
+    .linkedin-add:focus-visible {
+      background: rgba(10,102,194,0.16);
+      border-color: rgba(10,102,194,0.7);
+      transform: translateY(-1px);
+    }
+    .linkedin-add svg { flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -550,6 +635,12 @@
   <div class="card" id="card">
     <div class="card-ribbon"></div>
     <div class="card-body">
+
+      <!-- Brand header: tampil di semua state (loading/success/error) -->
+      <div class="brand-header">
+        <img src="logo.png" alt="FB Academy" class="brand-logo" />
+        <span class="brand-name">FB Academy</span>
+      </div>
 
       <!-- Loading -->
       <div id="state-loading" class="loading-state">
@@ -595,6 +686,14 @@
             </svg>
           </div>
         </div>
+
+        <!-- Add to LinkedIn: link resmi LinkedIn (gratis, bukan API),
+             href diisi dinamis lewat JS setelah data sertifikat dimuat
+             (lihat fungsi renderCertificate / buildLinkedInAddUrl). -->
+        <a id="linkedin-add-btn" class="linkedin-add" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14zM8.34 18.34V10.13H5.67v8.21h2.67zM7 8.84A1.46 1.46 0 1 0 7 5.92a1.46 1.46 0 0 0 0 2.92zm11.34 9.5v-4.7c0-2.52-1.35-3.7-3.15-3.7a2.72 2.72 0 0 0-2.46 1.35h-.04v-1.16H9.97c.03.7 0 8.21 0 8.21h2.67v-4.58c0-.24.02-.49.1-.66a1.46 1.46 0 0 1 1.33-.98c.94 0 1.31.71 1.31 1.76v4.46h2.67z"/></svg>
+          Add to LinkedIn Profile
+        </a>
 
         <!-- Tampil HANYA kalau data diambil dari fallback Google Sheet
              (dokumen Firestore sudah tidak ada / dihapus admin) — murni
@@ -679,6 +778,82 @@
   <p class="wordmark">E-Certificate System</p>
 
   <script>
+    // ── Reveal social bar & site CTA berdasarkan ARAH scroll ───
+    // Sengaja dijalankan PALING AWAL (sebelum inisialisasi Firebase),
+    // dibungkus try-catch sendiri, supaya animasi scroll ini tetap aktif
+    // walau ada masalah lain di bagian Firebase/network (mis. koneksi
+    // lambat di Android) — keduanya independen sepenuhnya.
+    //
+    // Scroll ke BAWAH (meski sedikit) → muncul. Scroll ke ATAS (meski
+    // sedikit) → hilang lagi. Dipicu oleh DELTA gerakan, bukan posisi
+    // absolut scrollY — supaya terasa natural & responsif di kedua arah,
+    // bukan menunggu mencapai titik pixel tertentu.
+    //
+    // Dipasang di window DAN document.documentElement/document.body
+    // sekaligus (passive, redundant tapi murah) karena beberapa
+    // Android WebView/Chrome versi tertentu tidak selalu memicu event
+    // scroll secara konsisten hanya dari window saja — memasang di
+    // beberapa target memastikan event selalu tertangkap secepat
+    // mungkin di semua browser, tanpa mengubah perilaku iOS yang
+    // sudah lancar (iOS tetap menerima event yang sama, jadi tidak
+    // ada resiko regresi).
+    try {
+      (function setupScrollReveal() {
+        const targets = document.querySelectorAll('.reveal-on-scroll');
+        if (!targets.length) return;
+
+        const DELTA_THRESHOLD = 4; // gerakan scroll minimal (px) untuk memicu perubahan
+        let lastY = window.scrollY || window.pageYOffset || 0;
+        let visible = false;
+        let ticking = false;
+
+        function setVisible(next) {
+          if (next === visible) return;
+          visible = next;
+          targets.forEach(el => el.classList.toggle('is-visible', visible));
+        }
+
+        function update() {
+          const y = window.scrollY || window.pageYOffset || 0;
+          const delta = y - lastY;
+
+          if (y <= 2) {
+            // Selalu sembunyikan begitu balik mendekati paling atas,
+            // berapa pun arah delta-nya (jaga-jaga kasus tepi).
+            setVisible(false);
+          } else if (delta > DELTA_THRESHOLD) {
+            // Scroll ke BAWAH yang cukup jelas → tampilkan
+            setVisible(true);
+          } else if (delta < -DELTA_THRESHOLD) {
+            // Scroll ke ATAS yang cukup jelas → sembunyikan
+            setVisible(false);
+          }
+
+          lastY = y;
+          ticking = false;
+        }
+
+        function onScroll() {
+          if (!ticking) {
+            // requestAnimationFrame: dijalankan tepat sebelum browser
+            // repaint berikutnya — paling responsif di semua browser
+            // dibanding setTimeout/debounce manual.
+            window.requestAnimationFrame(update);
+            ticking = true;
+          }
+        }
+
+        // Pasang di beberapa target sekaligus (passive listener, murah,
+        // tidak saling konflik) supaya event scroll tertangkap reliable
+        // baik di Android Chrome maupun iOS Safari.
+        window.addEventListener('scroll', onScroll, { passive: true });
+        document.addEventListener('scroll', onScroll, { passive: true });
+        document.body.addEventListener('scroll', onScroll, { passive: true });
+      })();
+    } catch (e) {
+      console.warn('[ScrollReveal] Gagal inisialisasi:', e.message);
+    }
+
     const firebaseConfig = {
       apiKey:            "AIzaSyAdr4A7woxm7qQs5HmEGbObUi8cIyWqVNk",
       authDomain:        "e-sertifikat-3d535.firebaseapp.com",
@@ -707,38 +882,6 @@
     }
 
     const studentId = getStudentId();
-
-    // ── Reveal social bar & site CTA based on scroll position ──
-    // Pakai POSISI absolut scrollY (bukan delta per-frame), sehingga
-    // tidak gampang flicker akibat micro-jitter scroll momentum di HP.
-    (function setupScrollReveal() {
-      const targets = document.querySelectorAll('.reveal-on-scroll');
-      if (!targets.length) return;
-
-      const SHOW_AT = 10; // muncul begitu scroll turun sedikit
-      const HIDE_AT = 4;  // sembunyi lagi begitu kembali dekat ke atas
-      let ticking = false;
-      let visible = false;
-
-      function update() {
-        const y = window.scrollY;
-        if (!visible && y > SHOW_AT) {
-          visible = true;
-          targets.forEach(el => el.classList.add('is-visible'));
-        } else if (visible && y < HIDE_AT) {
-          visible = false;
-          targets.forEach(el => el.classList.remove('is-visible'));
-        }
-        ticking = false;
-      }
-
-      window.addEventListener('scroll', () => {
-        if (!ticking) {
-          window.requestAnimationFrame(update);
-          ticking = true;
-        }
-      }, { passive: true });
-    })();
 
     // ── WhatsApp popover toggle ────────────────────────────────
     const waToggle   = document.getElementById('wa-toggle');
@@ -824,6 +967,36 @@
       document.getElementById('error-msg').textContent =
         'No certificate ID found in this URL. Please scan the QR code again.';
     } else {
+      // ── Bangun URL "Add to LinkedIn Profile" ─────────────────
+      // Endpoint resmi & GRATIS dari LinkedIn (bukan API berbayar,
+      // bukan butuh App ID) — cukup URL dengan parameter query yang
+      // dibaca LinkedIn untuk pre-fill form "Add Certification" di
+      // profil pengguna. Dokumentasi publik: linkedin.com/help (Add
+      // to Profile button). Tanggal terbit dipakai sebagai issueYear/
+      // issueMonth bila tersedia.
+      function buildLinkedInAddUrl(data) {
+        const params = new URLSearchParams({
+          startTask:        'CERTIFICATION_NAME',
+          name:             'Certificate of Completion — FB Academy',
+          organizationName: 'Fantiber Balance Academy',
+          certUrl:          window.location.href,
+        });
+
+        // issueYear/issueMonth: ambil dari issued_at bila valid
+        let d;
+        if (data.issued_at && typeof data.issued_at.toDate === 'function') {
+          d = data.issued_at.toDate();
+        } else if (data.issued_at) {
+          d = new Date(data.issued_at);
+        }
+        if (d && !isNaN(d)) {
+          params.set('issueYear',  d.getFullYear());
+          params.set('issueMonth', d.getMonth() + 1); // LinkedIn: 1-12
+        }
+
+        return 'https://www.linkedin.com/profile/add?' + params.toString();
+      }
+
       // ── Render hasil ke kartu (dipakai baik dari Firestore maupun fallback Sheet) ──
       function renderCertificate(data) {
         document.getElementById('cert-name').textContent  = data.cert_name || '—';
@@ -833,6 +1006,12 @@
 
         const archiveNote = document.getElementById('archive-note');
         if (archiveNote) archiveNote.style.display = data.source === 'sheet' ? 'block' : 'none';
+
+        const linkedinBtn = document.getElementById('linkedin-add-btn');
+        if (linkedinBtn) {
+          linkedinBtn.href = buildLinkedInAddUrl(data);
+          linkedinBtn.style.display = 'flex';
+        }
 
         showState('success');
       }

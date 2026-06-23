@@ -4359,66 +4359,73 @@ async function generateAndStore() {
       // correctLevel H: toleransi error ~30% (paling tinggi pada standar QR),
       // diperlukan karena logo di tengah sekarang lebih besar (30% lebar QR)
       // sehingga menutup area tengah lebih banyak — H menjaga QR tetap aman discan.
+      // Generate QR Code ke helper div tersembunyi
       const qrcode = new QRCode(qrHelper, {
         text: verificationUrl,
-        width: qrWScaled,
-        height: qrHScaled,
+        width: Math.round(qrWScaled),
+        height: Math.round(qrHScaled),
         colorDark : cfgQrColor,
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.H
       });
 
-      // Tunggu QRCode.js selesai render. Library ini bersifat sync tapi
-      // penambahan elemen ke DOM bisa butuh 1 frame — await rAF lebih aman
-      // daripada setTimeout(250) yang kadang masih terlalu cepat di Android.
-      await new Promise(resolve => requestAnimationFrame(resolve));
-      await new Promise(resolve => requestAnimationFrame(resolve)); // 2 frame untuk aman
+      // Tunggu QRCode.js selesai render — pakai setTimeout bukan rAF
+      // karena rAF di hidden element bisa tidak pernah terpanggil di beberapa browser.
+      // 300ms cukup untuk semua device termasuk HP Android mid-range.
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      // ── Ambil bitmap QR: coba canvas dulu (Android Chrome), fallback ke img (iOS/desktop) ──
-      // QRCode.js menghasilkan <canvas> di beberapa browser dan <img> di yang lain.
-      // Mengambil langsung dari <canvas> via toDataURL() adalah cara paling reliable
-      // di semua platform karena tidak bergantung pada load event <img>.
+      // ── Ambil bitmap QR: coba canvas dulu, fallback ke img ───────
+      // QRCode.js v1.0.0: di Chrome/Android → <canvas>, di Safari/iOS → <img>
       let qrDataUrl = null;
-      const qrCanvas = qrHelper.querySelector('canvas');
-      const qrImgElement = qrHelper.querySelector('img');
 
+      const qrCanvas = qrHelper.querySelector('canvas');
       if (qrCanvas) {
-        // Path Android Chrome & desktop — canvas sudah ada dan langsung bisa dibaca
-        qrDataUrl = qrCanvas.toDataURL('image/png');
-      } else if (qrImgElement && qrImgElement.src) {
-        // Path iOS Safari — QRCode.js render sebagai <img> dengan data URL
-        if (qrImgElement.complete) {
-          qrDataUrl = qrImgElement.src;
-        } else {
-          // Belum selesai load — tunggu dengan timeout safety 2 detik
-          qrDataUrl = await new Promise(resolve => {
-            const timer = setTimeout(() => resolve(qrImgElement.src || null), 2000);
-            qrImgElement.onload = () => { clearTimeout(timer); resolve(qrImgElement.src); };
-            qrImgElement.onerror = () => { clearTimeout(timer); resolve(null); };
-          });
+        try {
+          qrDataUrl = qrCanvas.toDataURL('image/png');
+        } catch (e) {
+          console.warn('[QR] canvas.toDataURL gagal:', e.message);
+        }
+      }
+
+      // Fallback ke <img> jika canvas tidak ada atau toDataURL gagal
+      if (!qrDataUrl) {
+        const qrImg = qrHelper.querySelector('img');
+        if (qrImg) {
+          // Tunggu img selesai load jika belum complete
+          if (!qrImg.complete || !qrImg.naturalWidth) {
+            await new Promise(resolve => {
+              const t = setTimeout(resolve, 2000);
+              qrImg.onload  = () => { clearTimeout(t); resolve(); };
+              qrImg.onerror = () => { clearTimeout(t); resolve(); };
+            });
+          }
+          if (qrImg.src && qrImg.naturalWidth > 0) {
+            qrDataUrl = qrImg.src;
+          }
         }
       }
 
       if (qrDataUrl) {
-        const qrImage = new Image();
-        qrImage.src = qrDataUrl;
-        await new Promise(resolve => {
-          qrImage.onload = resolve;
-          qrImage.onerror = resolve; // tetap lanjut meski gagal load
+        // Draw QR ke certificate canvas
+        await new Promise((resolve) => {
+          const qrImage = new Image();
+          qrImage.onload  = () => {
+            ctx.drawImage(qrImage, qrXScaled, qrYScaled, qrWScaled, qrHScaled);
+            resolve();
+          };
+          qrImage.onerror = resolve; // tetap lanjut meski gagal
           setTimeout(resolve, 3000); // safety timeout
+          qrImage.src = qrDataUrl;
         });
-        
-        // MENEMPELKAN QR CODE BERDASARKAN KOORDINAT YANG DISIMPAN ADMIN DI FIRESTORE (di-scale)
-        ctx.drawImage(qrImage, qrXScaled, qrYScaled, qrWScaled, qrHScaled);
 
-        // MENEMPELKAN LOGO BULAT DI TENGAH QR CODE (logo.png, sama dengan brand icon)
+        // Logo di tengah QR
         try {
           await drawLogoOnQRCenter(ctx, qrXScaled, qrYScaled, qrWScaled, qrHScaled);
         } catch (e) {
           console.warn('[QR Logo] Gagal menempel logo di tengah QR:', e.message);
         }
       } else {
-        console.warn('[QR] Tidak bisa ambil QR bitmap dari qrHelper — QR tidak ditempel ke canvas.');
+        console.warn('[QR] Tidak bisa ambil QR bitmap — QR tidak ditempel ke canvas.');
       }
     }
 
@@ -4470,46 +4477,45 @@ async function generateAndStore() {
     console.error('[CertGen]', err);
   }
 }
-// ── Fungsi Pembantu: load gambar template dengan CORS support ──────
-// iOS Safari punya dua quirk berbahaya:
-// 1. crossOrigin HARUS di-set SEBELUM .src — kalau terbalik, Safari
-//    pakai cached version tanpa CORS headers → canvas tainted → toDataURL() gagal.
-// 2. Kalau browser sudah cache gambar tanpa crossOrigin sebelumnya,
-//    request CORS baru di-reject dari cache → perlu cache-busting param.
+// ── Fungsi Pembantu: load gambar template ─────────────────────────
+// Strategi 3-lapis untuk handle iOS Safari + Android Chrome + semua edge case:
+//
+// Layer 1: crossOrigin SEBELUM src + URL asli  → biasanya cukup di Android & desktop
+// Layer 2: cache-bust (?_cb=timestamp)         → fix iOS cache conflict  
+// Layer 3: tanpa crossOrigin                   → last resort (canvas akan tainted,
+//           tapi toDataURL() masih bisa jalan di Safari jika src == same-origin/data-url)
+//
+// KHUSUS DATA URL (base64): langsung resolve, tidak perlu CORS apapun.
 function loadTemplateImage(src) {
-  return new Promise((resolve, reject) => {
+  // Base64 / data URL — tidak perlu CORS, langsung load
+  if (!src || src.startsWith('data:')) {
+    return new Promise((resolve, reject) => {
+      if (!src) return reject(new Error('No src'));
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = src;
+    });
+  }
+
+  // URL eksternal (Cloudinary dll) — coba 3 strategi berurutan
+  const tryLoad = (url, useCrossOrigin) => new Promise((resolve, reject) => {
     const img = new Image();
-    const isDataUrl = src.startsWith('data:');
-
-    if (!isDataUrl) {
-      img.crossOrigin = 'anonymous'; // WAJIB di-set SEBELUM .src (iOS Safari quirk)
-    }
-
-    img.onload = () => resolve(img);
-    img.onerror = () => {
-      if (!isDataUrl) {
-        // Retry dengan cache-busting — iOS Safari sering reject CORS
-        // karena pakai non-CORS cached version dari request sebelumnya.
-        const bustSrc = src.includes('?') ? `${src}&_cb=${Date.now()}` : `${src}?_cb=${Date.now()}`;
-        const img2 = new Image();
-        img2.crossOrigin = 'anonymous';
-        img2.onload = () => resolve(img2);
-        img2.onerror = () => {
-          // Last resort tanpa crossOrigin — gambar tetap muncul meski
-          // canvas jadi tainted (toDataURL tangani sendiri di caller).
-          const img3 = new Image();
-          img3.onload = () => resolve(img3);
-          img3.onerror = (err) => reject(err);
-          img3.src = bustSrc;
-        };
-        img2.src = bustSrc;
-      } else {
-        reject(new Error('Failed to load data URL image'));
-      }
-    };
-
-    img.src = src;
+    if (useCrossOrigin) img.crossOrigin = 'anonymous'; // WAJIB sebelum .src
+    const timer = setTimeout(() => reject(new Error('timeout')), 15000);
+    img.onload  = () => { clearTimeout(timer); resolve(img); };
+    img.onerror = () => { clearTimeout(timer); reject(new Error('load error')); };
+    img.src = url;
   });
+
+  const cacheBustedUrl = src.includes('?')
+    ? `${src}&_cb=${Date.now()}`
+    : `${src}?_cb=${Date.now()}`;
+
+  // Jalankan berurutan: kalau satu gagal, coba berikutnya
+  return tryLoad(src, true)
+    .catch(() => tryLoad(cacheBustedUrl, true))
+    .catch(() => tryLoad(cacheBustedUrl, false));
 }
 
 // ── Draw certificate template + name on <canvas> ──────────────────

@@ -303,31 +303,59 @@
   .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 
   .btn-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
     gap: 12px;
     margin-top: 12px;
+  }
+  .btn-row > .btn {
+    flex: 1 1 0%;
+    min-width: 0;
   }
 
   /* ── Saat survey selesai & sedang generate sertifikat: tombol Back
      menyusut & memudar, tombol Next/Processing melebar mengambil alih
-     seluruh baris. Pakai grid-template-columns dengan transition (didukung
-     browser modern) supaya pelebarannya terasa halus, bukan "jeplak". ──── */
-  .btn-row {
-    transition: grid-template-columns 0.35s cubic-bezier(0.22,1,0.36,1);
+     seluruh baris. Pakai flexbox (bukan CSS Grid) karena transisi
+     grid-template-columns dengan unit fr tidak mulus di semua browser
+     (terutama Safari/iOS) — flex-grow + flex-basis jauh lebih konsisten. */
+  .btn-row > #btn-survey-back {
+    transition: flex-grow 0.4s cubic-bezier(0.22,1,0.36,1),
+                flex-basis 0.4s cubic-bezier(0.22,1,0.36,1),
+                opacity 0.3s ease,
+                margin 0.4s cubic-bezier(0.22,1,0.36,1),
+                padding 0.4s cubic-bezier(0.22,1,0.36,1);
+  }
+  .btn-row > #btn-survey-next {
+    transition: flex-grow 0.4s cubic-bezier(0.22,1,0.36,1);
   }
   .btn-row.processing {
-    grid-template-columns: 0fr 1fr;
     gap: 0;
   }
   .btn-row.processing #btn-survey-back {
+    flex-grow: 0;
+    flex-basis: 0%;
     opacity: 0;
     pointer-events: none;
+    margin-right: -12px; /* tutup gap yang ditinggalkan supaya Next benar2 full-width */
     padding-left: 0;
     padding-right: 0;
     overflow: hidden;
     white-space: nowrap;
-    transition: opacity 0.2s ease;
+  }
+  .btn-row.processing #btn-survey-next {
+    flex-grow: 1;
+  }
+
+  /* ── Kunci SEMUA jenis input jawaban (text, radio, checkbox, dropdown,
+     linear scale) begitu survey selesai & sedang generate sertifikat.
+     pointer-events:none mencegah klik tembus ke semua elemen turunan
+     (termasuk <label> yang membungkus radio/checkbox), dan opacity
+     memberi sinyal visual bahwa area ini sudah tidak bisa diisi lagi. */
+  #survey-answer-area.locked {
+    pointer-events: none;
+    opacity: 0.45;
+    filter: saturate(0.6);
+    transition: opacity 0.25s ease, filter 0.25s ease;
+    user-select: none;
   }
 
   .btn-icon {
@@ -4049,6 +4077,7 @@ async function surveyFinishAndGenerate() {
   const nextArrow  = document.getElementById('survey-next-arrow');
   const nextSpinner = document.getElementById('survey-next-spinner');
   const btnRow      = document.getElementById('survey-btn-row');
+  const answerArea  = document.getElementById('survey-answer-area');
 
   // ── Tampilkan loading state di tombol Finish ──────────────────
   // Tombol Back disembunyikan & tombol Next/Processing melebar penuh
@@ -4058,6 +4087,20 @@ async function surveyFinishAndGenerate() {
   if (nextLabel)   nextLabel.textContent = 'Processing...';
   if (nextArrow)   nextArrow.style.display = 'none';
   if (nextSpinner) nextSpinner.style.display = 'block';
+
+  // ── Kunci SEMUA jenis input jawaban (text / radio / checkbox /
+  // dropdown / linear-scale) supaya tidak bisa diisi/diklik lagi
+  // setelah survey selesai. class 'locked' (CSS: pointer-events:none)
+  // menangani klik-tembus, dan disabled=true pada tiap elemen sebagai
+  // lapisan pengaman tambahan (mis. supaya Enter di keyboard fisik
+  // pada <input> tidak memicu apa pun, dan <select>/<button> tidak
+  // bisa difokus lewat keyboard/Tab).
+  if (answerArea) {
+    answerArea.classList.add('locked');
+    answerArea.querySelectorAll('input, select, button, textarea').forEach(el => {
+      el.disabled = true;
+    });
+  }
 
   // ── 1. KIRIM OTOMATIS KE GOOGLE SHEET (MENGGUNAKAN APPS SCRIPT ARRAY DINAMIS)
   try {

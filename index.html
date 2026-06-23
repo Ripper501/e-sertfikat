@@ -3262,33 +3262,67 @@ function haversine(lat1, lng1, lat2, lng2) {
 // STEP 1: AUTH
 // ══════════════════════════════════════════════════════════════════
 
-// signInWithPopup sangat tidak reliable di Safari iOS / in-app browser
-// (WhatsApp, Instagram, dll) karena popup window & third-party storage
-// dibatasi oleh sistem. Untuk perangkat tersebut kita wajib pakai
-// signInWithRedirect, lalu tangkap hasilnya lewat getRedirectResult()
-// saat halaman reload setelah redirect kembali.
-function isMobileOrInAppBrowser() {
-  const ua = navigator.userAgent || '';
-  const isIOS     = /iPhone|iPad|iPod/i.test(ua);
-  const isAndroid = /Android/i.test(ua);
+// signInWithRedirect ternyata BERMASALAH KHUSUS di Android Chrome modern:
+// Chrome Android menerapkan storage partitioning yang memblokir
+// sessionStorage/IndexedDB yang Firebase butuh untuk menyimpan state
+// sebelum redirect ke accounts.google.com. Saat browser kembali, Firebase
+// tidak bisa membaca state itu lagi dan GAGAL TOTAL dengan error
+// "missing initial state" — kegagalan ini terjadi DI HALAMAN GOOGLE/
+// FIREBASE SENDIRI (sebelum sempat balik ke index.html), sehingga
+// getRedirectResult().catch() di sisi kita tidak pernah kebagian
+// menangkapnya. User cuma terlempar balik ke layar login tanpa pesan
+// error apa pun (dikonfirmasi lewat screenshot error Firebase langsung).
+//
+// iOS Safari TIDAK menunjukkan masalah ini (sudah dites & terbukti lancar
+// dengan redirect) — jadi perilaku iOS TIDAK diubah, supaya tidak merusak
+// yang sudah bekerja. Hanya Android yang dipindah ke signInWithPopup,
+// yang tidak terkena masalah storage-partitioning karena seluruh proses
+// login tetap di window/tab yang sama (tidak ada redirect lintas-domain).
+//
+// In-app browser (WhatsApp, Instagram, dll) tetap pakai redirect karena
+// popup window diblokir total di browser tersebut — tidak ada pilihan lain.
+function isIOS() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+}
+function isAndroid() {
+  return /Android/i.test(navigator.userAgent || '');
+}
+function isInAppBrowser() {
   // WebView umum yang dipakai aplikasi share-link (Instagram, FB, WhatsApp, Line, dll)
-  const isInApp   = /FBAN|FBAV|Instagram|Line\/|WhatsApp|Twitter|MicroMessenger/i.test(ua);
-  // Safari iOS asli tidak punya token "CriOS"/"FxiOS" (Chrome/Firefox di iOS),
-  // tapi keduanya tetap WebKit jadi sama-sama lebih aman pakai redirect.
-  return isIOS || isAndroid || isInApp;
+  return /FBAN|FBAV|Instagram|Line\/|WhatsApp|Twitter|MicroMessenger/i.test(navigator.userAgent || '');
+}
+// Dipertahankan untuk kompatibilitas nama lama, tapi logikanya sudah
+// dipersempit: hanya iOS & in-app browser yang pakai redirect sekarang.
+function isMobileOrInAppBrowser() {
+  return isIOS() || isInAppBrowser();
 }
 
 async function signInWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   try {
     if (isMobileOrInAppBrowser()) {
+      // iOS Safari & in-app browser: redirect (terbukti reliable di iOS,
+      // dan satu-satunya opsi yang berfungsi di in-app browser).
       await auth.signInWithRedirect(provider);
       // Halaman akan reload; sisanya ditangani oleh getRedirectResult() di bawah.
     } else {
+      // Android Chrome & semua browser desktop: popup. Tidak terkena
+      // masalah storage-partitioning yang merusak redirect di Android.
       await auth.signInWithPopup(provider);
       // onAuthStateChanged handles the rest
     }
   } catch (e) {
+    // Jaga-jaga: kalau popup diblokir manual oleh user/pengaturan browser
+    // tertentu di Android, fallback ke redirect daripada gagal total.
+    if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) {
+      try {
+        await auth.signInWithRedirect(provider);
+        return;
+      } catch (e2) {
+        showToast('error', 'Sign-in cancelled or failed. Please try again.', `${e2.code || ''} ${e2.message}`.trim());
+        return;
+      }
+    }
     showToast('error', 'Sign-in cancelled or failed. Please try again.', `${e.code || ''} ${e.message}`.trim());
   }
 }

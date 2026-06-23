@@ -1728,7 +1728,7 @@
 
 <!-- Hidden certificate template for canvas rendering -->
 <div id="cert-template">
-  <canvas id="cert-canvas" width="900" height="636"></canvas>
+  <canvas id="cert-canvas" width="2970" height="2099"></canvas>
 </div>
 
 <div id="qrcode-helper" style="display: none;"></div>
@@ -4259,6 +4259,9 @@ async function generateAndStore() {
     const canvas = document.getElementById('cert-canvas');
     await drawCertificateOnCanvas(canvas, certName);
 
+    // Faktor skala: koordinat QR di Firestore masih dalam basis lama (900x636)
+    const SCALE = canvas.width / 900;
+
     // ─── AMBIL CONTEXT CANVAS UNTUK PROSES GAMBAR QR CODE ───
     const ctx = canvas.getContext('2d');
 
@@ -4286,14 +4289,22 @@ async function generateAndStore() {
       
       const qrHelper = document.getElementById('qrcode-helper');
       qrHelper.innerHTML = "";
-      
+
+      // Koordinat & ukuran QR dari Firestore di-scale ke resolusi canvas baru.
+      // QR digenerate langsung pada ukuran piksel akhir (bukan di-upscale dari
+      // ukuran kecil) supaya pola QR tetap tajam/tidak blur saat di-zoom/print.
+      const qrXScaled = cfgQrX * SCALE;
+      const qrYScaled = cfgQrY * SCALE;
+      const qrWScaled = cfgQrW * SCALE;
+      const qrHScaled = cfgQrH * SCALE;
+
       // Ukuran, posisi & warna QR berdasarkan setting Admin yang tersimpan di Firestore.
       // correctLevel M (bukan H): pola QR lebih ringkas/tidak terlalu padat secara visual,
       // tetap punya toleransi error ~15% sehingga aman untuk kamera HP yang scan agak miring/blur.
       const qrcode = new QRCode(qrHelper, {
         text: verificationUrl,
-        width: cfgQrW,
-        height: cfgQrH,
+        width: qrWScaled,
+        height: qrHScaled,
         colorDark : cfgQrColor,
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.M
@@ -4307,14 +4318,14 @@ async function generateAndStore() {
         qrImage.src = qrImgElement.src;
         await new Promise(resolve => qrImage.onload = resolve);
         
-        // MENEMPELKAN QR CODE BERDASARKAN KOORDINAT YANG DISIMPAN ADMIN DI FIRESTORE
-        ctx.drawImage(qrImage, cfgQrX, cfgQrY, cfgQrW, cfgQrH);
+        // MENEMPELKAN QR CODE BERDASARKAN KOORDINAT YANG DISIMPAN ADMIN DI FIRESTORE (di-scale)
+        ctx.drawImage(qrImage, qrXScaled, qrYScaled, qrWScaled, qrHScaled);
 
         // MENEMPELKAN LOGO BULAT DI TENGAH QR CODE (logo.png, sama dengan brand icon)
         // correctLevel M masih punya toleransi error ~15%, jadi menutup sedikit
         // area tengah dengan logo (sekitar 22% dari lebar QR) masih aman untuk discan.
         try {
-          await drawLogoOnQRCenter(ctx, cfgQrX, cfgQrY, cfgQrW, cfgQrH);
+          await drawLogoOnQRCenter(ctx, qrXScaled, qrYScaled, qrWScaled, qrHScaled);
         } catch (e) {
           console.warn('[QR Logo] Gagal menempel logo di tengah QR:', e.message);
         }
@@ -4325,10 +4336,10 @@ async function generateAndStore() {
     const imgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
     certPreviewUrl = imgDataUrl; // simpan untuk preview di screen-done
 
-    // Build Flattened PDF
+    // Build Flattened PDF — dimensi PDF ikut mengikuti resolusi canvas (2970x2099, ~300dpi)
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [900, 636], hotfixes: ['px_scaling'] });
-    pdf.addImage(imgDataUrl, 'JPEG', 0, 0, 900, 636);
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height], hotfixes: ['px_scaling'] });
+    pdf.addImage(imgDataUrl, 'JPEG', 0, 0, canvas.width, canvas.height);
 
     // Simpan blob global agar bisa di-download ulang / di-share dari screen-done
     const pdfBlob = pdf.output('blob');
@@ -4375,14 +4386,21 @@ function loadTemplateImage(src) {
 // Falls back gracefully to built-in defaults when no config exists.
 async function drawCertificateOnCanvas(canvas, name) {
   const ctx = canvas.getContext('2d');
-  const W   = canvas.width;   // 900
-  const H   = canvas.height;  // 636
+  const W   = canvas.width;   // 2970 (= 900 * SCALE)
+  const H   = canvas.height;  // 2099 (= 636 * SCALE)
+
+  // ── SCALE FACTOR ────────────────────────────────────────────────
+  // Semua koordinat (bbox, QR) disimpan di Firestore dalam skala LAMA
+  // (900x636), supaya Admin Editor & data lama tetap kompatibel.
+  // Canvas sekarang dirender lebih besar (untuk hasil cetak tajam),
+  // jadi setiap koordinat/ukuran dari Firestore dikali SCALE di sini.
+  const SCALE = W / 900; // 3.3
 
   // ── Fetch config dari Firestore — SATU SUMBER KEBENARAN: bbox ──
   let cfgSrc       = 'sertifikat-template.png';
   let cfgFont      = 'Alex Brush';
   let cfgFontColor = '#d09e3b';
-  // Default bbox (persis default ced state)
+  // Default bbox (persis default ced state) — masih dalam skala 900x636
   let bboxX = 153, bboxY = 240, bboxW = 594, bboxH = 115;
   // Default QR config (diambil dari Firestore saat generate)
   let cfgShowQR = false;
@@ -4414,12 +4432,14 @@ async function drawCertificateOnCanvas(canvas, name) {
     console.warn('[CertDraw] Firestore config fetch failed, using defaults:', e.message);
   }
 
-  // Hitung posisi teks dari bbox — persis sama dengan editor preview
-  const centreX = bboxX + bboxW / 2;
-  const centreY = bboxY + bboxH / 2;
+  // Hitung posisi teks dari bbox (skala lama), lalu kalikan SCALE untuk canvas besar
+  const centreX = (bboxX + bboxW / 2) * SCALE;
+  const centreY = (bboxY + bboxH / 2) * SCALE;
+  const bboxWScaled = bboxW * SCALE;
 
   // ── Tunggu font ter-load sebelum draw ─────────────────────────
-  try { await document.fonts.load(`68px "${cfgFont}"`); } catch(e) {}
+  // (ukuran awal font dites di basis 68px * SCALE, lihat di bawah)
+  try { await document.fonts.load(`${Math.round(68 * SCALE)}px "${cfgFont}"`); } catch(e) {}
 
   // ── 1. Clear + draw template ──────────────────────────────────
   ctx.clearRect(0, 0, W, H);
@@ -4438,23 +4458,23 @@ async function drawCertificateOnCanvas(canvas, name) {
   ctx.textBaseline = 'middle';
   ctx.fillStyle    = cfgFontColor;
 
-  let fontSize = 68;
+  let fontSize = 68 * SCALE;
   ctx.font = `${fontSize}px "${cfgFont}"`;
-  while (ctx.measureText(name).width > bboxW && fontSize > 20) {
-    fontSize -= 1;
+  while (ctx.measureText(name).width > bboxWScaled && fontSize > 20 * SCALE) {
+    fontSize -= 1 * SCALE;
     ctx.font = `${fontSize}px "${cfgFont}"`;
   }
-  // centreX & centreY dihitung dari bbox — sama persis dengan editor preview
+  // centreX & centreY sudah dalam skala canvas besar — sama persis posisi relatifnya dengan editor preview
   ctx.fillText(name, centreX, centreY);
   ctx.restore();
 
   // ── 3. Faint UID watermark ────────────────────────────────────
   ctx.save();
-  ctx.font      = '400 10px "JetBrains Mono", monospace';
+  ctx.font      = `400 ${Math.round(10 * SCALE)}px "JetBrains Mono", monospace`;
   ctx.fillStyle = 'rgba(204,204,204,0.28)';
   ctx.textAlign = 'left';
   const uid = currentUser ? currentUser.uid.slice(-8).toUpperCase() : 'UNKNOWN';
-  ctx.fillText('UID: ' + uid, 84, H - 30);
+  ctx.fillText('UID: ' + uid, 84 * SCALE, H - 30 * SCALE);
   ctx.restore();
 }
 // ── Helper: draw shield icon on canvas ───────────────────────────

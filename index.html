@@ -4436,7 +4436,6 @@ async function drawCertificateOnCanvas(canvas, name) {
 
   // Hitung posisi teks dari bbox (skala lama), lalu kalikan SCALE untuk canvas besar
   const centreX = (bboxX + bboxW / 2) * SCALE;
-  const centreY = (bboxY + bboxH / 2) * SCALE;
   const bboxWScaled = bboxW * SCALE;
 
   // ── Tunggu font ter-load sebelum draw ─────────────────────────
@@ -4455,19 +4454,65 @@ async function drawCertificateOnCanvas(canvas, name) {
   }
 
   // ── 2. Smart auto-scaling name ────────────────────────────────
+  // Logika ini DISAMAKAN PERSIS dengan editor admin (_cedDraw / ced-canvas):
+  // mengukur lebar DAN tinggi aktual glyph (actualBoundingBoxAscent/Descent),
+  // pakai SAFE_RATIO supaya ada ruang ekstra untuk huruf naik/turun (ascender/
+  // descender) pada font script, dan bisa wrap ke beberapa baris bila perlu.
+  // Tanpa ini, font bisa lolos cek LEBAR tapi tetap menabrak elemen di atas/
+  // bawah bbox karena TINGGI-nya tidak pernah dicek (itulah sebab versi lama
+  // bisa tampak aman di preview tapi nabrak saat di-generate).
   ctx.save();
   ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
   ctx.fillStyle    = cfgFontColor;
 
-  let fontSize = 68 * SCALE;
-  ctx.font = `${fontSize}px "${cfgFont}"`;
-  while (ctx.measureText(name).width > bboxWScaled && fontSize > 20 * SCALE) {
-    fontSize -= 1 * SCALE;
-    ctx.font = `${fontSize}px "${cfgFont}"`;
+  const BOX_W      = bboxWScaled;
+  const BOX_H      = bboxH * SCALE;
+  const SAFE_RATIO = 0.72; // sama dengan editor admin
+
+  function wrapTextFinal(c, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let current = '';
+    for (let i = 0; i < words.length; i++) {
+      const test = current ? current + ' ' + words[i] : words[i];
+      if (c.measureText(test).width > maxWidth && current) {
+        lines.push(current);
+        current = words[i];
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
   }
-  // centreX & centreY sudah dalam skala canvas besar — sama persis posisi relatifnya dengan editor preview
-  ctx.fillText(name, centreX, centreY);
+
+  let fontSize = 68 * SCALE;
+  let lines, lineH, ascent, descent, totalH;
+
+  while (fontSize >= 10 * SCALE) {
+    ctx.font = `${fontSize}px "${cfgFont}"`;
+    lines = wrapTextFinal(ctx, name, BOX_W);
+
+    ascent  = 0;
+    descent = 0;
+    lines.forEach(ln => {
+      const m = ctx.measureText(ln);
+      ascent  = Math.max(ascent,  m.actualBoundingBoxAscent  || fontSize * 0.80);
+      descent = Math.max(descent, m.actualBoundingBoxDescent || fontSize * 0.30);
+    });
+
+    lineH  = ascent + descent + fontSize * 0.18;
+    totalH = lines.length * lineH;
+
+    if (totalH <= BOX_H * SAFE_RATIO) break;
+    fontSize -= 1 * SCALE;
+  }
+
+  // Posisi sama seperti editor admin: rata tengah horizontal & vertikal di dalam bbox
+  const boxTop  = bboxY * SCALE;
+  const offsetY = (BOX_H - totalH) / 2;
+  const startY  = boxTop + offsetY + ascent;
+  lines.forEach((ln, i) => ctx.fillText(ln, centreX, startY + i * lineH));
   ctx.restore();
 
   // ── 3. Faint UID watermark ────────────────────────────────────

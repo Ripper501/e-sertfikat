@@ -4422,8 +4422,19 @@ async function generateAndStore() {
       }
     }
 
-    // Ambil hasil akhir gambar canvas setelah ditempeli QR Code (jika ada)
-    const imgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
+    // Ambil hasil akhir gambar canvas setelah ditempeli QR Code (jika ada).
+    // Wrap dengan try/catch: di iOS Safari, kalau canvas tainted karena
+    // gambar template load tanpa crossOrigin (fallback terakhir), toDataURL()
+    // akan throw SecurityError — tangkap dan beri pesan yang jelas ke user.
+    let imgDataUrl;
+    try {
+      imgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
+    } catch (taintErr) {
+      console.error('[Canvas] toDataURL gagal (canvas tainted):', taintErr.message);
+      showToast('error', 'Gagal generate sertifikat',
+        'Template gambar tidak bisa dimuat dengan aman di browser ini. Coba refresh halaman atau gunakan browser lain.');
+      throw taintErr;
+    }
     certPreviewUrl = imgDataUrl; // simpan untuk preview di screen-done
 
     // Build Flattened PDF — dimensi PDF ikut mengikuti resolusi canvas (6250x4419, sepadan template asli)
@@ -4459,14 +4470,44 @@ async function generateAndStore() {
     console.error('[CertGen]', err);
   }
 }
-// ── Fungsi Pembantu: Memastikan gambar Canva selesai di-load sebelum dicetak ──
-// ── Fungsi Pembantu (VERSI BARU) ──
+// ── Fungsi Pembantu: load gambar template dengan CORS support ──────
+// iOS Safari punya dua quirk berbahaya:
+// 1. crossOrigin HARUS di-set SEBELUM .src — kalau terbalik, Safari
+//    pakai cached version tanpa CORS headers → canvas tainted → toDataURL() gagal.
+// 2. Kalau browser sudah cache gambar tanpa crossOrigin sebelumnya,
+//    request CORS baru di-reject dari cache → perlu cache-busting param.
 function loadTemplateImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous"; // WAJIB ADA UNTUK CLOUDINARY
+    const isDataUrl = src.startsWith('data:');
+
+    if (!isDataUrl) {
+      img.crossOrigin = 'anonymous'; // WAJIB di-set SEBELUM .src (iOS Safari quirk)
+    }
+
     img.onload = () => resolve(img);
-    img.onerror = (err) => reject(err);
+    img.onerror = () => {
+      if (!isDataUrl) {
+        // Retry dengan cache-busting — iOS Safari sering reject CORS
+        // karena pakai non-CORS cached version dari request sebelumnya.
+        const bustSrc = src.includes('?') ? `${src}&_cb=${Date.now()}` : `${src}?_cb=${Date.now()}`;
+        const img2 = new Image();
+        img2.crossOrigin = 'anonymous';
+        img2.onload = () => resolve(img2);
+        img2.onerror = () => {
+          // Last resort tanpa crossOrigin — gambar tetap muncul meski
+          // canvas jadi tainted (toDataURL tangani sendiri di caller).
+          const img3 = new Image();
+          img3.onload = () => resolve(img3);
+          img3.onerror = (err) => reject(err);
+          img3.src = bustSrc;
+        };
+        img2.src = bustSrc;
+      } else {
+        reject(new Error('Failed to load data URL image'));
+      }
+    };
+
     img.src = src;
   });
 }

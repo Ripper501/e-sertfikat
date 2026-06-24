@@ -965,7 +965,7 @@
     // (yang tidak ikut terhapus). Endpoint yang sama (URL /exec) juga
     // dipakai index_v9.html untuk doPost (tulis), di sini dipakai utk doGet.
     // ════════════════════════════════════════════════════════════
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGtXn9LZAbfSWtN6-ekr5TUdvTtJfOR3lHkNYpFZGtJSO-eVCz5Bm-Iilrtd5NtCO9JA/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQyEZ8ABTIlM9FJdkiHetyTXskpLvAfm2dDuQpLHYzUK36eRs4RuC9zl3SBpMaQRz8/exec";
 
     // ── Deteksi otomatis "kursus/profesi" dari jawaban survey ──────
     // Tidak ada field khusus terpisah — sistem mencari di antara
@@ -1007,31 +1007,29 @@
         .then(res => res.json())
         .then(data => {
           if (data && data.status === 'success' && data.found) {
-            // Coba deteksi dari jawaban survey bila Apps Script mengirim
-            // baliknya (nama field bisa berbeda tergantung implementasi
-            // doGet di Apps Script — dicoba beberapa kemungkinan nama
-            // secara graceful, aman bila tidak ada satupun yang cocok).
-            const possibleAnswers = data.survey_answers || data.dynamicResponses || data.responses || null;
-            let detectedCourse = null;
-            if (Array.isArray(possibleAnswers)) {
-              // Normalisasi: dynamicResponses dari index.html berbentuk
-              // {label, value}, sementara survey_answers berbentuk
-              // {questionText, answer} — disamakan dulu sebelum dicek.
-              const normalized = possibleAnswers.map(item => ({
-                questionText: item.questionText || item.label || '',
-                answer:       item.answer       || item.value || '',
-                isName:       !!item.isName,
-              }));
-              detectedCourse = detectCourseFromAnswers(normalized);
+            // PERBAIKAN: Langsung ambil course_name yang dikirim oleh Apps Script
+            let detectedCourse = data.course_name || null;
+
+            // Jalankan fallback survey jawaban jika seandainya course_name kosong
+            if (!detectedCourse) {
+              const possibleAnswers = data.survey_answers || data.dynamicResponses || data.responses || null;
+              if (Array.isArray(possibleAnswers)) {
+                const normalized = possibleAnswers.map(item => ({
+                  questionText: item.questionText || item.label || '',
+                  answer:       item.answer       || item.value || '',
+                  isName:       !!item.isName,
+                }));
+                detectedCourse = detectCourseFromAnswers(normalized);
+              }
             }
 
             return {
               cert_name: data.cert_name || '—',
               email:     data.email     || '—',
-              issued_at: data.issued_at || null, // string ISO dari Sheet, formatDate() sudah menangani ini
+              issued_at: data.issued_at || null,
               source:    'sheet',
               event:     data.event || null,
-              detectedCourse,
+              detectedCourse, // Sekarang sudah terisi dengan benar
             };
           }
           return null; // tidak ketemu di Sheet juga

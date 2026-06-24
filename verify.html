@@ -5,17 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Certificate Verification — FB Academy</title>
 
-  <!-- ── Open Graph meta tags ─────────────────────────────────────
-       Dibaca oleh WhatsApp/LinkedIn/Facebook/Telegram saat link ini
-       dishare, untuk menampilkan preview kartu (judul, deskripsi,
-       gambar) bukan cuma teks URL polos. Murni tag HTML statis,
-       tidak butuh server/API tambahan apa pun — gratis sepenuhnya.
-
-       CATATAN: karena file ini statis (bukan rendering per-orang di
-       server), gambar & judul di sini bersifat GENERIK untuk semua
-       link verifikasi (memakai logo FB Academy), bukan foto/nama
-       spesifik tiap penerima sertifikat — itu butuh server-side
-       rendering dinamis yang di luar lingkup file HTML statis ini. -->
   <meta property="og:type"        content="website" />
   <meta property="og:title"       content="Certificate Verification — FB Academy" />
   <meta property="og:description" content="Officially verified certificate issued by Fantiber Balance Academy, Timor-Leste." />
@@ -237,7 +226,7 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* ── Course/workshop name: tampil di bawah nama, lebih kecil ──── */
+    /* ── Course/workshop name ── */
     .cert-course {
       font-family: 'Space Grotesk', sans-serif;
       font-size: 14px;
@@ -302,7 +291,7 @@
       letter-spacing: 0.04em;
     }
 
-    /* ── Footer ─────────────────────────────────────────────── */
+    /* ── Card Footer ─────────────────────────────────────────── */
     .card-footer {
       border-top: 1px solid rgba(255,255,255,0.05);
       padding-top: 20px;
@@ -569,11 +558,6 @@
     }
 
     /* ── Scroll reveal ──────────────────────────────────────── */
-    /* Durasi dipersingkat (0.9s → 0.35s) dan blur dikurangi (3px → 1.5px).
-       filter:blur() jauh lebih berat dirender di Android Chrome daripada
-       di Safari iOS (kurang teroptimasi GPU-nya), sehingga durasi panjang
-       + blur besar terasa lancar di iPhone tapi nyendat di Android.
-       Versi ini tetap halus di iOS, dan jadi jauh lebih responsif di Android. */
     .reveal-on-scroll {
       opacity: 0;
       transform: translateY(14px);
@@ -593,9 +577,7 @@
       transition-delay: 0.05s;
     }
 
-    /* ── Brand header: logo + "FB Academy" ─────────────────────
-       Tampil di semua state (loading/success/error) karena
-       diletakkan di luar 3 div state, langsung di dalam card-body. */
+    /* ── Brand header ── */
     .brand-header {
       display: flex;
       align-items: center;
@@ -658,19 +640,16 @@
     <div class="card-ribbon"></div>
     <div class="card-body">
 
-      <!-- Brand header: tampil di semua state (loading/success/error) -->
       <div class="brand-header">
         <img src="logo.png" alt="FB Academy" class="brand-logo" />
         <span class="brand-name">FB Academy</span>
       </div>
 
-      <!-- Loading -->
       <div id="state-loading" class="loading-state">
         <div class="spinner-ring"></div>
         <p class="loading-text">Verifying certificate</p>
       </div>
 
-      <!-- Success -->
       <div id="state-success" style="display:none;">
         <div class="badge-verified">
           <span class="badge-icon">
@@ -713,23 +692,16 @@
           </div>
         </div>
 
-        <!-- Add to LinkedIn: link resmi LinkedIn (gratis, bukan API),
-             href diisi dinamis lewat JS setelah data sertifikat dimuat
-             (lihat fungsi renderCertificate / buildLinkedInAddUrl). -->
         <a id="linkedin-add-btn" class="linkedin-add" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14zM8.34 18.34V10.13H5.67v8.21h2.67zM7 8.84A1.46 1.46 0 1 0 7 5.92a1.46 1.46 0 0 0 0 2.92zm11.34 9.5v-4.7c0-2.52-1.35-3.7-3.15-3.7a2.72 2.72 0 0 0-2.46 1.35h-.04v-1.16H9.97c.03.7 0 8.21 0 8.21h2.67v-4.58c0-.24.02-.49.1-.66a1.46 1.46 0 0 1 1.33-.98c.94 0 1.31.71 1.31 1.76v4.46h2.67z"/></svg>
           Add to LinkedIn Profile
         </a>
 
-        <!-- Tampil HANYA kalau data diambil dari fallback Google Sheet
-             (dokumen Firestore sudah tidak ada / dihapus admin) — murni
-             info kecil, tidak mengubah validitas sertifikat sama sekali. -->
         <p id="archive-note" style="display:none; margin-top:14px; font-size:10.5px; color:var(--text-muted); text-align:center; letter-spacing:0.04em;">
           Retrieved from permanent archive
         </p>
       </div>
 
-      <!-- Error -->
       <div id="state-error" class="error-state" style="display:none;">
         <div class="error-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e05555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -742,9 +714,7 @@
         <p id="error-msg" class="error-desc">This certificate ID does not exist or the link is invalid.</p>
       </div>
 
-    </div><!-- /.card-body -->
-
-    <div class="social-bar reveal-on-scroll" id="social-bar">
+    </div><div class="social-bar reveal-on-scroll" id="social-bar">
       <a class="social-link" href="https://www.instagram.com/fantiber.balance/" target="_blank" rel="noopener" aria-label="Instagram">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="5"/>
@@ -786,9 +756,7 @@
       </div>
     </div>
 
-  </div><!-- /.card -->
-
-  <div class="site-cta reveal-on-scroll" id="site-cta">
+  </div><div class="site-cta reveal-on-scroll" id="site-cta">
     <div class="site-cta-divider"></div>
     <span class="site-cta-label">More Courses &amp; Information</span>
     <a class="site-cta-link" href="https://www.fbacademytimorleste.com/" target="_blank" rel="noopener">
@@ -804,31 +772,12 @@
   <p class="wordmark">E-Certificate System</p>
 
   <script>
-    // ── Reveal social bar & site CTA berdasarkan ARAH scroll ───
-    // Sengaja dijalankan PALING AWAL (sebelum inisialisasi Firebase),
-    // dibungkus try-catch sendiri, supaya animasi scroll ini tetap aktif
-    // walau ada masalah lain di bagian Firebase/network (mis. koneksi
-    // lambat di Android) — keduanya independen sepenuhnya.
-    //
-    // Scroll ke BAWAH (meski sedikit) → muncul. Scroll ke ATAS (meski
-    // sedikit) → hilang lagi. Dipicu oleh DELTA gerakan, bukan posisi
-    // absolut scrollY — supaya terasa natural & responsif di kedua arah,
-    // bukan menunggu mencapai titik pixel tertentu.
-    //
-    // Dipasang di window DAN document.documentElement/document.body
-    // sekaligus (passive, redundant tapi murah) karena beberapa
-    // Android WebView/Chrome versi tertentu tidak selalu memicu event
-    // scroll secara konsisten hanya dari window saja — memasang di
-    // beberapa target memastikan event selalu tertangkap secepat
-    // mungkin di semua browser, tanpa mengubah perilaku iOS yang
-    // sudah lancar (iOS tetap menerima event yang sama, jadi tidak
-    // ada resiko regresi).
     try {
       (function setupScrollReveal() {
         const targets = document.querySelectorAll('.reveal-on-scroll');
         if (!targets.length) return;
 
-        const DELTA_THRESHOLD = 4; // gerakan scroll minimal (px) untuk memicu perubahan
+        const DELTA_THRESHOLD = 4;
         let lastY = window.scrollY || window.pageYOffset || 0;
         let visible = false;
         let ticking = false;
@@ -844,14 +793,10 @@
           const delta = y - lastY;
 
           if (y <= 2) {
-            // Selalu sembunyikan begitu balik mendekati paling atas,
-            // berapa pun arah delta-nya (jaga-jaga kasus tepi).
             setVisible(false);
           } else if (delta > DELTA_THRESHOLD) {
-            // Scroll ke BAWAH yang cukup jelas → tampilkan
             setVisible(true);
           } else if (delta < -DELTA_THRESHOLD) {
-            // Scroll ke ATAS yang cukup jelas → sembunyikan
             setVisible(false);
           }
 
@@ -861,17 +806,11 @@
 
         function onScroll() {
           if (!ticking) {
-            // requestAnimationFrame: dijalankan tepat sebelum browser
-            // repaint berikutnya — paling responsif di semua browser
-            // dibanding setTimeout/debounce manual.
             window.requestAnimationFrame(update);
             ticking = true;
           }
         }
 
-        // Pasang di beberapa target sekaligus (passive listener, murah,
-        // tidak saling konflik) supaya event scroll tertangkap reliable
-        // baik di Android Chrome maupun iOS Safari.
         window.addEventListener('scroll', onScroll, { passive: true });
         document.addEventListener('scroll', onScroll, { passive: true });
         document.body.addEventListener('scroll', onScroll, { passive: true });
@@ -894,22 +833,18 @@
     const db = firebase.firestore();
     db.settings({ experimentalForceLongPolling: true, useFetchStreams: false });
 
-    // ── Read UID from URL path or ?id= param ─────────────────
-    // Supports: /verify.html?id=UID  AND  /e-sertifikat/UID
     function getStudentId() {
       const params = new URLSearchParams(window.location.search);
       if (params.get('id')) return params.get('id');
-      // Path-based: last non-empty segment
       const segs = window.location.pathname.split('/').filter(Boolean);
       const last  = segs[segs.length - 1];
-      // Ignore known filenames
       if (last && last !== 'verify.html' && last !== 'index.html') return last;
       return null;
     }
 
     const studentId = getStudentId();
 
-    // ── WhatsApp popover toggle ────────────────────────────────
+    // ── WhatsApp popover toggle ──
     const waToggle   = document.getElementById('wa-toggle');
     const waPopover  = document.getElementById('wa-popover');
     if (waToggle && waPopover) {
@@ -936,7 +871,6 @@
       stError.style.display   = name === 'error'   ? 'flex'  : 'none';
     }
 
-    // ── Format date in English ────────────────────────────────
     function formatDate(raw) {
       let d;
       if (raw && typeof raw.toDate === 'function') {
@@ -947,67 +881,45 @@
       if (!d || isNaN(d)) return '—';
       return d.toLocaleDateString('en-GB', {
         day: 'numeric', month: 'long', year: 'numeric'
-      }); // e.g. "17 June 2026"
+      });
     }
 
-    // ════════════════════════════════════════════════════════════
-    // FALLBACK: Google Sheet via Apps Script (doGet)
-    //
-    // Dipanggil HANYA ketika dokumen Firestore TIDAK DITEMUKAN
-    // (doc.exists === false) — bukan saat error jaringan, karena kalau
-    // Firestore gagal akibat koneksi, fallback ke Sheet kemungkinan besar
-    // akan gagal dengan alasan yang sama, dan pesannya harus tetap
-    // "network error", bukan "not found", supaya tidak menyesatkan audiens.
-    //
-    // Sheet ini berfungsi sebagai ARSIP PERMANEN: meskipun admin menghapus
-    // dokumen di Firestore (cert_users) untuk bersih-bersih data, sertifikat
-    // tetap bisa diverifikasi lewat Apps Script yang membaca Google Sheet
-    // (yang tidak ikut terhapus). Endpoint yang sama (URL /exec) juga
-    // dipakai index_v9.html untuk doPost (tulis), di sini dipakai utk doGet.
-    // ════════════════════════════════════════════════════════════
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJb5bT3OqvE5-TYVrK9QqPwY_AhCaW3Sv88KK8lXhSPsQBad-oqfJFGdIdXJjg4gUW/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQyEZ8ABTIlM9FJdkiHetyTXskpLvAfm2dDuQpLHYzUK36eRs4RuC9zl3SBpMaQRz8/exec";
 
     // ── Deteksi otomatis "kursus/profesi" dari jawaban survey ──────
-    // Tidak ada field khusus terpisah — sistem mencari di antara
-    // SEMUA pertanyaan survey yang dijawab peserta (survey_answers),
-    // lalu mengambil jawaban dari pertanyaan pertama yang teksnya
-    // mengandung salah satu kata kunci di bawah. Ini bekerja untuk
-    // pertanyaan apa pun yang dibuat admin — "Course", "Kursus",
-    // "Kelas", "Class", "Job Title", "Pekerjaan", "Jurusan",
-    // "Departemen", dst — tanpa perlu field tambahan di form admin.
-    //
-    // Kalau TIDAK ADA pertanyaan yang cocok kata kunci apa pun,
-    // mengembalikan null — pemanggil (renderCertificate) akan
-    // menyembunyikan baris course di kartu, dan buildLinkedInAddUrl
-    // akan fallback ke teks generik "E-Certificate Completion — FB Academy".
     const COURSE_KEYWORDS = [
-  // English / Indonesia (punya lu)
-  'course','kursus','kelas','class','workshop',
-  'job title','job','pekerjaan','profesi','occupation',
-  'jurusan','department','departemen','program','major','bidang',
-  
-  // Português
-  'departamento','faculdade','ocupação','profissão',
-  'curso','classe','área','especialidade','formação',
-  'título profissional','cargo',
-  
-  // Tetum
-  'departamentu','fakuldade','okupasaun','profisaun',
-  'kursu','klase','area','espesialidade','formasaun',
-  'titulu servisu','knaar',
-  
-  // varian ejaan campur yang sering ketemu
-  'fakultas','fakulteti','departement','ocupacao','okupasaun','Nivél Kursu'
-];
+      'course', 'kursus', 'kelas', 'class', 'workshop',
+      'job title', 'job', 'pekerjaan', 'profesi', 'occupation',
+      'jurusan', 'department', 'departemen', 'departments',
+      'program', 'major', 'bidang', 'kursu', 'Nivél Kursu'
+    ];
+
+    // === BARU: Daftar keyword untuk mendeteksi custom Student ID / Certificate ID ===
+    const ID_KEYWORDS = [
+      'student id', 'certificate id', 'id sertifikat', 'id siswa', 
+      'nomer induk', 'no. induk', 'id mu', 'id acak', 'id knaar'
+    ];
 
     function detectCourseFromAnswers(surveyAnswers) {
       if (!Array.isArray(surveyAnswers) || !surveyAnswers.length) return null;
-
       for (const item of surveyAnswers) {
-        // Lewati pertanyaan "Full Name" — itu jelas bukan kursus/profesi
         if (item.isName) continue;
         const questionText = (item.questionText || '').toLowerCase();
         const matched = COURSE_KEYWORDS.some(kw => questionText.includes(kw));
+        if (matched && item.answer && item.answer.trim()) {
+          return item.answer.trim();
+        }
+      }
+      return null;
+    }
+
+    // === BARU: Fungsi untuk mendeteksi Custom ID dari jawaban kuesioner ===
+    function detectCustomIdFromAnswers(surveyAnswers) {
+      if (!Array.isArray(surveyAnswers) || !surveyAnswers.length) return null;
+      for (const item of surveyAnswers) {
+        if (item.isName) continue;
+        const questionText = (item.questionText || '').toLowerCase();
+        const matched = ID_KEYWORDS.some(kw => questionText.includes(kw));
         if (matched && item.answer && item.answer.trim()) {
           return item.answer.trim();
         }
@@ -1020,11 +932,11 @@
         .then(res => res.json())
         .then(data => {
           if (data && data.status === 'success' && data.found) {
-            // PERBAIKAN: Langsung ambil course_name yang dikirim oleh Apps Script
             let detectedCourse = data.course_name || null;
+            // Cek apakah Apps Script langsung mengirim properti id khusus kustom
+            let detectedCustomId = data.certificate_id || data.student_id || null;
 
-            // Jalankan fallback survey jawaban jika seandainya course_name kosong
-            if (!detectedCourse) {
+            if (!detectedCourse || !detectedCustomId) {
               const possibleAnswers = data.survey_answers || data.dynamicResponses || data.responses || null;
               if (Array.isArray(possibleAnswers)) {
                 const normalized = possibleAnswers.map(item => ({
@@ -1032,7 +944,8 @@
                   answer:       item.answer       || item.value || '',
                   isName:       !!item.isName,
                 }));
-                detectedCourse = detectCourseFromAnswers(normalized);
+                if (!detectedCourse) detectedCourse = detectCourseFromAnswers(normalized);
+                if (!detectedCustomId) detectedCustomId = detectCustomIdFromAnswers(normalized);
               }
             }
 
@@ -1042,10 +955,11 @@
               issued_at: data.issued_at || null,
               source:    'sheet',
               event:     data.event || null,
-              detectedCourse, // Sekarang sudah terisi dengan benar
+              detectedCourse,
+              detectedCustomId, // dimasukkan ke dalam return object
             };
           }
-          return null; // tidak ketemu di Sheet juga
+          return null;
         })
         .catch(err => {
           console.error('[Verify] Sheet fallback fetch failed:', err);
@@ -1058,18 +972,7 @@
       document.getElementById('error-msg').textContent =
         'No certificate ID found in this URL. Please scan the QR code again.';
     } else {
-      // ── Bangun URL "Add to LinkedIn Profile" ─────────────────
-      // Endpoint resmi & GRATIS dari LinkedIn (bukan API berbayar,
-      // bukan butuh App ID) — cukup URL dengan parameter query yang
-      // dibaca LinkedIn untuk pre-fill form "Add Certification" di
-      // profil pengguna. Dokumentasi publik: linkedin.com/help (Add
-      // to Profile button). Tanggal terbit dipakai sebagai issueYear/
-      // issueMonth bila tersedia.
       function buildLinkedInAddUrl(data) {
-        // Pakai nama kursus/profesi yang terdeteksi otomatis (lihat
-        // detectCourseFromAnswers) bila tersedia. Untuk sertifikat yang
-        // tidak punya jawaban survey yang cocok kata kunci apa pun,
-        // fallback ke nama generik supaya tombol tetap berfungsi.
         const certificationName = data.detectedCourse && data.detectedCourse.trim()
           ? data.detectedCourse.trim()
           : 'E-Certificate Completion — FB Academy';
@@ -1081,7 +984,6 @@
           certUrl:          window.location.href,
         });
 
-        // issueYear/issueMonth: ambil dari issued_at bila valid
         let d;
         if (data.issued_at && typeof data.issued_at.toDate === 'function') {
           d = data.issued_at.toDate();
@@ -1090,34 +992,36 @@
         }
         if (d && !isNaN(d)) {
           params.set('issueYear',  d.getFullYear());
-          params.set('issueMonth', d.getMonth() + 1); // LinkedIn: 1-12
+          params.set('issueMonth', d.getMonth() + 1);
         }
 
         return 'https://www.linkedin.com/profile/add?' + params.toString();
       }
 
-      // ── Render hasil ke kartu (dipakai baik dari Firestore maupun fallback Sheet) ──
       function renderCertificate(data) {
         document.getElementById('cert-name').textContent  = data.cert_name || '—';
         document.getElementById('cert-email').textContent = data.email     || '—';
-        document.getElementById('cert-uid').textContent   = studentId;
+        
+        // === DIUBAH: Logika Penentuan Tampilan Certificate ID ===
+        // Jika ada Student ID / Certificate ID kustom yang terdeteksi, tampilkan itu.
+        // Jika kosong, pakai UID asli bawaan Firebase dari URL (studentId).
+        const displayUid = data.detectedCustomId && data.detectedCustomId.trim()
+          ? data.detectedCustomId.trim()
+          : studentId;
+        document.getElementById('cert-uid').textContent = displayUid;
+        
         document.getElementById('cert-issue').textContent = formatDate(data.issued_at);
 
-        // Nama kursus/profesi — hasil deteksi otomatis dari jawaban survey
-        // (lihat detectCourseFromAnswers). Tampil HANYA jika terdeteksi;
-        // kalau tidak ada pertanyaan survey yang cocok kata kunci apa pun,
-        // sembunyikan baris ini sepenuhnya (fallback teks generik tetap
-        // dipakai di tombol LinkedIn, tapi tidak perlu ditampilkan di sini).
         const courseEl     = document.getElementById('cert-course');
         const courseTextEl = document.getElementById('cert-course-text');
         const nameEl        = document.getElementById('cert-name');
         if (data.detectedCourse && data.detectedCourse.trim()) {
           courseTextEl.textContent = data.detectedCourse.trim();
           courseEl.style.display = 'block';
-          nameEl.style.marginBottom = '4px'; // rapatkan ke course name di bawahnya
+          nameEl.style.marginBottom = '4px';
         } else {
           courseEl.style.display = 'none';
-          nameEl.style.marginBottom = '28px'; // jarak normal tanpa course name
+          nameEl.style.marginBottom = '28px';
         }
 
         const archiveNote = document.getElementById('archive-note');
@@ -1141,18 +1045,13 @@
               email:     d.email,
               issued_at: d.issued_at,
               source:    'firestore',
-              // survey_answers disimpan oleh index.html di surveyFinishAndGenerate()
-              // (array {questionId, questionText, answer, type, isName}).
-              // detectCourseFromAnswers mencari jawaban yang teks pertanyaannya
-              // cocok kata kunci kursus/profesi — lihat definisi di atas.
               detectedCourse: detectCourseFromAnswers(d.survey_answers),
+              // === BARU: Deteksi ID Kustom dari Firestore data ===
+              detectedCustomId: detectCustomIdFromAnswers(d.survey_answers),
             });
             return;
           }
 
-          // ── Dokumen Firestore tidak ditemukan → coba fallback ke Sheet ──
-          // (mis. admin sudah menghapus dokumen lama untuk bersih-bersih data,
-          // tapi sertifikat ini tetap pernah sah diterbitkan & tercatat di Sheet)
           return fetchFromSheetFallback(studentId).then(sheetData => {
             if (sheetData) {
               renderCertificate(sheetData);
@@ -1164,10 +1063,6 @@
           });
         })
         .catch(err => {
-          // Error JARINGAN saat query Firestore — TIDAK mencoba fallback Sheet,
-          // karena kemungkinan besar gagal dengan alasan koneksi yang sama;
-          // pesannya tetap "network error", bukan "not found", agar tidak
-          // menyesatkan audiens yang sebenarnya cuma sedang offline.
           console.error(err);
           showState('error');
           document.getElementById('error-msg').textContent =

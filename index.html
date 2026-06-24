@@ -5955,10 +5955,12 @@ function renderSurveyResults(rows) {
   if (!wrap) return;
 
   // Kumpulkan semua survey_answers yang valid dari tiap peserta.
+  // Pertanyaan "Nama lengkap" (isName) DIKECUALIKAN di sini — Survey Results
+  // hanya untuk rekap isi survei, bukan daftar nama peserta.
   const allAnswers = []; // { questionId, questionText, answer }
   rows.forEach(r => {
     if (Array.isArray(r.survey_answers)) {
-      r.survey_answers.forEach(a => allAnswers.push(a));
+      r.survey_answers.forEach(a => { if (!a.isName) allAnswers.push(a); });
     }
   });
 

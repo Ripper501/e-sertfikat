@@ -226,7 +226,7 @@
       font-weight: 600;
       line-height: 1.1;
       color: var(--text);
-      margin-bottom: 28px;
+      margin-bottom: 14px;
       word-break: break-word;
       opacity: 0;
       transform: translateY(10px);
@@ -235,6 +235,28 @@
     }
     @keyframes fadeUp {
       to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Course/workshop name: tampil di bawah nama, lebih kecil ──── */
+    .cert-course {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--gold);
+      margin-bottom: 24px;
+      line-height: 1.4;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.68s forwards;
+    }
+    .cert-course-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
     }
 
     /* ── Divider ────────────────────────────────────────────── */
@@ -661,6 +683,10 @@
 
         <p class="eyebrow">This certificate is presented to</p>
         <h1 id="cert-name" class="cert-name">—</h1>
+        <p id="cert-course" class="cert-course" style="display:none;">
+          <span class="cert-course-label">For successfully completing</span>
+          <span id="cert-course-text">—</span>
+        </p>
 
         <div class="divider"></div>
 
@@ -941,17 +967,71 @@
     // ════════════════════════════════════════════════════════════
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDEcr_BwQpXyTbCLU2c20MzjcrLvyTlO2EHOCVbP2t0GK0VO2GHGHZSNaNaSbvq_QIWw/exec";
 
+    // ── Deteksi otomatis "kursus/profesi" dari jawaban survey ──────
+    // Tidak ada field khusus terpisah — sistem mencari di antara
+    // SEMUA pertanyaan survey yang dijawab peserta (survey_answers),
+    // lalu mengambil jawaban dari pertanyaan pertama yang teksnya
+    // mengandung salah satu kata kunci di bawah. Ini bekerja untuk
+    // pertanyaan apa pun yang dibuat admin — "Course", "Kursus",
+    // "Kelas", "Class", "Job Title", "Pekerjaan", "Jurusan",
+    // "Departemen", dst — tanpa perlu field tambahan di form admin.
+    //
+    // Kalau TIDAK ADA pertanyaan yang cocok kata kunci apa pun,
+    // mengembalikan null — pemanggil (renderCertificate) akan
+    // menyembunyikan baris course di kartu, dan buildLinkedInAddUrl
+    // akan fallback ke teks generik "E-Certificate Completion — FB Academy".
+    const COURSE_KEYWORDS = [
+      'course', 'kursus', 'kelas', 'class', 'workshop',
+      'job title', 'job', 'pekerjaan', 'profesi', 'occupation',
+      'jurusan', 'department', 'departemen', 'departments',
+      'program', 'major', 'bidang'
+    ];
+
+    function detectCourseFromAnswers(surveyAnswers) {
+      if (!Array.isArray(surveyAnswers) || !surveyAnswers.length) return null;
+
+      for (const item of surveyAnswers) {
+        // Lewati pertanyaan "Full Name" — itu jelas bukan kursus/profesi
+        if (item.isName) continue;
+        const questionText = (item.questionText || '').toLowerCase();
+        const matched = COURSE_KEYWORDS.some(kw => questionText.includes(kw));
+        if (matched && item.answer && item.answer.trim()) {
+          return item.answer.trim();
+        }
+      }
+      return null;
+    }
+
     function fetchFromSheetFallback(uid) {
       return fetch(`${APPS_SCRIPT_URL}?id=${encodeURIComponent(uid)}`)
         .then(res => res.json())
         .then(data => {
           if (data && data.status === 'success' && data.found) {
+            // Coba deteksi dari jawaban survey bila Apps Script mengirim
+            // baliknya (nama field bisa berbeda tergantung implementasi
+            // doGet di Apps Script — dicoba beberapa kemungkinan nama
+            // secara graceful, aman bila tidak ada satupun yang cocok).
+            const possibleAnswers = data.survey_answers || data.dynamicResponses || data.responses || null;
+            let detectedCourse = null;
+            if (Array.isArray(possibleAnswers)) {
+              // Normalisasi: dynamicResponses dari index.html berbentuk
+              // {label, value}, sementara survey_answers berbentuk
+              // {questionText, answer} — disamakan dulu sebelum dicek.
+              const normalized = possibleAnswers.map(item => ({
+                questionText: item.questionText || item.label || '',
+                answer:       item.answer       || item.value || '',
+                isName:       !!item.isName,
+              }));
+              detectedCourse = detectCourseFromAnswers(normalized);
+            }
+
             return {
               cert_name: data.cert_name || '—',
               email:     data.email     || '—',
               issued_at: data.issued_at || null, // string ISO dari Sheet, formatDate() sudah menangani ini
               source:    'sheet',
               event:     data.event || null,
+              detectedCourse,
             };
           }
           return null; // tidak ketemu di Sheet juga
@@ -975,9 +1055,17 @@
       // to Profile button). Tanggal terbit dipakai sebagai issueYear/
       // issueMonth bila tersedia.
       function buildLinkedInAddUrl(data) {
+        // Pakai nama kursus/profesi yang terdeteksi otomatis (lihat
+        // detectCourseFromAnswers) bila tersedia. Untuk sertifikat yang
+        // tidak punya jawaban survey yang cocok kata kunci apa pun,
+        // fallback ke nama generik supaya tombol tetap berfungsi.
+        const certificationName = data.detectedCourse && data.detectedCourse.trim()
+          ? data.detectedCourse.trim()
+          : 'E-Certificate Completion — FB Academy';
+
         const params = new URLSearchParams({
           startTask:        'CERTIFICATION_NAME',
-          name:             'Certificate of Completion — FB Academy',
+          name:             certificationName,
           organizationName: 'Fantiber Balance Academy',
           certUrl:          window.location.href,
         });
@@ -1004,6 +1092,23 @@
         document.getElementById('cert-uid').textContent   = studentId;
         document.getElementById('cert-issue').textContent = formatDate(data.issued_at);
 
+        // Nama kursus/profesi — hasil deteksi otomatis dari jawaban survey
+        // (lihat detectCourseFromAnswers). Tampil HANYA jika terdeteksi;
+        // kalau tidak ada pertanyaan survey yang cocok kata kunci apa pun,
+        // sembunyikan baris ini sepenuhnya (fallback teks generik tetap
+        // dipakai di tombol LinkedIn, tapi tidak perlu ditampilkan di sini).
+        const courseEl     = document.getElementById('cert-course');
+        const courseTextEl = document.getElementById('cert-course-text');
+        const nameEl        = document.getElementById('cert-name');
+        if (data.detectedCourse && data.detectedCourse.trim()) {
+          courseTextEl.textContent = data.detectedCourse.trim();
+          courseEl.style.display = 'block';
+          nameEl.style.marginBottom = '4px'; // rapatkan ke course name di bawahnya
+        } else {
+          courseEl.style.display = 'none';
+          nameEl.style.marginBottom = '28px'; // jarak normal tanpa course name
+        }
+
         const archiveNote = document.getElementById('archive-note');
         if (archiveNote) archiveNote.style.display = data.source === 'sheet' ? 'block' : 'none';
 
@@ -1025,6 +1130,11 @@
               email:     d.email,
               issued_at: d.issued_at,
               source:    'firestore',
+              // survey_answers disimpan oleh index.html di surveyFinishAndGenerate()
+              // (array {questionId, questionText, answer, type, isName}).
+              // detectCourseFromAnswers mencari jawaban yang teks pertanyaannya
+              // cocok kata kunci kursus/profesi — lihat definisi di atas.
+              detectedCourse: detectCourseFromAnswers(d.survey_answers),
             });
             return;
           }

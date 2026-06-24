@@ -1475,6 +1475,59 @@
   }
   .gv-item-link:hover { text-decoration: underline; }
 
+  /* ─── GEO VIOLATIONS: gear menu (Select / Delete All) ───────── */
+  .gv-modal-gear-wrap { position: relative; flex-shrink: 0; }
+  .gv-modal-gear-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border-soft);
+    color: var(--text-muted); cursor: pointer; transition: var(--transition);
+  }
+  .gv-modal-gear-btn:hover { border-color: rgba(204,255,0,0.35); color: var(--text); }
+  .gv-item-checkbox { margin-right: 4px; }
+  .gv-item-row-flex { display: flex; align-items: flex-start; gap: 10px; }
+  .gv-item-row-flex .gv-item-body { flex: 1; min-width: 0; }
+
+  /* Toolbar mode Select di dalam modal Geo Violations */
+  #gv-select-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border-soft);
+    border-radius: 10px; padding: 8px 12px; margin-bottom: 10px;
+    font-size: 12.5px; color: var(--text-muted);
+  }
+  #gv-select-toolbar label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+  /* ─── RIGHT-CLICK CONTEXT MENU (pelanggar: Hapus / Akses) ───── */
+  .gv-context-menu {
+    position: fixed; z-index: 9999; min-width: 170px;
+    background: #1e2033; border: 1px solid rgba(204,255,0,0.18);
+    border-radius: 10px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    display: none;
+  }
+  .gv-context-menu.open { display: block; }
+  .gv-context-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 10px 14px; cursor: pointer;
+    border: none; background: transparent; text-align: left;
+    color: var(--text); font-size: 13px; transition: background .15s;
+  }
+  .gv-context-item:hover { background: rgba(204,255,0,0.07); }
+  .gv-context-item-danger { color: var(--danger); }
+  .gv-context-item-danger:hover { background: rgba(255,77,109,0.08); }
+  .gv-context-item-access { color: var(--success); }
+  .gv-context-item-access:hover { background: rgba(0,229,160,0.08); }
+  .gv-item.gv-item-access-granted {
+    background: rgba(0,229,160,0.04); border-color: rgba(0,229,160,0.25);
+  }
+  .gv-access-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.03em;
+    color: var(--success); background: rgba(0,229,160,0.1);
+    border: 1px solid rgba(0,229,160,0.3); border-radius: 5px;
+    padding: 2px 7px; margin-left: 8px;
+  }
+
   /* ─── ADMIN ACCESS DENIED OVERLAY ────────────────────────── */
   #screen-admin-denied { max-width: 420px; }
 
@@ -3008,19 +3061,66 @@
         <div class="gv-modal-title">⚠️ Geofence Violations</div>
         <div class="gv-modal-subtitle" id="gv-modal-count">Loading…</div>
       </div>
-      <button class="gv-modal-close" onclick="closeGeoViolationsModal()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="gv-modal-gear-wrap">
+          <button type="button" class="gv-modal-gear-btn" onclick="gvToggleTableMenu(this)" title="More options">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+          <div class="admin-menu-dropdown" id="gv-table-menu" style="display:none;">
+            <button type="button" class="admin-menu-item" onclick="gvEnterSelectMode()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              Select
+            </button>
+            <button type="button" class="admin-menu-item admin-menu-item-danger" onclick="gvConfirmDeleteAll()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+              Delete All
+            </button>
+          </div>
+        </div>
+        <button class="gv-modal-close" onclick="closeGeoViolationsModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
     </div>
-    <div class="gv-modal-body" id="gv-modal-body">
-      <div style="text-align:center; padding:40px 0; color:var(--text-muted);">
-        <div class="spinner" style="margin:0 auto 12px;"></div>
-        Loading violations…
+    <div class="gv-modal-body" id="gv-modal-body-wrap">
+      <!-- Toolbar mode Select — tampil HANYA saat mode select aktif -->
+      <div id="gv-select-toolbar" style="display:none;">
+        <label>
+          <input type="checkbox" id="gv-select-all-checkbox" onchange="gvToggleSelectAll(this.checked)" />
+          <span id="gv-select-count">0 selected</span>
+        </label>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-admin-select-cancel" onclick="gvExitSelectMode()">Cancel</button>
+          <button type="button" class="btn-admin-select-delete" id="gv-delete-selected-btn" onclick="gvConfirmDeleteSelected()" disabled>
+            Delete Selected
+          </button>
+        </div>
+      </div>
+      <div id="gv-modal-body">
+        <div style="text-align:center; padding:40px 0; color:var(--text-muted);">
+          <div class="spinner" style="margin:0 auto 12px;"></div>
+          Loading violations…
+        </div>
       </div>
     </div>
   </div>
+</div>
+
+<!-- ── CONTEXT MENU klik-kanan: Hapus / Akses (per pelanggar) ── -->
+<div class="gv-context-menu" id="gv-context-menu">
+  <button type="button" class="gv-context-item gv-context-item-access" id="gv-ctx-access-btn" onclick="gvContextGrantAccess()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    Akses
+  </button>
+  <button type="button" class="gv-context-item gv-context-item-danger" onclick="gvContextDelete()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+    Hapus
+  </button>
 </div>
 
 <!-- ── SURVEY RESULTS MODAL ───────────────────────────────────
@@ -3200,6 +3300,7 @@ const EVENT_LOCATION  = "Dili Convention Centre, Timor-Leste";
 // ── FIRESTORE COLLECTIONS ──────────────────────────────────────────
 const USERS_COLLECTION      = "cert_users";
 const VIOLATIONS_COLLECTION = "geofence_violations";
+const GEO_ACCESS_COLLECTION = "geo_access_overrides";
 
 // ══════════════════════════════════════════════════════════════════
 // FIREBASE INIT
@@ -3386,6 +3487,21 @@ async function runVerificationPipeline() {
   }
 
   // ── 3. Geofence check ───────────────────────────────────────
+  // Sebelum minta GPS, cek dulu apakah admin sudah memberi akses manual
+  // (lewat menu klik-kanan "Akses" di modal Geo Violations) — kalau ya,
+  // skip geofence sepenuhnya, langsung lanjut ke survei. Ini jalan keluar
+  // untuk kasus GPS error / tidak akurat di lapangan.
+  setCheckLabel('Checking access permissions…');
+  try {
+    const accessDoc = await db.collection(GEO_ACCESS_COLLECTION).doc(currentUser.uid).get();
+    if (accessDoc.exists && accessDoc.data().granted === true) {
+      await surveyStart();
+      return;
+    }
+  } catch (e) {
+    console.warn('[GeoAccess] Override check failed:', e.message);
+  }
+
   await runGeofenceCheck();
 }
 
@@ -3479,6 +3595,10 @@ async function openGeoViolationsModal() {
       return tb - ta;
     });
 
+    gvAllRows = rows; // simpan untuk select-mode / context-menu
+    gvSelectedIds.clear();
+    gvUpdateSelectCount();
+
     countL.textContent = `${rows.length} violation${rows.length !== 1 ? 's' : ''} recorded`;
 
     if (rows.length === 0) {
@@ -3488,49 +3608,13 @@ async function openGeoViolationsModal() {
       return;
     }
 
-    body.innerHTML = rows.map(r => {
-      const name  = escapeHtml(r.displayName || 'Unknown');
-      const email = escapeHtml(r.email || '—');
-      const ts    = r.timestamp ? new Date(r.timestamp.seconds * 1000).toLocaleString('id-ID') : '—';
-      const hasCoords = (r.attempted_lat != null && r.attempted_lng != null);
+    // Cek status akses (granted) untuk tiap uid pelanggar, supaya badge
+    // "✓ Access Granted" muncul kalau admin sudah klik "Akses" sebelumnya.
+    const accessSnap = await db.collection(GEO_ACCESS_COLLECTION).get();
+    const grantedUids = new Set();
+    accessSnap.forEach(doc => { if (doc.data().granted === true) grantedUids.add(doc.id); });
 
-      let locHtml;
-      if (hasCoords) {
-        const lat = r.attempted_lat.toFixed(5);
-        const lng = r.attempted_lng.toFixed(5);
-        const mapsUrl = `https://www.google.com/maps?q=${r.attempted_lat},${r.attempted_lng}`;
-        locHtml = `
-          <div class="gv-item-loc-row">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-            </svg>
-            <span id="gv-addr-${r.id}">Resolving address… (${lat}, ${lng})</span>
-            <a class="gv-item-link" href="${mapsUrl}" target="_blank" rel="noopener">Open in Maps ↗</a>
-          </div>
-          ${r.distance_m != null ? `<span class="gv-item-dist">${r.distance_m.toLocaleString('id-ID')} m from event location</span>` : ''}
-        `;
-      } else {
-        locHtml = `
-          <div class="gv-item-loc-row">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            <span>Location unavailable${r.reason ? ` — ${escapeHtml(r.reason)}` : ' (permission denied)'}</span>
-          </div>
-        `;
-      }
-
-      return `
-        <div class="gv-item">
-          <div class="gv-item-top">
-            <div class="gv-item-name">${name}</div>
-            <div class="gv-item-time">${ts}</div>
-          </div>
-          <div class="gv-item-email">${email}</div>
-          ${locHtml}
-        </div>
-      `;
-    }).join('');
+    gvRenderRows(rows, grantedUids);
 
     // Reverse-geocode tiap koordinat jadi alamat (async, isi belakangan tanpa blok render)
     rows.forEach(r => {
@@ -3545,6 +3629,70 @@ async function openGeoViolationsModal() {
     </div>`;
     countL.textContent = 'Error';
   }
+}
+
+// State untuk select-mode & data baris Geo Violations (dipakai context menu juga)
+let gvAllRows = [];
+let gvSelectMode = false;
+let gvSelectedIds = new Set();
+let gvContextTargetUid = null; // uid baris yang diklik-kanan saat ini
+
+function gvRenderRows(rows, grantedUids) {
+  const body = document.getElementById('gv-modal-body');
+  body.innerHTML = rows.map(r => {
+    const name  = escapeHtml(r.displayName || 'Unknown');
+    const email = escapeHtml(r.email || '—');
+    const ts    = r.timestamp ? new Date(r.timestamp.seconds * 1000).toLocaleString('id-ID') : '—';
+    const hasCoords = (r.attempted_lat != null && r.attempted_lng != null);
+    const isGranted = grantedUids && grantedUids.has(r.uid);
+    const isChecked = gvSelectedIds.has(r.id);
+
+    let locHtml;
+    if (hasCoords) {
+      const lat = r.attempted_lat.toFixed(5);
+      const lng = r.attempted_lng.toFixed(5);
+      const mapsUrl = `https://www.google.com/maps?q=${r.attempted_lat},${r.attempted_lng}`;
+      locHtml = `
+        <div class="gv-item-loc-row">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          <span id="gv-addr-${r.id}">Resolving address… (${lat}, ${lng})</span>
+          <a class="gv-item-link" href="${mapsUrl}" target="_blank" rel="noopener">Open in Maps ↗</a>
+        </div>
+        ${r.distance_m != null ? `<span class="gv-item-dist">${r.distance_m.toLocaleString('id-ID')} m from event location</span>` : ''}
+      `;
+    } else {
+      locHtml = `
+        <div class="gv-item-loc-row">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>Location unavailable${r.reason ? ` — ${escapeHtml(r.reason)}` : ' (permission denied)'}</span>
+        </div>
+      `;
+    }
+
+    const checkboxHtml = gvSelectMode
+      ? `<input type="checkbox" class="gv-item-checkbox" data-vid="${escapeHtml(r.id)}" ${isChecked ? 'checked' : ''} onchange="gvToggleRowSelect('${escapeHtml(r.id)}', this.checked)" onclick="event.stopPropagation()" />`
+      : '';
+
+    return `
+      <div class="gv-item ${isGranted ? 'gv-item-access-granted' : ''}" data-vid="${escapeHtml(r.id)}" data-uid="${escapeHtml(r.uid || '')}" oncontextmenu="gvOpenContextMenu(event, '${escapeHtml(r.id)}', '${escapeHtml(r.uid || '')}', '${escapeHtml(r.email || '')}')">
+        <div class="gv-item-row-flex">
+          ${checkboxHtml}
+          <div class="gv-item-body">
+            <div class="gv-item-top">
+              <div class="gv-item-name">${name}${isGranted ? '<span class="gv-access-badge">✓ Access Granted</span>' : ''}</div>
+              <div class="gv-item-time">${ts}</div>
+            </div>
+            <div class="gv-item-email">${email}</div>
+            ${locHtml}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 // Reverse geocode via Nominatim (OpenStreetMap) — gratis, tanpa API key
@@ -3572,7 +3720,244 @@ function closeGeoViolationsModal() {
   modal.classList.remove('open');
   document.body.style.overflow = '';
   document.removeEventListener('keydown', gvEscHandler);
+  gvExitSelectMode();
+  gvCloseContextMenu();
 }
+
+// ══════════════════════════════════════════════════════════════════
+// GEO VIOLATIONS: gear menu (Select / Delete All) — meniru pola yang
+// sama dengan menu titik-tiga di tabel Participants.
+// ══════════════════════════════════════════════════════════════════
+window.gvToggleTableMenu = function(triggerBtn) {
+  const menu = document.getElementById('gv-table-menu');
+  const willOpen = menu.style.display === 'none';
+  menu.style.display = willOpen ? 'block' : 'none';
+};
+
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.gv-modal-gear-wrap')) return;
+  const menu = document.getElementById('gv-table-menu');
+  if (menu) menu.style.display = 'none';
+});
+
+window.gvEnterSelectMode = function() {
+  gvSelectMode = true;
+  gvSelectedIds.clear();
+  document.getElementById('gv-table-menu').style.display = 'none';
+  document.getElementById('gv-select-toolbar').style.display = 'flex';
+  document.getElementById('gv-select-all-checkbox').checked = false;
+  gvUpdateSelectCount();
+  gvRenderRows(gvAllRows);
+};
+
+window.gvExitSelectMode = function() {
+  gvSelectMode = false;
+  gvSelectedIds.clear();
+  const toolbar = document.getElementById('gv-select-toolbar');
+  if (toolbar) toolbar.style.display = 'none';
+  if (gvAllRows.length) gvRenderRows(gvAllRows);
+};
+
+window.gvToggleRowSelect = function(vid, checked) {
+  if (checked) gvSelectedIds.add(vid);
+  else gvSelectedIds.delete(vid);
+  gvUpdateSelectCount();
+};
+
+window.gvToggleSelectAll = function(checked) {
+  if (checked) gvAllRows.forEach(r => gvSelectedIds.add(r.id));
+  else gvSelectedIds.clear();
+  gvUpdateSelectCount();
+  gvRenderRows(gvAllRows);
+};
+
+function gvUpdateSelectCount() {
+  const countSpan = document.getElementById('gv-select-count');
+  const deleteBtn = document.getElementById('gv-delete-selected-btn');
+  if (countSpan) countSpan.textContent = `${gvSelectedIds.size} selected`;
+  if (deleteBtn) deleteBtn.disabled = gvSelectedIds.size === 0;
+}
+
+window.gvConfirmDeleteSelected = function() {
+  const n = gvSelectedIds.size;
+  if (n === 0) return;
+  Swal.fire({
+    icon: 'warning',
+    title: `Delete ${n} violation record${n !== 1 ? 's' : ''}?`,
+    html: `<p style="font-size:13px; color:var(--text-muted); line-height:1.6;">
+             This permanently removes the selected geofence violation record(s) from Firestore.
+           </p>`,
+    showCancelButton: true,
+    confirmButtonText: `Delete ${n}`,
+    confirmButtonColor: 'var(--danger)',
+    cancelButtonText: 'Cancel',
+    customClass: { popup: 'swal2-dark-custom' }
+  }).then(result => {
+    if (result.isConfirmed) gvExecuteDelete(Array.from(gvSelectedIds));
+  });
+};
+
+window.gvConfirmDeleteAll = function() {
+  document.getElementById('gv-table-menu').style.display = 'none';
+  const total = gvAllRows.length;
+  if (total === 0) {
+    showToast('error', 'Nothing to delete', 'There are no violation records yet.');
+    return;
+  }
+  Swal.fire({
+    icon: 'warning',
+    title: `Delete ALL ${total} violation records?`,
+    html: `<p style="font-size:13px; color:var(--text-muted); line-height:1.6;">
+             This permanently removes <b style="color:var(--danger)">every</b> geofence violation record from Firestore.<br><br>
+             Type <b style="color:var(--text)">DELETE</b> below to confirm.
+           </p>`,
+    input: 'text',
+    inputPlaceholder: 'Type DELETE to confirm',
+    showCancelButton: true,
+    confirmButtonText: 'Delete All',
+    confirmButtonColor: 'var(--danger)',
+    cancelButtonText: 'Cancel',
+    customClass: { popup: 'swal2-dark-custom' },
+    preConfirm: (value) => {
+      if (value !== 'DELETE') {
+        Swal.showValidationMessage('You must type DELETE exactly to confirm.');
+        return false;
+      }
+      return true;
+    }
+  }).then(result => {
+    if (result.isConfirmed) gvExecuteDelete(gvAllRows.map(r => r.id));
+  });
+};
+
+async function gvExecuteDelete(vids) {
+  if (!vids || vids.length === 0) return;
+
+  Swal.fire({
+    title: 'Deleting…',
+    html: `<div class="spinner" style="margin:12px auto;"></div>`,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    customClass: { popup: 'swal2-dark-custom' }
+  });
+
+  try {
+    const chunkSize = 450;
+    for (let i = 0; i < vids.length; i += chunkSize) {
+      const chunk = vids.slice(i, i + chunkSize);
+      const batch = db.batch();
+      chunk.forEach(vid => batch.delete(db.collection(VIOLATIONS_COLLECTION).doc(vid)));
+      await batch.commit();
+    }
+
+    gvSelectedIds.clear();
+    Swal.close();
+    showToast('success', 'Deleted', `${vids.length} violation record${vids.length !== 1 ? 's' : ''} removed.`);
+    gvExitSelectMode();
+    openGeoViolationsModal(); // reload list
+  } catch (err) {
+    Swal.close();
+    console.error('[GeoViolations] Delete failed:', err);
+    showToast('error', 'Delete failed', err.message || 'Please try again.');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CONTEXT MENU klik-kanan per pelanggar: "Hapus" & "Akses"
+// "Akses" menulis dokumen ke koleksi geo_access_overrides dengan id =
+// uid pelanggar, { granted: true }. Saat orang itu login lagi, fungsi
+// runVerificationPipeline akan men-skip pengecekan GPS/geofence dan
+// langsung mengizinkan dia masuk ke form survei untuk klaim sertifikat
+// — berguna kalau GPS-nya error padahal dia memang hadir di lokasi.
+// ══════════════════════════════════════════════════════════════════
+window.gvOpenContextMenu = function(evt, vid, uid, email) {
+  evt.preventDefault();
+  gvContextTargetUid = uid || null;
+  gvContextTargetVid = vid;
+  gvContextTargetEmail = email || '';
+
+  const menu = document.getElementById('gv-context-menu');
+  const accessBtn = document.getElementById('gv-ctx-access-btn');
+  if (accessBtn) accessBtn.style.display = uid ? 'flex' : 'none'; // tanpa uid (error GPS tanpa login) tidak bisa diberi akses
+
+  menu.classList.add('open');
+  // Posisikan di titik klik, dengan sedikit penyesuaian agar tidak keluar viewport
+  const menuWidth = 180, menuHeight = 90;
+  let x = evt.clientX, y = evt.clientY;
+  if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 8;
+  if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 8;
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+};
+
+let gvContextTargetVid = null;
+let gvContextTargetEmail = '';
+
+function gvCloseContextMenu() {
+  const menu = document.getElementById('gv-context-menu');
+  if (menu) menu.classList.remove('open');
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#gv-context-menu')) gvCloseContextMenu();
+});
+document.addEventListener('contextmenu', function(e) {
+  if (!e.target.closest('.gv-item')) gvCloseContextMenu();
+});
+
+window.gvContextDelete = function() {
+  gvCloseContextMenu();
+  if (!gvContextTargetVid) return;
+  Swal.fire({
+    icon: 'warning',
+    title: 'Delete this violation record?',
+    html: `<p style="font-size:13px; color:var(--text-muted);">${escapeHtml(gvContextTargetEmail || 'This record')} will be removed from the violations list.</p>`,
+    showCancelButton: true,
+    confirmButtonText: 'Delete',
+    confirmButtonColor: 'var(--danger)',
+    cancelButtonText: 'Cancel',
+    customClass: { popup: 'swal2-dark-custom' }
+  }).then(result => {
+    if (result.isConfirmed) gvExecuteDelete([gvContextTargetVid]);
+  });
+};
+
+window.gvContextGrantAccess = function() {
+  gvCloseContextMenu();
+  if (!gvContextTargetUid) {
+    showToast('error', 'Cannot grant access', 'No user account linked to this record (GPS permission was likely denied before login).');
+    return;
+  }
+  Swal.fire({
+    icon: 'question',
+    title: 'Grant survey access?',
+    html: `<p style="font-size:13px; color:var(--text-muted); line-height:1.6;">
+             <b style="color:var(--text)">${escapeHtml(gvContextTargetEmail)}</b> will be allowed to skip the
+             geofence/GPS check and go straight to the survey to claim an e-certificate.<br><br>
+             Use this when you're confident the person was actually on-site but their GPS failed.
+           </p>`,
+    showCancelButton: true,
+    confirmButtonText: 'Grant Access',
+    confirmButtonColor: 'var(--success)',
+    cancelButtonText: 'Cancel',
+    customClass: { popup: 'swal2-dark-custom' }
+  }).then(async result => {
+    if (!result.isConfirmed) return;
+    try {
+      await db.collection(GEO_ACCESS_COLLECTION).doc(gvContextTargetUid).set({
+        granted: true,
+        email: gvContextTargetEmail || null,
+        granted_at: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showToast('success', 'Access granted', `${gvContextTargetEmail} can now access the survey without GPS check.`);
+      openGeoViolationsModal(); // reload supaya badge "Access Granted" muncul
+    } catch (err) {
+      console.error('[GeoAccess] Grant failed:', err);
+      showToast('error', 'Failed to grant access', err.message || 'Please try again.');
+    }
+  });
+};
 
 function gvEscHandler(e) {
   if (e.key === 'Escape') closeGeoViolationsModal();

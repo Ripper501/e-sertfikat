@@ -4157,6 +4157,15 @@ let studentSurveyAnswers   = {};    // { [questionId]: answerString }
 let studentSurveyIndex     = 0;     // index pertanyaan yang sedang ditampilkan
 
 async function surveyStart() {
+  // ── Mulai preload gambar sertifikat (template + halaman belakang) DI
+  // BACKGROUND begitu survei dimulai — bukan di-await, jadi tidak
+  // memblokir tampilan pertanyaan survei. Tujuannya: saat peserta sampai
+  // pertanyaan terakhir & klik "Finish", gambar-gambar ini sudah ada di
+  // cache (sudah selesai di-download), sehingga proses "Processing..."
+  // tidak perlu menunggu download gambar lagi → jauh lebih cepat,
+  // TANPA mengubah resolusi/kualitas gambar sama sekali.
+  preloadCertAssets();
+
   try {
     const snap = await db.collection('settings').doc('survey_config').get();
     const d = snap.exists ? snap.data() : null;
@@ -4580,16 +4589,27 @@ async function surveyFinishAndGenerate() {
 
     // Gunakan text/plain untuk membungkus JSON agar bypass CORS (Anti-Blokir Browser)
     // PENTING: Gunakan text/plain dan no-cors untuk membungkus JSON agar bypass CORS (Anti-Blokir Browser)
-    await fetch(urlAppsScript, {
+    //
+    // CATATAN PERFORMA: fetch ini SENGAJA TIDAK di-`await` (fire-and-forget).
+    // Payload yang dikirim ke Google Sheet TETAP SAMA PERSIS — tidak ada field
+    // yang berubah/dihilangkan. Bedanya cuma: proses generate sertifikat di
+    // bawah tidak perlu menunggu Apps Script merespons (yang kadang lambat,
+    // terutama saat "cold start"). Jawaban peserta tetap punya cadangan aman
+    // di Firestore (langkah berikutnya), jadi kalau pengiriman ke Sheet gagal/
+    // telat, itu tidak menghalangi peserta dapat sertifikatnya — sama seperti
+    // sebelumnya (error di sini hanya di-log, tidak pernah menghentikan proses).
+    fetch(urlAppsScript, {
       method: 'POST',
       mode: 'no-cors', // 👈 TAMBAHKAN BARIS INI (Ini kunci utamanya!)
       headers: {
         'Content-Type': 'text/plain'
       },
       body: JSON.stringify(payload)
+    }).then(() => {
+      console.log('[Survey] Data berhasil dikirim ke Google Sheet via Apps Script.');
+    }).catch(e => {
+      console.warn('[Survey] Gagal kirim ke Apps Script:', e.message);
     });
-    
-    console.log('[Survey] Data berhasil dikirim ke Google Sheet via Apps Script.');
   } catch (e) {
     console.warn('[Survey] Gagal kirim ke Apps Script:', e.message);
   }
@@ -4712,6 +4732,41 @@ async function drawLogoOnQRCenter(ctx, qrX, qrY, qrW, qrH) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// PRELOAD ASSET SERTIFIKAT (template depan + halaman belakang)
+// ══════════════════════════════════════════════════════════════════
+// Dipanggil sekali di awal survei (lihat surveyStart()), TIDAK di-await
+// supaya tidak memblokir UI survei. Tujuannya cuma men-download gambar
+// lebih awal ke cache browser/memori, supaya saat generateAndStore()
+// jalan nanti (setelah pertanyaan terakhir), gambar sudah siap pakai
+// dan tidak perlu menunggu request internet lagi. Resolusi/kualitas
+// gambar SAMA SEKALI TIDAK berubah — ini cuma soal kapan di-download.
+let _preloadedTemplateImg    = null;
+let _preloadedTemplateImgUrl = null;
+let _preloadedBackImg        = null;
+let _preloadedBackImgUrl     = null;
+
+async function preloadCertAssets() {
+  try {
+    const snap = await db.collection('settings').doc('certificate_config').get();
+    if (!snap.exists) return;
+    const d = snap.data();
+
+    if (d.templateBase64) {
+      loadTemplateImage(d.templateBase64)
+        .then(img => { _preloadedTemplateImg = img; _preloadedTemplateImgUrl = d.templateBase64; })
+        .catch(e => console.warn('[Preload] Gagal preload template depan:', e.message));
+    }
+    if (d.backImageUrl) {
+      loadTemplateImage(d.backImageUrl)
+        .then(img => { _preloadedBackImg = img; _preloadedBackImgUrl = d.backImageUrl; })
+        .catch(e => console.warn('[Preload] Gagal preload halaman belakang:', e.message));
+    }
+  } catch (e) {
+    console.warn('[Preload] Gagal baca certificate_config untuk preload:', e.message);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
 // STEP 4: GENERATE FLATTENED PDF
 // ══════════════════════════════════════════════════════════════════
 async function generateAndStore() {
@@ -4727,18 +4782,22 @@ async function generateAndStore() {
     // ─── AMBIL CONTEXT CANVAS UNTUK PROSES GAMBAR QR CODE ───
     const ctx = canvas.getContext('2d');
 
-    // ── Baca ulang QR config dari Firestore (independent dari ced Admin state) ──
+    // ── Baca config sertifikat dari Firestore SEKALI SAJA ──────────
+    // Digabung jadi satu .get() untuk QR config + backImageUrl (sebelumnya
+    // dibaca 2x terpisah — ini hemat 1 round-trip jaringan ke Firestore).
     let cfgShowQR = false, cfgQrX = 760, cfgQrY = 500, cfgQrW = 100, cfgQrH = 100, cfgQrColor = '#000000';
+    let backImageUrl = null;
     try {
-      const qrSnap = await db.collection('settings').doc('certificate_config').get();
-      if (qrSnap.exists) {
-        const qd = qrSnap.data();
+      const certCfgSnap = await db.collection('settings').doc('certificate_config').get();
+      if (certCfgSnap.exists) {
+        const qd = certCfgSnap.data();
         if (qd.showQR   != null) cfgShowQR  = qd.showQR;
         if (qd.qrX      != null) cfgQrX     = qd.qrX;
         if (qd.qrY      != null) cfgQrY     = qd.qrY;
         if (qd.qrWidth  != null) cfgQrW     = qd.qrWidth;
         if (qd.qrHeight != null) cfgQrH     = qd.qrHeight;
         if (qd.qrColor  != null) cfgQrColor = qd.qrColor;
+        backImageUrl = qd.backImageUrl || null;
       }
     } catch(e) {
       console.warn('[QR Config] Gagal baca Firestore, QR tidak akan digenerate:', e.message);
@@ -4855,14 +4914,14 @@ async function generateAndStore() {
     pdf.addImage(imgDataUrl, 'JPEG', 0, 0, canvas.width, canvas.height);
 
     // ── Halaman 2: gambar belakang sertifikat (statis, tidak diedit) ──
-    // Diambil dari settings/certificate_config.backImageUrl (diatur lewat
-    // panel "Certificate Visual Editor" → Back Page). Kalau belum diisi
-    // admin, PDF tetap 1 halaman seperti biasa (tidak error).
+    // backImageUrl sudah didapat dari pembacaan Firestore di atas (tidak baca lagi).
+    // Kalau gambar ini sudah di-preload sebelumnya (lihat preloadCertAssets(),
+    // dipanggil saat survei dimulai), pakai cache itu — tidak perlu download ulang.
     try {
-      const cfgSnap = await db.collection('settings').doc('certificate_config').get();
-      const backImageUrl = cfgSnap.exists ? cfgSnap.data().backImageUrl : null;
       if (backImageUrl) {
-        const backImg = await loadTemplateImage(backImageUrl);
+        const backImg = (_preloadedBackImg && _preloadedBackImgUrl === backImageUrl)
+          ? _preloadedBackImg
+          : await loadTemplateImage(backImageUrl);
         pdf.addPage([canvas.width, canvas.height], 'landscape');
         // Tempel gambar memenuhi seluruh halaman (gambar sudah jadi/final, jadi
         // di-stretch full-page persis seperti halaman 1 — bukan crop/contain).
@@ -5005,7 +5064,11 @@ async function drawCertificateOnCanvas(canvas, name) {
   // ── 1. Clear + draw template ──────────────────────────────────
   ctx.clearRect(0, 0, W, H);
   try {
-    const tpl = await loadTemplateImage(cfgSrc);
+    // Pakai gambar yang sudah di-preload (lihat preloadCertAssets(), dipanggil
+    // saat survei dimulai) kalau URL-nya cocok — supaya tidak download ulang.
+    const tpl = (_preloadedTemplateImg && _preloadedTemplateImgUrl === cfgSrc)
+      ? _preloadedTemplateImg
+      : await loadTemplateImage(cfgSrc);
     ctx.drawImage(tpl, 0, 0, W, H);
   } catch (e) {
     console.error('[CertDraw] Template load failed, using dark fallback.');

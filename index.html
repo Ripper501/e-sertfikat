@@ -2374,6 +2374,26 @@
           </div>
         </div>
 
+        <!-- 1b. Back page image upload (halaman 2 — gambar statis, tidak diedit) -->
+        <div class="ced-field">
+          <label class="ced-label">Certificate Back Page (Halaman 2 — gambar statis)</label>
+          <div class="ced-upload" id="ced-upload-zone-back">
+            <svg class="ced-upload-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <div class="ced-upload-lbl">Upload Back Page</div>
+            <div class="ced-upload-sub">PNG · JPG · WEBP — gambar modul/lampiran sudah jadi</div>
+            <div class="ced-upload-name" id="ced-upload-name-back"></div>
+          </div>
+          <p style="font-size:11px; color:var(--text-dim); margin-top:6px; line-height:1.5;">
+            Gambar ini TIDAK diedit (tanpa nama/QR) — akan ditempel apa adanya sebagai
+            <b style="color:var(--text);">halaman ke-2</b> di PDF. Peserta akan otomatis dapat 1 file PDF berisi 2 halaman:
+            halaman 1 = sertifikat (nama + QR), halaman 2 = gambar ini.
+          </p>
+        </div>
+
         <!-- 2. Live test name -->
         <div class="ced-field">
           <label class="ced-label" for="ced-name-input">Preview Name (auto-scales)</label>
@@ -4834,6 +4854,26 @@ async function generateAndStore() {
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height], hotfixes: ['px_scaling'] });
     pdf.addImage(imgDataUrl, 'JPEG', 0, 0, canvas.width, canvas.height);
 
+    // ── Halaman 2: gambar belakang sertifikat (statis, tidak diedit) ──
+    // Diambil dari settings/certificate_config.backImageUrl (diatur lewat
+    // panel "Certificate Visual Editor" → Back Page). Kalau belum diisi
+    // admin, PDF tetap 1 halaman seperti biasa (tidak error).
+    try {
+      const cfgSnap = await db.collection('settings').doc('certificate_config').get();
+      const backImageUrl = cfgSnap.exists ? cfgSnap.data().backImageUrl : null;
+      if (backImageUrl) {
+        const backImg = await loadTemplateImage(backImageUrl);
+        pdf.addPage([canvas.width, canvas.height], 'landscape');
+        // Tempel gambar memenuhi seluruh halaman (gambar sudah jadi/final, jadi
+        // di-stretch full-page persis seperti halaman 1 — bukan crop/contain).
+        pdf.addImage(backImg, 'JPEG', 0, 0, canvas.width, canvas.height);
+      }
+    } catch (backErr) {
+      // Gagal muat halaman 2 TIDAK boleh membatalkan seluruh proses —
+      // peserta tetap dapat sertifikat halaman 1 (yang penting: nama + QR).
+      console.warn('[CertGen] Gagal menambahkan halaman 2 (back page):', backErr.message);
+    }
+
     // Simpan blob global agar bisa di-download ulang / di-share dari screen-done
     const pdfBlob = pdf.output('blob');
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -6163,6 +6203,7 @@ function projectorEscHandler(e) {
 // centreY = ced.y + ced.height/2
 const ced = {
   templateBase64: null,
+  backImageUrl:   null,  // gambar halaman 2 (belakang) — statis, tidak diedit (bukan canvas)
   fontFamily:     'Alex Brush',
   fontColor:      '#d09e3b',   // default: gold
   // ── Bounding box (canvas-space coords, 900×636 grid) ──
@@ -6895,6 +6936,15 @@ async function cedLoadFromFirestore() {
       nm.textContent  = '✓ Template loaded from Firestore';
       nm.style.display = 'block';
     }
+    if (d.backImageUrl) {
+      ced.backImageUrl = d.backImageUrl;
+      const nmBack = document.getElementById('ced-upload-name-back');
+      if (nmBack) {
+        nmBack.textContent  = '✓ Halaman belakang loaded from Firestore';
+        nmBack.style.display = 'block';
+        nmBack.style.color = 'var(--success)';
+      }
+    }
     // Prioritaskan localStorage Base64 (lokal, selalu bisa load, tidak butuh CORS)
     // Override Firestore URL jika localStorage punya Base64 yang lebih baru
     const lsBase64 = localStorage.getItem('ced_templateBase64');
@@ -6905,6 +6955,18 @@ async function cedLoadFromFirestore() {
       const nm = document.getElementById('ced-upload-name');
       nm.textContent  = '✓ Template: ' + (lsName || 'cached') + ' (dari cache lokal)';
       nm.style.display = 'block';
+    }
+    // Fallback halaman belakang dari cache lokal (mis. baru upload tapi belum klik Save)
+    const lsBackUrl  = localStorage.getItem('ced_backImageUrl');
+    const lsBackName = localStorage.getItem('ced_backImageName');
+    if (lsBackUrl) {
+      ced.backImageUrl = lsBackUrl;
+      const nmBack = document.getElementById('ced-upload-name-back');
+      if (nmBack) {
+        nmBack.textContent  = '✓ Halaman belakang: ' + (lsBackName || 'cached') + ' (dari cache lokal)';
+        nmBack.style.display = 'block';
+        nmBack.style.color = 'var(--success)';
+      }
     }
     cedRedraw();
   } catch (e) {
@@ -6982,6 +7044,72 @@ const myWidget = cloudinary.createUploadWidget({
 document.getElementById('ced-upload-zone').addEventListener('click', (e) => {
   e.stopPropagation(); // Cegah event bubbling ke canvas click handler di document level
   myWidget.open();
+});
+
+// ── Widget Cloudinary KEDUA — khusus untuk gambar Halaman Belakang (Halaman 2) ──
+// Gambar ini statis (tidak digambar ulang di canvas, tidak ada nama/QR) —
+// hanya disimpan sebagai URL dan ditempel langsung sebagai page-2 di PDF.
+const myWidgetBack = cloudinary.createUploadWidget({
+    cloudName: CLOUD_NAME,
+    uploadPreset: UPLOAD_PRESET,
+    sources: ['local'],
+    multiple: false,
+    clientAllowedFormats: ['jpg', 'png', 'jpeg', 'webp'],
+    styles: {
+      palette: {
+        window: "#22243A",
+        windowBorder: "#CCFF00",
+        tabIcon: "#CCFF00",
+        menuIcons: "#CCFF00",
+        textDark: "#FFFFFF",
+        textLight: "#1b1c27",
+        link: "#CCFF00",
+        action: "#CCFF00",
+        inactiveTabIcon: "#7b7d96",
+        error: "#ff4d6d",
+        inProgress: "#CCFF00",
+        complete: "#00e5a0",
+        sourceBg: "#1b1c27"
+      }
+    },
+    inlineContainer: null,
+  }, (error, result) => {
+    if (!error && result && result.event === "success") {
+      console.log('Upload back-page berhasil! URL: ', result.info.secure_url);
+
+      const nm = document.getElementById('ced-upload-name-back');
+      nm.textContent = '⏳ Memuat gambar halaman belakang...';
+      nm.style.display = 'block';
+      nm.style.color = 'var(--accent)';
+
+      ced.backImageUrl = result.info.secure_url;
+      const backFileName = result.info.original_filename + "." + result.info.format;
+
+      try {
+        localStorage.setItem('ced_backImageUrl', result.info.secure_url);
+        localStorage.setItem('ced_backImageName', backFileName);
+      } catch (ex) {}
+
+      // Validasi gambar bisa dimuat (tidak perlu cache ke canvas, hanya dipakai
+      // saat generate PDF nanti via loadTemplateImage()).
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        nm.textContent = '✓ Halaman belakang siap: ' + backFileName;
+        nm.style.color = 'var(--success)';
+      };
+      img.onerror = () => {
+        nm.textContent = '✗ Gagal memuat gambar halaman belakang';
+        nm.style.color = 'var(--danger)';
+      };
+      img.src = result.info.secure_url;
+    }
+  }
+);
+
+document.getElementById('ced-upload-zone-back').addEventListener('click', (e) => {
+  e.stopPropagation();
+  myWidgetBack.open();
 });
 
 // ── Req #2: Debounced redraw on name / font change ───────────────
@@ -7248,6 +7376,7 @@ async function cedSaveConfig() {
   // Satu sumber kebenaran: simpan semua 4 nilai bbox saja
   const payload = {
     templateBase64: ced.templateBase64 || null,
+    backImageUrl:   ced.backImageUrl || null,
     fontFamily:     ced.fontFamily,
     fontColor:      ced.fontColor || '#d09e3b',
     bboxX:      isFinite(ced.x)      ? Math.round(ced.x)      : 153,
@@ -7274,6 +7403,12 @@ async function cedSaveConfig() {
     const nm = document.getElementById('ced-upload-name');
     if (nm && nm.style.display !== 'none') {
       nm.textContent = '✓ Template aktif dari Cloudinary';
+    }
+    const nmBack = document.getElementById('ced-upload-name-back');
+    if (nmBack && ced.backImageUrl) {
+      nmBack.textContent = '✓ Halaman belakang aktif dari Cloudinary';
+      nmBack.style.display = 'block';
+      nmBack.style.color = 'var(--success)';
     }
 
     setTimeout(() => { status.textContent = ''; }, 5000);

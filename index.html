@@ -4380,6 +4380,51 @@ function surveyRenderCurrentQuestion() {
       </div>
     `;
 
+  } else if (q.type === 'id_lookup') {
+    // Dropdown native <select> juga, TAPI: <option> teksnya NAMA siswa
+    // (yang dicari/dikenali siswa), sementara value-nya adalah Student ID
+    // (yang benar2 tersimpan ke studentSurveyAnswers → Firestore/Sheet).
+    // Siswa tidak perlu tahu/hafal ID mereka sendiri — cukup cari nama.
+    const lookupRows = Array.isArray(q.lookup) ? q.lookup : [];
+    // existingAnswer di sini adalah ID yang sudah tersimpan (kalau user kembali
+    // ke pertanyaan ini setelah klik Back) — cari index baris yang ID-nya cocok
+    // untuk pewarnaan kartu yang konsisten dengan tipe dropdown biasa.
+    const selectedLookupIndex = lookupRows.findIndex(r => r.sid === existingAnswer);
+    const cLookup = SURVEY_CARD_PALETTE[selectedLookupIndex >= 0 ? selectedLookupIndex % SURVEY_CARD_PALETTE.length : 0];
+    // Label nama yang sedang terpilih, untuk ditampilkan sbg konfirmasi visual di bawah dropdown
+    const selectedLookupName = selectedLookupIndex >= 0 ? lookupRows[selectedLookupIndex].name : '';
+
+    answerArea.innerHTML = `
+      <div id="survey-dropdown-wrap" style="
+        position:relative;
+        padding:4px; border-radius:16px;
+        background:${existingAnswer ? cLookup.grad : 'rgba(255,255,255,0.05)'};
+        border:1.5px solid ${existingAnswer ? 'var(--accent)' : 'var(--border-soft)'};
+        box-shadow:${existingAnswer ? `0 0 0 1px var(--accent), 0 0 18px var(--accent-glow)` : 'none'};
+        transition:var(--transition);
+      ">
+        <select id="survey-lookup-input" onchange="surveySetCurrentAnswer(this.value); surveyRecolorDropdown(this); surveyRenderCurrentQuestion();" style="
+          width:100%; padding:14px 38px 14px 16px; border-radius:14px;
+          background:transparent; border:none;
+          color:${existingAnswer ? '#fff' : 'var(--text)'};
+          font-family:var(--font-main); font-size:15px; font-weight:${existingAnswer ? '600' : '400'}; cursor:pointer;
+          appearance:none; -webkit-appearance:none;
+        ">
+          <option value="" disabled ${!existingAnswer ? 'selected' : ''} style="background:#1e2033;">Cari nama kamu...</option>
+          ${lookupRows.map(row => `
+            <option value="${escapeHtml(row.sid)}" ${existingAnswer === row.sid ? 'selected' : ''} style="background:#1e2033; color:#fff;">${escapeHtml(row.name)}</option>
+          `).join('')}
+        </select>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="
+          position:absolute; right:14px; top:50%; transform:translateY(-50%);
+          color:${existingAnswer ? '#fff' : 'var(--text-muted)'}; pointer-events:none;
+        "><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      ${existingAnswer ? `<p style="font-size:11.5px; color:var(--text-dim); margin-top:10px; line-height:1.5;">
+        ✓ Terpilih: <strong style="color:var(--text);">${escapeHtml(selectedLookupName)}</strong>
+      </p>` : ''}
+    `;
+
   } else if (q.type === 'linear_scale') {
     const min = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
     const max = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
@@ -6478,6 +6523,7 @@ function surveyRenderQuestions() {
     checkbox:      { label: 'Kotak centang', icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="4"/><polyline points="8.5 12.5 11 15 16 9.5"/></svg>' },
     dropdown:      { label: 'Dropdown',      icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="3"/><polyline points="9 11 12 14 15 11"/></svg>' },
     linear_scale:  { label: 'Skala linear',  icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><circle cx="7" cy="12" r="2.2" fill="currentColor" stroke="none"/><circle cx="17" cy="12" r="2.2" fill="none"/></svg>' },
+    id_lookup:     { label: 'ID',            icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="10" r="1.8"/><path d="M5.5 16c0-1.7 1.5-3 3-3s3 1.3 3 3"/><line x1="13.5" y1="8.5" x2="18" y2="8.5"/><line x1="13.5" y1="12" x2="18" y2="12"/></svg>' },
   };
 
   list.innerHTML = surveyQuestions.map((q, i) => {
@@ -6533,6 +6579,60 @@ function surveyRenderQuestions() {
         <div class="survey-scale-preview">
           ${scaleDots.map(v => `<div class="survey-scale-preview-dot"><span></span><span>${v}</span></div>`).join('')}
         </div>
+      </div>
+    ` : '';
+
+    // ID Lookup: builder 2-kolom (Nama | Student ID) per baris + kotak paste massal.
+    // Hanya kolom "Nama" yang tampil ke student sebagai pilihan dropdown;
+    // kolom "ID" itulah yang benar2 terkirim ke Firestore/Sheet saat dipilih.
+    const isIdLookup = q.type === 'id_lookup';
+    const lookupRows = Array.isArray(q.lookup) ? q.lookup : [];
+    const lookupRowsHtml = lookupRows.map((row, ri) => `
+      <div class="survey-opt-row">
+        <input class="ced-input" type="text" placeholder="Nama (mis. Tomas)"
+          value="${escapeHtml(row.name || '')}"
+          oninput="surveyUpdateLookupRow('${q.id}', ${ri}, 'name', this.value)"
+          style="flex:1.4;" />
+        <input class="ced-input" type="text" placeholder="Student ID (mis. 20554)"
+          value="${escapeHtml(row.sid || '')}"
+          oninput="surveyUpdateLookupRow('${q.id}', ${ri}, 'sid', this.value)"
+          style="flex:1; font-family:var(--font-mono);" />
+        <button type="button" class="survey-opt-remove" onclick="surveyRemoveLookupRow('${q.id}', ${ri})" title="Hapus baris">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    `).join('');
+
+    const idLookupHtml = isIdLookup ? `
+      <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+        <div style="display:flex; gap:8px; font-size:10.5px; color:var(--text-dim); padding:0 2px 2px 2px; letter-spacing:0.04em; text-transform:uppercase;">
+          <span style="flex:1.4;">Nama (tampil ke student)</span>
+          <span style="flex:1;">Student ID (terkirim ke Firestore/Sheet)</span>
+          <span style="width:25px;"></span>
+        </div>
+        ${lookupRowsHtml}
+        <button type="button" class="survey-opt-add" onclick="surveyAddLookupRow('${q.id}')">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Tambah Baris
+        </button>
+
+        <details style="margin-top:8px;">
+          <summary style="cursor:pointer; font-size:11.5px; color:var(--text-dim); padding:4px 0;">📋 Paste massal dari Excel/Sheet (banyak baris sekaligus)</summary>
+          <div style="margin-top:8px;">
+            <textarea
+              id="survey-lookup-paste-${q.id}"
+              placeholder="Tempel di sini, format per baris: Nama, ID${String.fromCharCode(10)}Contoh:${String.fromCharCode(10)}Tomas, 20554${String.fromCharCode(10)}Maria, 20892"
+              style="width:100%; min-height:90px; padding:10px 12px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); color:var(--text); font-family:var(--font-mono); font-size:12.5px; resize:vertical;"
+            ></textarea>
+            <button type="button" class="survey-opt-add" style="margin-top:6px;" onclick="surveyImportLookupPaste('${q.id}')">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 15 11"/><line x1="12" y1="3" x2="12" y2="14"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
+              Impor Daftar Ini
+            </button>
+            <p style="font-size:10.5px; color:var(--text-dim); margin-top:6px; line-height:1.5;">
+              Pisahkan Nama & ID dengan koma ( , ), titik koma ( ; ), atau tab. Satu pasangan per baris. Baris yang sudah ada (sama persis) tidak diduplikasi.
+            </p>
+          </div>
+        </details>
       </div>
     ` : '';
 
@@ -6598,6 +6698,7 @@ function surveyRenderQuestions() {
           </div>
         ` : ''}
         ${linearScaleHtml}
+        ${idLookupHtml}
       </div>
     `;
   }).join('');
@@ -6642,6 +6743,10 @@ window.surveyUpdateField = function(qid, field, value) {
   // Saat ganti tipe ke tipe berbasis opsi dan belum ada opsi, beri 2 slot kosong.
   if (field === 'type' && ['choice','checkbox','dropdown'].includes(value) && (!q.options || q.options.length === 0)) {
     q.options = ['', ''];
+  }
+  // Saat ganti tipe ke id_lookup dan belum ada baris, beri 2 slot kosong juga.
+  if (field === 'type' && value === 'id_lookup' && (!Array.isArray(q.lookup) || q.lookup.length === 0)) {
+    q.lookup = [{ name: '', sid: '' }, { name: '', sid: '' }];
   }
   // Saat ganti tipe ke skala linear, beri default 1–5 kalau belum diset.
   if (field === 'type' && value === 'linear_scale') {
@@ -6835,6 +6940,87 @@ window.surveyUpdateOption = function(qid, optIndex, value) {
   // Tidak perlu re-render penuh di sini — cukup update array, hindari kehilangan fokus input saat mengetik.
 };
 
+// ── ID Lookup: manipulasi daftar pasangan Nama + Student ID ───────
+window.surveyAddLookupRow = function(qid) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+  surveySnapshot();
+  if (!Array.isArray(q.lookup)) q.lookup = [];
+  q.lookup.push({ name: '', sid: '' });
+  surveyRenderQuestions();
+};
+
+window.surveyRemoveLookupRow = function(qid, rowIndex) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q || !Array.isArray(q.lookup)) return;
+  surveySnapshot();
+  q.lookup.splice(rowIndex, 1);
+  surveyRenderQuestions();
+};
+
+window.surveyUpdateLookupRow = function(qid, rowIndex, field, value) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q || !Array.isArray(q.lookup) || !q.lookup[rowIndex]) return;
+  surveySnapshotDebounced(); // ketikan nama/ID = debounce, sama seperti ketikan opsi biasa
+  q.lookup[rowIndex][field] = value;
+  // Tidak re-render penuh — sama seperti surveyUpdateOption, hindari kehilangan fokus saat mengetik.
+};
+
+// Impor banyak baris sekaligus dari kotak paste massal. Format per baris:
+// "Nama, ID" — pemisah didukung: koma, titik-koma, atau tab (memudahkan
+// copy-paste langsung dari Excel/Google Sheet, yang biasa memakai tab).
+// Baris yang identik (nama DAN id sama persis, case-insensitive) dengan
+// yang sudah ada di daftar tidak diduplikasi.
+window.surveyImportLookupPaste = function(qid) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+  const textarea = document.getElementById(`survey-lookup-paste-${qid}`);
+  if (!textarea) return;
+  const raw = textarea.value;
+  if (!raw || !raw.trim()) return;
+
+  surveySnapshot();
+  if (!Array.isArray(q.lookup)) q.lookup = [];
+
+  const existingKeys = new Set(
+    q.lookup.map(r => `${(r.name || '').trim().toLowerCase()}|${(r.sid || '').trim().toLowerCase()}`)
+  );
+
+  let importedCount = 0;
+  raw.split(/\r\n|\r|\n/).forEach(line => {
+    if (!line.trim()) return;
+    // Pisah berdasarkan tab dulu (paste dari spreadsheet), fallback ke koma/titik-koma
+    const parts = line.includes('\t')
+      ? line.split('\t')
+      : line.split(/[,;]/);
+    if (parts.length < 2) return; // baris tidak lengkap, lewati
+
+    const name = (parts[0] || '').trim();
+    const sid  = (parts[1] || '').trim();
+    if (!name || !sid) return;
+
+    const key = `${name.toLowerCase()}|${sid.toLowerCase()}`;
+    if (existingKeys.has(key)) return; // sudah ada, skip duplikat
+
+    q.lookup.push({ name, sid });
+    existingKeys.add(key);
+    importedCount++;
+  });
+
+  textarea.value = ''; // kosongkan kotak paste setelah impor
+  surveyRenderQuestions();
+
+  // Feedback kecil ke admin lewat status bar yang sudah ada (survey-save-status)
+  const status = document.getElementById('survey-save-status');
+  if (status) {
+    status.textContent = importedCount > 0
+      ? `✓ ${importedCount} baris berhasil diimpor.`
+      : '⚠️ Tidak ada baris baru yang valid untuk diimpor (cek format atau duplikat).';
+    status.style.color = importedCount > 0 ? 'var(--success)' : 'var(--text-dim)';
+    setTimeout(() => { status.textContent = ''; }, 4000);
+  }
+};
+
 // ── Simpan konfigurasi survei ke Firestore ────────────────────────
 async function surveySaveConfig() {
   const btn    = document.getElementById('survey-save-btn');
@@ -6854,6 +7040,13 @@ async function surveySaveConfig() {
     status.style.color = 'var(--danger)';
     return;
   }
+  const invalidLookup = surveyQuestions.find(q => q.type === 'id_lookup' &&
+    (!Array.isArray(q.lookup) || q.lookup.filter(r => r.name && r.name.trim() && r.sid && r.sid.trim()).length < 2));
+  if (invalidLookup) {
+    status.textContent = '✗ Tipe ID butuh minimal 2 baris Nama+ID terisi lengkap.';
+    status.style.color = 'var(--danger)';
+    return;
+  }
 
   btn.disabled = true;
   status.textContent = '⏳ Menyimpan konfigurasi survei ke Firestore...';
@@ -6861,7 +7054,7 @@ async function surveySaveConfig() {
 
   // Bersihkan opsi kosong sebelum simpan
   const OPTION_BASED_TYPES = ['choice', 'checkbox', 'dropdown'];
-  const VALID_TYPES = ['choice', 'checkbox', 'dropdown', 'linear_scale', 'text'];
+  const VALID_TYPES = ['choice', 'checkbox', 'dropdown', 'linear_scale', 'text', 'id_lookup'];
   const cleanQuestions = surveyQuestions.map(q => {
     const type = VALID_TYPES.includes(q.type) ? q.type : 'text';
     const base = {
@@ -6875,6 +7068,12 @@ async function surveySaveConfig() {
       base.scaleMax      = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
       base.scaleMinLabel = (q.scaleMinLabel || '').trim();
       base.scaleMaxLabel = (q.scaleMaxLabel || '').trim();
+    }
+    if (type === 'id_lookup') {
+      // Hanya simpan baris yang benar2 lengkap (nama & id keduanya terisi).
+      base.lookup = (Array.isArray(q.lookup) ? q.lookup : [])
+        .map(r => ({ name: (r.name || '').trim(), sid: (r.sid || '').trim() }))
+        .filter(r => r.name && r.sid);
     }
     return base;
   });
@@ -6916,12 +7115,13 @@ async function surveyLoadFromFirestore() {
     surveyQuestions = Array.isArray(d.questions) ? d.questions.map(q => ({
       id:      q.id || _surveyNewId(),
       text:    q.text || '',
-      type:    ['choice','checkbox','dropdown','linear_scale'].includes(q.type) ? q.type : 'text',
+      type:    ['choice','checkbox','dropdown','linear_scale','id_lookup'].includes(q.type) ? q.type : 'text',
       options: Array.isArray(q.options) ? q.options.slice() : [],
       scaleMin:      Number.isFinite(q.scaleMin) ? q.scaleMin : 1,
       scaleMax:      Number.isFinite(q.scaleMax) ? q.scaleMax : 5,
       scaleMinLabel: q.scaleMinLabel || '',
       scaleMaxLabel: q.scaleMaxLabel || '',
+      lookup:  Array.isArray(q.lookup) ? q.lookup.map(r => ({ name: r.name || '', sid: r.sid || '' })) : [],
     })) : [];
 
     surveyRenderQuestions();

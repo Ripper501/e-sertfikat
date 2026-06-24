@@ -965,7 +965,7 @@
     // (yang tidak ikut terhapus). Endpoint yang sama (URL /exec) juga
     // dipakai index_v9.html untuk doPost (tulis), di sini dipakai utk doGet.
     // ════════════════════════════════════════════════════════════
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz8iJASU-Nsj8QWD2jOVyqTRSfQRjVHfVDmQQBP6R-F3nuBibkv6VjbfoA2k_0AjC7hvw/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9e6I1QUpV_2yURLz7OXnb3Ae4292n5jpILpZYf6rpzmdozO-NtO1xOmbnHv4y2cJwDg/exec";
 
     // ── Deteksi otomatis "kursus/profesi" dari jawaban survey ──────
     // Tidak ada field khusus terpisah — sistem mencari di antara
@@ -981,11 +981,24 @@
     // menyembunyikan baris course di kartu, dan buildLinkedInAddUrl
     // akan fallback ke teks generik "E-Certificate Completion — FB Academy".
     const COURSE_KEYWORDS = [
-      'course', 'kursus', 'kelas', 'class', 'workshop',
-      'job title', 'job', 'pekerjaan', 'profesi', 'occupation',
-      'jurusan', 'department', 'departemen', 'departments',
-      'program', 'major', 'bidang', 'kursu', 'Nivél Kursu'
-    ];
+  // English / Indonesia (punya lu)
+  'course','kursus','kelas','class','workshop',
+  'job title','job','pekerjaan','profesi','occupation',
+  'jurusan','department','departemen','program','major','bidang',
+  
+  // Português
+  'departamento','faculdade','ocupação','profissão',
+  'curso','classe','área','especialidade','formação',
+  'título profissional','cargo',
+  
+  // Tetum
+  'departamentu','fakuldade','okupasaun','profisaun',
+  'kursu','klase','area','espesialidade','formasaun',
+  'titulu servisu','knaar',
+  
+  // varian ejaan campur yang sering ketemu
+  'fakultas','fakulteti','departement','ocupacao','okupasaun','Nivél Kursu'
+];
 
     function detectCourseFromAnswers(surveyAnswers) {
       if (!Array.isArray(surveyAnswers) || !surveyAnswers.length) return null;

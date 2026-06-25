@@ -4853,11 +4853,12 @@ async function preloadCertAssets() {
         .then(img => { _preloadedTemplateImg = img; _preloadedTemplateImgUrl = d.templateBase64; })
         .catch(e => console.warn('[Preload] Gagal preload template depan:', e.message));
     }
-    if (d.backImageUrl) {
-      loadTemplateImage(d.backImageUrl)
-        .then(img => { _preloadedBackImg = img; _preloadedBackImgUrl = d.backImageUrl; })
-        .catch(e => console.warn('[Preload] Gagal preload halaman belakang:', e.message));
-    }
+    // Catatan: gambar halaman belakang (backImageUrl) SENGAJA TIDAK di-preload/
+    // ditahan di memori di sini. Ukurannya sudah di-cap kecil saat dipakai
+    // (lihat generateAndStore), jadi fetch-nya cepat — menahannya di memori
+    // sepanjang durasi survei cuma menambah beban tanpa banyak manfaat, dan
+    // pernah jadi salah satu sebab halaman 1 (sertifikat) gagal render di
+    // beberapa iPhone karena memori canvas kepenuhan.
   } catch (e) {
     console.warn('[Preload] Gagal baca certificate_config untuk preload:', e.message);
   }
@@ -5012,17 +5013,32 @@ async function generateAndStore() {
 
     // ── Halaman 2: gambar belakang sertifikat (statis, tidak diedit) ──
     // backImageUrl sudah didapat dari pembacaan Firestore di atas (tidak baca lagi).
-    // Kalau gambar ini sudah di-preload sebelumnya (lihat preloadCertAssets(),
-    // dipanggil saat survei dimulai), pakai cache itu — tidak perlu download ulang.
+    //
+    // PENTING (fix bug "halaman 1 putih" di iPhone): sebelumnya gambar ini
+    // di-stretch paksa ke resolusi 6250×4419 — SAMA besar dengan halaman 1.
+    // Akibatnya Safari/iOS harus alokasikan memori untuk 2 gambar raksasa
+    // sekaligus dalam 1 PDF, dan di banyak iPhone ini melewati batas memori
+    // canvas internal Safari → halaman 1 (yang paling berat: template + nama
+    // + QR) gagal digambar secara diam-diam dan keluar putih kosong.
+    //
+    // FIX: halaman 2 sekarang dipakai sesuai RESOLUSI ASLI gambarnya sendiri
+    // (di-cap maksimal 3000px di sisi terpanjang — masih sangat tajam untuk
+    // cetak/print, dan gambar modul semacam ini biasanya jauh lebih kecil dari
+    // itu). Resolusi halaman 1 (sertifikat dgn nama+QR) TIDAK disentuh sama
+    // sekali — tetap 6250×4419 seperti yang diminta.
     try {
       if (backImageUrl) {
-        const backImg = (_preloadedBackImg && _preloadedBackImgUrl === backImageUrl)
-          ? _preloadedBackImg
-          : await loadTemplateImage(backImageUrl);
-        pdf.addPage([canvas.width, canvas.height], 'landscape');
-        // Tempel gambar memenuhi seluruh halaman (gambar sudah jadi/final, jadi
-        // di-stretch full-page persis seperti halaman 1 — bukan crop/contain).
-        pdf.addImage(backImg, 'JPEG', 0, 0, canvas.width, canvas.height);
+        const backImg = await loadTemplateImage(backImageUrl); // selalu fetch fresh, tidak ditahan di memori sepanjang survei
+        const MAX_SIDE = 3000;
+        let bw = backImg.naturalWidth  || backImg.width;
+        let bh = backImg.naturalHeight || backImg.height;
+        if (bw > MAX_SIDE || bh > MAX_SIDE) {
+          const ratio = Math.min(MAX_SIDE / bw, MAX_SIDE / bh);
+          bw = Math.round(bw * ratio);
+          bh = Math.round(bh * ratio);
+        }
+        pdf.addPage([bw, bh], bw >= bh ? 'landscape' : 'portrait');
+        pdf.addImage(backImg, 'JPEG', 0, 0, bw, bh);
       }
     } catch (backErr) {
       // Gagal muat halaman 2 TIDAK boleh membatalkan seluruh proses —

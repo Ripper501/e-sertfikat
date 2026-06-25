@@ -1805,6 +1805,29 @@
   }
 
 
+  /* ─── SURVEY: Linear Scale slider (geser) ───────────────────────────── */
+  #survey-slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: #fff;
+    border: 6px solid var(--accent);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    cursor: pointer;
+    margin-top: 0;
+  }
+  #survey-slider-input::-moz-range-thumb {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: #fff;
+    border: 6px solid var(--accent);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    cursor: pointer;
+  }
+  #survey-slider-input::-moz-range-track {
+    background: transparent; height: 8px; border-radius: 999px;
+  }
+  #survey-slider-input { touch-action: none; }
+
+
   /* ─── CLOUDINARY WIDGET Z-INDEX OVERRIDE ────────────────────────────── */
   /* Must appear ABOVE the cert-editor-panel (z-index: 999999) */
   .cloudinary-widget,
@@ -4428,37 +4451,66 @@ function surveyRenderCurrentQuestion() {
   } else if (q.type === 'linear_scale') {
     const min = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
     const max = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
-    const selectedVal = existingAnswer !== '' ? Number(existingAnswer) : null;
-    const dots = [];
-    for (let v = min; v <= max; v++) dots.push(v);
+    // Default posisi slider ke tengah-tengah skala kalau belum pernah digeser,
+    // supaya peserta langsung lihat handle-nya (bukan kosong/tersembunyi di kiri).
+    const mid = Math.round((min + max) / 2);
+    const selectedVal = existingAnswer !== '' && existingAnswer != null ? Number(existingAnswer) : mid;
+    const hasAnswer = existingAnswer !== '' && existingAnswer != null;
+    const pct = max > min ? ((selectedVal - min) / (max - min)) * 100 : 0;
 
     answerArea.innerHTML = `
       ${(q.scaleMinLabel || q.scaleMaxLabel) ? `
-        <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-muted); margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-muted); margin-bottom:6px;">
           <span>${escapeHtml(q.scaleMinLabel || '')}</span>
           <span>${escapeHtml(q.scaleMaxLabel || '')}</span>
         </div>
       ` : ''}
-      <div style="display:flex; gap:8px;">
-        ${dots.map((v, oi) => {
-          const isSelected = selectedVal === v;
-          const c = SURVEY_CARD_PALETTE[oi % SURVEY_CARD_PALETTE.length];
-          const border = isSelected ? 'var(--accent)' : c.border;
-          const glow   = isSelected ? `0 0 0 1px var(--accent), 0 0 18px var(--accent-glow), 0 6px 14px rgba(0,0,0,0.3)` : `0 6px 14px rgba(0,0,0,0.3), 0 0 10px ${c.glow}`;
-          return `
-            <button type="button" class="survey-scale-btn" data-val="${v}" onclick="surveySetCurrentAnswer('${v}'); surveyRenderCurrentQuestion();" style="
-              flex:1; padding:16px 4px; text-align:center;
-              background:${c.grad}; border:1.5px solid ${border};
-              border-radius:14px; cursor:pointer; transition:var(--transition);
-              box-shadow:${glow};
-              color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.25);
-              font-family:var(--font-mono); font-size:16px; font-weight:700;
-            ">${v}</button>
-          `;
-        }).join('')}
+      <div style="padding:20px 6px 8px;">
+        <input
+          type="range"
+          id="survey-slider-input"
+          min="${min}" max="${max}" step="1" value="${selectedVal}"
+          oninput="surveySliderInput(this)"
+          onchange="surveySetCurrentAnswer(this.value); surveyRenderCurrentQuestion();"
+          style="
+            width:100%; height:8px; border-radius:999px; cursor:pointer;
+            -webkit-appearance:none; appearance:none;
+            background: linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, rgba(255,255,255,0.12) ${pct}%, rgba(255,255,255,0.12) 100%);
+            outline:none;
+          "
+        />
+        <div style="display:flex; justify-content:space-between; margin-top:10px; font-family:var(--font-mono); font-size:11px; color:var(--text-dim);">
+          ${dotsForScale(min, max).map(v => `<span>${v}</span>`).join('')}
+        </div>
       </div>
+      <p style="text-align:center; margin-top:6px;">
+        <span id="survey-slider-value" style="
+          display:inline-flex; align-items:center; justify-content:center;
+          min-width:44px; height:44px; padding:0 14px; border-radius:14px;
+          background:var(--accent); color:#0d0e16; font-family:var(--font-mono);
+          font-size:20px; font-weight:800; box-shadow:0 0 18px var(--accent-glow);
+        ">${selectedVal}</span>
+      </p>
     `;
   }
+}
+
+// Style track/thumb slider skala-linear (WebKit + Firefox) — ditaruh sekali di <head>/<style> global.
+// Update angka besar live saat slider digeser, dan refresh gradasi warna track-nya.
+window.surveySliderInput = function(el) {
+  const min = Number(el.min), max = Number(el.max), val = Number(el.value);
+  const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
+  el.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, rgba(255,255,255,0.12) ${pct}%, rgba(255,255,255,0.12) 100%)`;
+  delete el.dataset.untouched;
+  const valLabel = document.getElementById('survey-slider-value');
+  if (valLabel) valLabel.textContent = val;
+};
+
+// Daftar angka kecil di bawah slider (1, 2, 3, 4, 5 ...) sebagai penanda skala.
+function dotsForScale(min, max) {
+  const out = [];
+  for (let v = min; v <= max; v++) out.push(v);
+  return out;
 }
 
 // Re-warnai bungkus dropdown saat opsi diganti (tanpa re-render penuh,

@@ -5097,6 +5097,41 @@ function loadTemplateImage(src) {
 // ── Draw certificate template + name on <canvas> ──────────────────
 // Dynamically fetches settings/certificate_config from Firestore.
 // Falls back gracefully to built-in defaults when no config exists.
+// ── Deteksi otomatis "Certificate ID / Student ID" dari jawaban survey ──
+// Sama persis polanya dengan deteksi "Course/Profesi" yang dipakai di
+// verify.html: mencari pertanyaan survey yang TEKSNYA mengandung salah
+// satu kata kunci di bawah, lalu memakai JAWABAN dari pertanyaan itu
+// sebagai watermark UID di sertifikat — BUKAN Firebase UID lagi.
+//
+// Kalau TIDAK ADA pertanyaan yang cocok kata kunci apa pun, fallback ke
+// Firebase UID (8 karakter terakhir, huruf besar) seperti sebelumnya.
+//
+// Prioritas kata kunci: "certificate id" / "id sertifikat" dicek LEBIH
+// DULU daripada "student id" — supaya kalau admin entah bagaimana punya
+// KEDUA pertanyaan itu di survey yang sama, Certificate ID yang dipakai
+// (lebih spesifik & sesuai konteks sertifikat dibanding ID siswa umum).
+const CERT_ID_KEYWORDS_PRIORITY1 = ['certificate id', 'cert id', 'id sertifikat', 'sertifikat id'];
+const CERT_ID_KEYWORDS_PRIORITY2 = ['student id', 'id siswa', 'id peserta', 'id student', 'nomor induk', 'nim', 'nis'];
+
+function detectCertificateIdFromAnswers(questions, answers) {
+  if (!Array.isArray(questions) || !questions.length) return null;
+
+  function findByKeywords(keywords) {
+    for (const q of questions) {
+      if (q.isName) continue; // pertanyaan "Full Name" jelas bukan ID
+      const questionText = (q.text || '').toLowerCase();
+      const matched = keywords.some(kw => questionText.includes(kw));
+      if (matched) {
+        const ans = (answers[q.id] || '').trim();
+        if (ans) return ans;
+      }
+    }
+    return null;
+  }
+
+  return findByKeywords(CERT_ID_KEYWORDS_PRIORITY1) || findByKeywords(CERT_ID_KEYWORDS_PRIORITY2);
+}
+
 async function drawCertificateOnCanvas(canvas, name) {
   const ctx = canvas.getContext('2d');
   const W   = canvas.width;   // 6250 (= 900 * SCALE)
@@ -5233,11 +5268,19 @@ async function drawCertificateOnCanvas(canvas, name) {
   ctx.restore();
 
   // ── 3. Faint UID watermark ────────────────────────────────────
+  // Prioritas: kalau ada pertanyaan survey yang teksnya mengandung
+  // "Certificate ID"/"Student ID" (atau variannya), jawaban dari
+  // pertanyaan itu yang ditampilkan di sini. Kalau tidak ada
+  // pertanyaan seperti itu di survey, fallback ke Firebase UID
+  // (8 karakter terakhir, huruf besar) seperti sebelumnya.
   ctx.save();
   ctx.font      = `400 ${Math.round(10 * SCALE)}px "JetBrains Mono", monospace`;
   ctx.fillStyle = 'rgba(204,204,204,0.28)';
   ctx.textAlign = 'left';
-  const uid = currentUser ? currentUser.uid.slice(-8).toUpperCase() : 'UNKNOWN';
+  const detectedCertId = studentSurveyConfig
+    ? detectCertificateIdFromAnswers(studentSurveyConfig.questions, studentSurveyAnswers)
+    : null;
+  const uid = detectedCertId || (currentUser ? currentUser.uid.slice(-8).toUpperCase() : 'UNKNOWN');
   ctx.fillText('UID: ' + uid, 84 * SCALE, H - 30 * SCALE);
   ctx.restore();
 }
@@ -7051,8 +7094,9 @@ window.surveyImportLookupPaste = function(qid) {
 
   if (raw.includes('\t') || raw.split(/\r\n|\r|\n/).some(l => /[,;]/.test(l))) {
     // ── Format 1 & 2: ada pemisah jelas (tab / koma / titik-koma) ──
-    raw.split(/\r\n|\r|\n/).forEach(line => {
-      if (!line.trim()) return;
+    const lines = raw.split(/\r\n|\r|\n/).filter(l => l.trim());
+
+    lines.forEach((line, lineIdx) => {
       const parts = line.includes('\t')
         ? line.split('\t')
         : line.split(/[,;]/);
@@ -7061,6 +7105,18 @@ window.surveyImportLookupPaste = function(qid) {
       const name = (parts[0] || '').trim();
       const sid  = (parts[1] || '').trim();
       if (!name || !sid) return;
+
+      // ── Deteksi & skip baris HEADER (mis. "Name" + "Student ID") ──
+      // Kolom ID asli (mis. "STU-2026-0001", "20554") HAMPIR SELALU
+      // mengandung minimal satu digit. Header seperti "Student ID",
+      // "ID", "No. Identitas" TIDAK mengandung digit sama sekali.
+      // Dicek HANYA untuk baris pertama (lineIdx === 0) — kalau baris
+      // ke-2 dst kebetulan tidak punya digit di kolom ID, itu tetap
+      // diimpor apa adanya (bukan dianggap header susulan).
+      if (lineIdx === 0 && !/\d/.test(sid)) {
+        return; // ini baris header, bukan data — lewati
+      }
+
       newPairs.push({ name, sid });
     });
   } else {

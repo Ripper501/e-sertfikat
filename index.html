@@ -6966,9 +6966,21 @@ window.surveyUpdateLookupRow = function(qid, rowIndex, field, value) {
   // Tidak re-render penuh — sama seperti surveyUpdateOption, hindari kehilangan fokus saat mengetik.
 };
 
-// Impor banyak baris sekaligus dari kotak paste massal. Format per baris:
-// "Nama, ID" — pemisah didukung: koma, titik-koma, atau tab (memudahkan
-// copy-paste langsung dari Excel/Google Sheet, yang biasa memakai tab).
+// Impor banyak baris sekaligus dari kotak paste massal. Mendukung 3 format:
+//
+//  1) "Nama, ID"  / "Nama; ID"        — satu pasangan per baris, pemisah koma/titik-koma
+//  2) "Nama<TAB>ID"                   — paste langsung dari Excel/Google Sheet
+//  3) FREEFORM (BARU): "Nama ID Nama ID Nama ID ..." — nyambung tanpa pemisah
+//     jelas, baik dalam 1 baris panjang ATAUPUN tiap "Nama ID" di barisnya
+//     sendiri tanpa koma/tab. Ini yang terjadi kalau hasil copy dari gambar/PDF
+//     tabel (OCR atau copy manual) yang kehilangan format kolom aslinya.
+//     Caranya: pecah seluruh teks jadi kata per kata (spasi ATAU baris baru
+//     dianggap sama), lalu setiap kata yang MENGANDUNG ANGKA dianggap sebagai
+//     Student ID, dan semua kata sebelumnya (sejak ID terakhir) dirangkai
+//     jadi satu Nama. Contoh: "Maria José Ximenes Belo STU-2026-0001 Finia
+//     Vong STU-2026-0002" → otomatis terbagi: {Maria José Ximenes Belo,
+//     STU-2026-0001}, {Finia Vong, STU-2026-0002}.
+//
 // Baris yang identik (nama DAN id sama persis, case-insensitive) dengan
 // yang sudah ada di daftar tidak diduplikasi.
 window.surveyImportLookupPaste = function(qid) {
@@ -6986,22 +6998,52 @@ window.surveyImportLookupPaste = function(qid) {
     q.lookup.map(r => `${(r.name || '').trim().toLowerCase()}|${(r.sid || '').trim().toLowerCase()}`)
   );
 
+  const newPairs = [];
+
+  if (raw.includes('\t') || raw.split(/\r\n|\r|\n/).some(l => /[,;]/.test(l))) {
+    // ── Format 1 & 2: ada pemisah jelas (tab / koma / titik-koma) ──
+    raw.split(/\r\n|\r|\n/).forEach(line => {
+      if (!line.trim()) return;
+      const parts = line.includes('\t')
+        ? line.split('\t')
+        : line.split(/[,;]/);
+      if (parts.length < 2) return; // baris tidak lengkap, lewati
+
+      const name = (parts[0] || '').trim();
+      const sid  = (parts[1] || '').trim();
+      if (!name || !sid) return;
+      newPairs.push({ name, sid });
+    });
+  } else {
+    // ── Format 3 (FREEFORM): tidak ada tab/koma sama sekali ──
+    // Buang header umum di awal seperti "Name Student ID" / "Nama ID" kalau ada.
+    let text = raw.replace(/^\s*(nama|name)\s+(student\s*)?id\s*[:\-]?\s*/i, '');
+
+    // Pecah jadi kata-kata; \s sudah mencakup baris baru, jadi format
+    // "tiap pasangan di barisnya sendiri" maupun "nyambung 1 baris panjang"
+    // diproses dengan cara yang sama persis.
+    const tokens = text.split(/\s+/).filter(Boolean);
+    let nameBuf = [];
+    tokens.forEach(tok => {
+      const looksLikeId = /\d/.test(tok); // ID selalu mengandung angka, nama (hampir) tidak pernah
+      if (looksLikeId) {
+        if (nameBuf.length > 0) {
+          newPairs.push({ name: nameBuf.join(' '), sid: tok });
+          nameBuf = [];
+        }
+        // kalau ID muncul tanpa nama sebelumnya (mis. format kebalik / rusak), lewati token ini
+      } else {
+        nameBuf.push(tok);
+      }
+    });
+    // Sisa kata di nameBuf tanpa ID pasangan (baris terakhir tidak lengkap) — diabaikan.
+  }
+
   let importedCount = 0;
-  raw.split(/\r\n|\r|\n/).forEach(line => {
-    if (!line.trim()) return;
-    // Pisah berdasarkan tab dulu (paste dari spreadsheet), fallback ke koma/titik-koma
-    const parts = line.includes('\t')
-      ? line.split('\t')
-      : line.split(/[,;]/);
-    if (parts.length < 2) return; // baris tidak lengkap, lewati
-
-    const name = (parts[0] || '').trim();
-    const sid  = (parts[1] || '').trim();
+  newPairs.forEach(({ name, sid }) => {
     if (!name || !sid) return;
-
     const key = `${name.toLowerCase()}|${sid.toLowerCase()}`;
     if (existingKeys.has(key)) return; // sudah ada, skip duplikat
-
     q.lookup.push({ name, sid });
     existingKeys.add(key);
     importedCount++;

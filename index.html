@@ -4451,12 +4451,22 @@ function surveyRenderCurrentQuestion() {
   } else if (q.type === 'linear_scale') {
     const min = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
     const max = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
-    // Default posisi slider ke tengah-tengah skala kalau belum pernah digeser,
-    // supaya peserta langsung lihat handle-nya (bukan kosong/tersembunyi di kiri).
+    // Default posisi slider ke tengah-tengah skala kalau belum pernah digeser.
     const mid = Math.round((min + max) / 2);
     const selectedVal = existingAnswer !== '' && existingAnswer != null ? Number(existingAnswer) : mid;
-    const hasAnswer = existingAnswer !== '' && existingAnswer != null;
     const pct = max > min ? ((selectedVal - min) / (max - min)) * 100 : 0;
+
+    // FIX: posisi default (mis. tengah = 3) sekarang LANGSUNG dianggap jawaban
+    // valid begitu pertanyaan ini ditampilkan — bukan cuma preview visual.
+    // Sebelumnya jawaban baru tersimpan setelah peserta benar-benar menggeser
+    // (event "change"), jadi kalau peserta merasa "3" sudah pas dan langsung
+    // klik Next tanpa menyentuh slider, validasi tetap menganggap belum
+    // dijawab → muncul "Please answer this question before continuing"
+    // padahal tampilannya sudah menunjukkan angka 3. Sekarang nilainya
+    // langsung di-set begitu render, jadi konsisten dengan apa yang terlihat.
+    if (existingAnswer === '' || existingAnswer == null) {
+      studentSurveyAnswers[q.id] = String(selectedVal);
+    }
 
     answerArea.innerHTML = `
       ${(q.scaleMinLabel || q.scaleMaxLabel) ? `
@@ -4465,16 +4475,25 @@ function surveyRenderCurrentQuestion() {
           <span>${escapeHtml(q.scaleMaxLabel || '')}</span>
         </div>
       ` : ''}
-      <div style="padding:20px 6px 8px;">
+      <div style="position:relative; padding:48px 6px 8px;">
+        <!-- Bubble angka besar — posisinya (left:%) mengikuti posisi thumb slider secara real-time -->
+        <div id="survey-slider-bubble" style="
+          position:absolute; top:0; left:${pct}%; transform:translateX(-50%);
+          display:inline-flex; align-items:center; justify-content:center;
+          min-width:40px; height:40px; padding:0 12px; border-radius:12px;
+          background:var(--accent); color:#0d0e16; font-family:var(--font-mono);
+          font-size:18px; font-weight:800; box-shadow:0 0 16px var(--accent-glow);
+          white-space:nowrap; pointer-events:none; transition:left 0.05s linear;
+        ">${selectedVal}</div>
         <input
           type="range"
           id="survey-slider-input"
           min="${min}" max="${max}" step="1" value="${selectedVal}"
           oninput="surveySliderInput(this)"
-          onchange="surveySetCurrentAnswer(this.value); surveyRenderCurrentQuestion();"
+          onchange="surveySliderInput(this)"
           style="
             width:100%; height:8px; border-radius:999px; cursor:pointer;
-            -webkit-appearance:none; appearance:none;
+            -webkit-appearance:none; appearance:none; margin-top:14px;
             background: linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, rgba(255,255,255,0.12) ${pct}%, rgba(255,255,255,0.12) 100%);
             outline:none;
           "
@@ -4483,27 +4502,26 @@ function surveyRenderCurrentQuestion() {
           ${dotsForScale(min, max).map(v => `<span>${v}</span>`).join('')}
         </div>
       </div>
-      <p style="text-align:center; margin-top:6px;">
-        <span id="survey-slider-value" style="
-          display:inline-flex; align-items:center; justify-content:center;
-          min-width:44px; height:44px; padding:0 14px; border-radius:14px;
-          background:var(--accent); color:#0d0e16; font-family:var(--font-mono);
-          font-size:20px; font-weight:800; box-shadow:0 0 18px var(--accent-glow);
-        ">${selectedVal}</span>
-      </p>
     `;
   }
 }
 
-// Style track/thumb slider skala-linear (WebKit + Firefox) — ditaruh sekali di <head>/<style> global.
-// Update angka besar live saat slider digeser, dan refresh gradasi warna track-nya.
+// Update slider: gradasi track, bubble angka besar yang ikut bergerak mengikuti
+// posisi thumb (secara horizontal, real-time saat di-drag), dan simpan jawaban.
 window.surveySliderInput = function(el) {
   const min = Number(el.min), max = Number(el.max), val = Number(el.value);
   const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
+
   el.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, rgba(255,255,255,0.12) ${pct}%, rgba(255,255,255,0.12) 100%)`;
-  delete el.dataset.untouched;
-  const valLabel = document.getElementById('survey-slider-value');
-  if (valLabel) valLabel.textContent = val;
+
+  const bubble = document.getElementById('survey-slider-bubble');
+  if (bubble) {
+    bubble.textContent = val;
+    bubble.style.left = pct + '%';
+  }
+
+  // Simpan jawaban setiap kali digeser (tidak perlu nunggu event "change" saja).
+  surveySetCurrentAnswer(String(val));
 };
 
 // Daftar angka kecil di bawah slider (1, 2, 3, 4, 5 ...) sebagai penanda skala.

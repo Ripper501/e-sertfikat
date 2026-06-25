@@ -4843,25 +4843,12 @@ let _preloadedBackImg        = null;
 let _preloadedBackImgUrl     = null;
 
 async function preloadCertAssets() {
-  try {
-    const snap = await db.collection('settings').doc('certificate_config').get();
-    if (!snap.exists) return;
-    const d = snap.data();
-
-    if (d.templateBase64) {
-      loadTemplateImage(d.templateBase64)
-        .then(img => { _preloadedTemplateImg = img; _preloadedTemplateImgUrl = d.templateBase64; })
-        .catch(e => console.warn('[Preload] Gagal preload template depan:', e.message));
-    }
-    // Catatan: gambar halaman belakang (backImageUrl) SENGAJA TIDAK di-preload/
-    // ditahan di memori di sini. Ukurannya sudah di-cap kecil saat dipakai
-    // (lihat generateAndStore), jadi fetch-nya cepat — menahannya di memori
-    // sepanjang durasi survei cuma menambah beban tanpa banyak manfaat, dan
-    // pernah jadi salah satu sebab halaman 1 (sertifikat) gagal render di
-    // beberapa iPhone karena memori canvas kepenuhan.
-  } catch (e) {
-    console.warn('[Preload] Gagal baca certificate_config untuk preload:', e.message);
-  }
+  // DINONAKTIFKAN SEMENTARA — dicurigai jadi sumber bug "halaman 1 putih"
+  // di beberapa iPhone (gambar ter-cache resolve tapi datanya rusak/kosong
+  // tanpa error). Generate sertifikat sekarang kembali ke perilaku ASLI:
+  // selalu fetch gambar template fresh tepat saat dibutuhkan (lihat
+  // drawCertificateOnCanvas), yang sudah terbukti stabil sebelumnya.
+  return;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -5028,17 +5015,9 @@ async function generateAndStore() {
     // sekali — tetap 6250×4419 seperti yang diminta.
     try {
       if (backImageUrl) {
-        const backImg = await loadTemplateImage(backImageUrl); // selalu fetch fresh, tidak ditahan di memori sepanjang survei
-        const MAX_SIDE = 3000;
-        let bw = backImg.naturalWidth  || backImg.width;
-        let bh = backImg.naturalHeight || backImg.height;
-        if (bw > MAX_SIDE || bh > MAX_SIDE) {
-          const ratio = Math.min(MAX_SIDE / bw, MAX_SIDE / bh);
-          bw = Math.round(bw * ratio);
-          bh = Math.round(bh * ratio);
-        }
-        pdf.addPage([bw, bh], bw >= bh ? 'landscape' : 'portrait');
-        pdf.addImage(backImg, 'JPEG', 0, 0, bw, bh);
+        const backImg = await loadTemplateImage(backImageUrl);
+        pdf.addPage([canvas.width, canvas.height], 'landscape');
+        pdf.addImage(backImg, 'JPEG', 0, 0, canvas.width, canvas.height);
       }
     } catch (backErr) {
       // Gagal muat halaman 2 TIDAK boleh membatalkan seluruh proses —
@@ -5177,14 +5156,16 @@ async function drawCertificateOnCanvas(canvas, name) {
   // ── 1. Clear + draw template ──────────────────────────────────
   ctx.clearRect(0, 0, W, H);
   try {
-    // Pakai gambar yang sudah di-preload (lihat preloadCertAssets(), dipanggil
-    // saat survei dimulai) kalau URL-nya cocok — supaya tidak download ulang.
-    const tpl = (_preloadedTemplateImg && _preloadedTemplateImgUrl === cfgSrc)
-      ? _preloadedTemplateImg
-      : await loadTemplateImage(cfgSrc);
+    const tpl = await loadTemplateImage(cfgSrc);
+    if (!tpl || !tpl.naturalWidth || !tpl.naturalHeight) {
+      // Gambar "berhasil resolve" tapi tidak punya data piksel valid
+      // (rusak/diblokir diam-diam) — paksa masuk ke fallback dark navy
+      // di bawah, JANGAN biarkan canvas tetap kosong/putih tanpa jejak.
+      throw new Error('Template image resolved tapi dimensinya 0 (kemungkinan rusak/diblokir)');
+    }
     ctx.drawImage(tpl, 0, 0, W, H);
   } catch (e) {
-    console.error('[CertDraw] Template load failed, using dark fallback.');
+    console.error('[CertDraw] Template load failed, using dark fallback:', e.message);
     ctx.fillStyle = '#1b1c27';
     ctx.fillRect(0, 0, W, H);
   }

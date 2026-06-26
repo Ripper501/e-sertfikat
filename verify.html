@@ -651,6 +651,41 @@
       transform: translateY(-1px);
     }
     .linkedin-add svg { flex-shrink: 0; }
+
+    /* ── Tombol "Share Achievement" — bertema gold (brand sendiri) ── */
+    .share-achievement {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--gold-line);
+      background: rgba(245,230,0,0.07);
+      color: var(--gold);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+      position: relative;
+      z-index: 2;
+    }
+    .share-achievement:hover,
+    .share-achievement:focus-visible {
+      background: rgba(245,230,0,0.14);
+      border-color: var(--gold);
+      transform: translateY(-1px);
+    }
+    .share-achievement:disabled {
+      opacity: 0.55;
+      cursor: wait;
+      transform: none;
+    }
+    .share-achievement svg { flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -716,6 +751,14 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14zM8.34 18.34V10.13H5.67v8.21h2.67zM7 8.84A1.46 1.46 0 1 0 7 5.92a1.46 1.46 0 0 0 0 2.92zm11.34 9.5v-4.7c0-2.52-1.35-3.7-3.15-3.7a2.72 2.72 0 0 0-2.46 1.35h-.04v-1.16H9.97c.03.7 0 8.21 0 8.21h2.67v-4.58c0-.24.02-.49.1-.66a1.46 1.46 0 0 1 1.33-.98c.94 0 1.31.71 1.31 1.76v4.46h2.67z"/></svg>
           Add to LinkedIn Profile
         </a>
+
+        <button type="button" id="share-achievement-btn" class="share-achievement" style="display:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          <span id="share-achievement-label">Share Achievement</span>
+        </button>
 
         <p id="archive-note" style="display:none; margin-top:14px; font-size:10.5px; color:var(--text-muted); text-align:center; letter-spacing:0.04em;">
           Retrieved from permanent archive
@@ -994,6 +1037,183 @@
         });
       }
 
+      // ── "Share Achievement": generate kartu gambar (PNG) berisi nama,
+      // nama kursus, dan logo FB Academy — lalu dibagikan lewat Web Share
+      // API (kalau didukung perangkat, mis. HP) atau di-download sebagai
+      // PNG (fallback di desktop/browser yang belum dukung Web Share dgn
+      // file). Tujuannya: peserta bisa langsung posting ke IG Story/WA
+      // Status tanpa perlu screenshot manual.
+      function buildShareCardImage(data) {
+        return new Promise((resolve, reject) => {
+          const W = 1200, H = 675; // rasio 16:9 — pas untuk story/feed sosmed
+          const canvas = document.createElement('canvas');
+          canvas.width = W;
+          canvas.height = H;
+          const ctx = canvas.getContext('2d');
+
+          // Background gradasi hitam + radial glow gold lembut
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(0, 0, W, H);
+          const glow = ctx.createRadialGradient(W / 2, H * 0.38, 40, W / 2, H * 0.38, W * 0.65);
+          glow.addColorStop(0, 'rgba(245,230,0,0.14)');
+          glow.addColorStop(1, 'rgba(245,230,0,0)');
+          ctx.fillStyle = glow;
+          ctx.fillRect(0, 0, W, H);
+
+          // Frame border gold tipis
+          ctx.strokeStyle = 'rgba(245,230,0,0.45)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(18, 18, W - 36, H - 36);
+          ctx.strokeStyle = 'rgba(245,230,0,0.18)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(34, 34, W - 68, H - 68);
+
+          function drawTextContent() {
+            ctx.textAlign = 'center';
+
+            // Eyebrow kecil
+            ctx.fillStyle = 'rgba(245,230,0,0.85)';
+            ctx.font = '600 16px "Space Grotesk", sans-serif';
+            ctx.letterSpacing = '3px';
+            ctx.fillText('CERTIFICATE OF ACHIEVEMENT', W / 2, H * 0.30);
+            ctx.letterSpacing = '0px';
+
+            // Nama — font besar serif
+            ctx.fillStyle = '#f5f3e8';
+            let nameFontSize = 64;
+            ctx.font = `600 ${nameFontSize}px "Cormorant Garamond", serif`;
+            // Kecilkan otomatis kalau nama terlalu panjang agar tidak overflow
+            while (ctx.measureText(data.cert_name || '—').width > W - 160 && nameFontSize > 32) {
+              nameFontSize -= 2;
+              ctx.font = `600 ${nameFontSize}px "Cormorant Garamond", serif`;
+            }
+            ctx.fillText(data.cert_name || '—', W / 2, H * 0.46);
+
+            // Nama kursus (kalau ada)
+            if (data.detectedCourse && data.detectedCourse.trim()) {
+              ctx.fillStyle = '#f5e600';
+              ctx.font = '500 22px "Space Grotesk", sans-serif';
+              ctx.fillText(data.detectedCourse.trim(), W / 2, H * 0.565);
+            }
+
+            // Garis divider kecil
+            ctx.strokeStyle = 'rgba(245,230,0,0.35)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(W / 2 - 60, H * 0.62);
+            ctx.lineTo(W / 2 + 60, H * 0.62);
+            ctx.stroke();
+
+            // Footer wordmark
+            ctx.fillStyle = 'rgba(245,243,232,0.55)';
+            ctx.font = '500 15px "Space Grotesk", sans-serif';
+            ctx.letterSpacing = '1.5px';
+            ctx.fillText('FB ACADEMY · OFFICIALLY VERIFIED', W / 2, H * 0.88);
+            ctx.letterSpacing = '0px';
+          }
+
+          function finish() {
+            canvas.toBlob(blob => {
+              if (blob) resolve({ blob, canvas });
+              else reject(new Error('Gagal membuat gambar (toBlob kosong).'));
+            }, 'image/png');
+          }
+
+          // Pastikan webfont (Cormorant Garamond / Space Grotesk) sudah siap
+          // sebelum digambar ke canvas — kalau belum, teks bisa fallback ke
+          // font default browser dan terlihat tidak konsisten.
+          const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+
+          fontsReady.then(() => {
+            const logo = new Image();
+            logo.onload = () => {
+              // Logo bundar kecil di atas, sejajar tengah
+              const logoSize = 64;
+              const lx = W / 2 - logoSize / 2;
+              const ly = H * 0.12;
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(W / 2, ly + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+              ctx.closePath();
+              ctx.clip();
+              ctx.drawImage(logo, lx, ly, logoSize, logoSize);
+              ctx.restore();
+              ctx.strokeStyle = 'rgba(245,230,0,0.45)';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(W / 2, ly + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+              ctx.stroke();
+
+              drawTextContent();
+              finish();
+            };
+            logo.onerror = () => {
+              // Logo gagal dimuat — tetap lanjut tanpa logo, jangan sampai
+              // seluruh fitur share gagal hanya karena gambar logo.
+              drawTextContent();
+              finish();
+            };
+            logo.src = 'logo.png';
+          });
+        });
+      }
+
+      async function handleShareAchievement(data) {
+        const btn   = document.getElementById('share-achievement-btn');
+        const label = document.getElementById('share-achievement-label');
+        if (!btn || !label) return;
+
+        const originalLabel = label.textContent;
+        btn.disabled = true;
+        label.textContent = 'Generating…';
+
+        try {
+          const { blob } = await buildShareCardImage(data);
+          const fileName = `FB-Academy-Certificate-${(data.cert_name || 'achievement').replace(/[^a-z0-9]+/gi, '-')}.png`;
+          const file = new File([blob], fileName, { type: 'image/png' });
+
+          const shareText = data.detectedCourse && data.detectedCourse.trim()
+            ? `I just completed "${data.detectedCourse.trim()}" at FB Academy! 🎓`
+            : `I just earned a certificate from FB Academy! 🎓`;
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            // Perangkat mendukung share gambar langsung (kebanyakan HP/tablet)
+            await navigator.share({
+              files: [file],
+              title: 'My FB Academy Certificate',
+              text:  shareText,
+            });
+          } else {
+            // Fallback (umumnya desktop): download PNG-nya langsung
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
+            label.textContent = 'Downloaded ✓';
+            setTimeout(() => { label.textContent = originalLabel; }, 2500);
+            btn.disabled = false;
+            return;
+          }
+
+          label.textContent = originalLabel;
+          btn.disabled = false;
+        } catch (err) {
+          btn.disabled = false;
+          if (err && err.name === 'AbortError') {
+            // Pengguna batal share dari sheet — bukan error, jangan tampilkan apa-apa.
+            label.textContent = originalLabel;
+            return;
+          }
+          console.error('[ShareAchievement] Gagal:', err);
+          label.textContent = 'Failed — try again';
+          setTimeout(() => { label.textContent = originalLabel; }, 2500);
+        }
+      }
+
       function buildLinkedInAddUrl(data) {
         const certificationName = data.detectedCourse && data.detectedCourse.trim()
           ? data.detectedCourse.trim()
@@ -1053,6 +1273,12 @@
         if (linkedinBtn) {
           linkedinBtn.href = buildLinkedInAddUrl(data);
           linkedinBtn.style.display = 'flex';
+        }
+
+        const shareBtn = document.getElementById('share-achievement-btn');
+        if (shareBtn) {
+          shareBtn.style.display = 'flex';
+          shareBtn.onclick = () => handleShareAchievement(data);
         }
 
         injectCertificateStructuredData(data);

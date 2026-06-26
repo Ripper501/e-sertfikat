@@ -5500,25 +5500,23 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
     
     // ── LOGIKA OTOMATIS MENGUBAH PREFIX LABELS BERDASARKAN FIELD ──
     let prefixLabel = 'UID';
-    if (studentSurveyConfig && studentSurveyConfig.questions) {
+    if (typeof studentSurveyConfig !== 'undefined' && studentSurveyConfig && studentSurveyConfig.questions) {
       const qList = studentSurveyConfig.questions;
       
-      // Cek apakah ada field bertuliskan Certificate ID / ID Sertifikat
       const hasCert = qList.some(q => {
-        const t = (q.title || q.label || '').toLowerCase();
+        const t = (q.title || q.label || q.text || q.question || '').toLowerCase();
         return t.includes('certificate id') || t.includes('id sertifikat');
       });
       
-      // Cek apakah ada field bertuliskan Student ID / ID Siswa / NIM / NPM
       const hasStudent = qList.some(q => {
-        const t = (q.title || q.label || '').toLowerCase();
+        const t = (q.title || q.label || q.text || q.question || '').toLowerCase();
         return t.includes('student id') || t.includes('id siswa') || t.includes('nim') || t.includes('npm');
       });
 
-      if (hasCert) {
-        prefixLabel = 'Certificate ID';
-      } else if (hasStudent) {
+      if (hasStudent) {
         prefixLabel = 'Student ID';
+      } else if (hasCert) {
+        prefixLabel = 'Certificate ID';
       }
     }
 
@@ -7977,23 +7975,36 @@ async function _cedDraw() {
     
     // ── LOGIKA OTOMATIS MENGUBAH PREFIX LABELS UNTUK PREVIEW ADMIN ──
     let prefixLabel = 'UID';
-    // Mengambil data kuesioner dari variabel global admin yang tersedia
-    const adminQuestions = window.currentQuestions || (window.surveyConfig && window.surveyConfig.questions) || (window.activeSurvey && window.activeSurvey.questions) || (window.studentSurveyConfig && window.studentSurveyConfig.questions);
     
-    if (adminQuestions && Array.isArray(adminQuestions)) {
+    // Cari array pertanyaan dari semua kemungkinan variabel global di Admin
+    let adminQuestions = null;
+    if (typeof questions !== 'undefined' && Array.isArray(questions)) {
+      adminQuestions = questions;
+    } else if (window.surveyConfig && window.surveyConfig.questions) {
+      adminQuestions = window.surveyConfig.questions;
+    } else if (window.studentSurveyConfig && window.studentSurveyConfig.questions) {
+      adminQuestions = window.studentSurveyConfig.questions;
+    }
+
+    if (adminQuestions && adminQuestions.length > 0) {
       const hasCert = adminQuestions.some(q => {
-        const t = (q.title || q.label || '').toLowerCase();
+        // Tambahkan q.text dan q.question untuk mengecek semua bentuk object Firebase
+        const t = (q.title || q.label || q.text || q.question || '').toLowerCase();
         return t.includes('certificate id') || t.includes('id sertifikat');
       });
       const hasStudent = adminQuestions.some(q => {
-        const t = (q.title || q.label || '').toLowerCase();
+        const t = (q.title || q.label || q.text || q.question || '').toLowerCase();
         return t.includes('student id') || t.includes('id siswa') || t.includes('nim') || t.includes('npm');
       });
 
       if (hasCert) {
-        prefixLabel = 'Certificate ID';
-      } else if (hasStudent) {
+        prefixLabel = 'Student ID'; // Paksa ke Student ID jika ketemu Student ID
+      } 
+      // Urutan pengecekan: utamakan Student ID dulu
+      if (hasStudent) {
         prefixLabel = 'Student ID';
+      } else if (hasCert) {
+        prefixLabel = 'Certificate ID';
       }
     }
 

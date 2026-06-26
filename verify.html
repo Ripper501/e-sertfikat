@@ -859,11 +859,8 @@
 
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    // Ganti dari experimentalForceLongPolling (memaksa long-polling terus,
-    // walau koneksi peserta sebenarnya mendukung WebChannel yang lebih cepat)
-    // ke experimentalAutoDetectLongPolling — Firestore otomatis memilih cara
-    // koneksi tercepat yang didukung browser/jaringan peserta saat itu.
-    db.settings({ experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+    // Pengaturan db.settings dihapus agar Firebase benar-benar bebas
+    // memilih koneksi tercepat (WebChannel/Websocket) tanpa hambatan.
 
     function getStudentId() {
       const params = new URLSearchParams(window.location.search);
@@ -1025,7 +1022,7 @@
         const nameEl = document.getElementById('cert-name');
         nameEl.textContent = ''; // kosongkan dulu (hapus "—" default)
 
-        const STAGGER_MS = 28; // jarak delay antar huruf — cukup cepat agar nama panjang tidak lama
+        const STAGGER_MS = 13; // jarak delay antar huruf — cukup cepat agar nama panjang tidak lama
         const chars = Array.from(fullName);
 
         chars.forEach((ch, i) => {

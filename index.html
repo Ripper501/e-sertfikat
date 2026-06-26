@@ -4875,36 +4875,69 @@ async function preloadCertAssets() {
 async function generateAndStore() {
   // 2. Eksekusi Pembuatan PDF & Penyimpanan
   try {
-    // Render Certificate ke Canvas
     const canvas = document.getElementById('cert-canvas');
-    await drawCertificateOnCanvas(canvas, certName);
+
+    // ── Baca config sertifikat dari Firestore SEKALI SAJA di paling awal ──
+    // Sebelumnya dibaca 2x: sekali di dalam drawCertificateOnCanvas (untuk
+    // template/font/bbox), sekali lagi di sini (untuk QR/halaman belakang)
+    // — padahal dokumennya SAMA PERSIS. Digabung jadi 1 round-trip jaringan,
+    // hasilnya langsung dikirim ke drawCertificateOnCanvas() lewat parameter
+    // ketiga supaya fungsi itu tidak perlu fetch sendiri lagi.
+    let certCfg = null;
+    let cfgShowQR = false, cfgQrX = 760, cfgQrY = 500, cfgQrW = 100, cfgQrH = 100, cfgQrColor = '#000000';
+    let backImageUrl = null;
+    try {
+      const certCfgSnap = await db.collection('settings').doc('certificate_config').get();
+      if (certCfgSnap.exists) {
+        certCfg = certCfgSnap.data();
+        if (certCfg.showQR   != null) cfgShowQR  = certCfg.showQR;
+        if (certCfg.qrX      != null) cfgQrX     = certCfg.qrX;
+        if (certCfg.qrY      != null) cfgQrY     = certCfg.qrY;
+        if (certCfg.qrWidth  != null) cfgQrW     = certCfg.qrWidth;
+        if (certCfg.qrHeight != null) cfgQrH     = certCfg.qrHeight;
+        if (certCfg.qrColor  != null) cfgQrColor = certCfg.qrColor;
+        backImageUrl = certCfg.backImageUrl || null;
+      }
+    } catch(e) {
+      console.warn('[QR Config] Gagal baca Firestore, QR tidak akan digenerate:', e.message);
+    }
+
+    // ── Jalankan BERSAMAAN (paralel), bukan satu-satu ───────────────────
+    // 1) Gambar halaman 1 (template + nama + watermark) ke canvas
+    // 2) Download gambar halaman 2 (back page) dari Cloudinary
+    // Sebelumnya keduanya menunggu satu-per-satu (sequential) — padahal
+    // sama sekali tidak saling bergantung, jadi aman dijalankan bersamaan.
+    // Ini biasanya yang paling banyak memangkas waktu "Processing...",
+    // terutama kalau koneksi peserta agak lambat.
+    const backImagePromise = backImageUrl
+      ? loadTemplateImage(backImageUrl).catch(e => {
+          console.warn('[CertGen] Gagal preload halaman 2 (back page):', e.message);
+          return null;
+        })
+      : Promise.resolve(null);
+
+    // Firestore write "cert_claimed" TIDAK butuh PDF selesai dulu — datanya
+    // (nama, email, uid) sudah lengkap dari sekarang. Mulai dikirim
+    // bersamaan juga, supaya waktu tunggu jaringan-nya tumpang-tindih
+    // dengan proses gambar, bukan menunggu di belakang antrian.
+    const claimWritePromise = db.collection(USERS_COLLECTION).doc(currentUser.uid).set({
+      cert_claimed: true,
+      cert_name: certName,
+      uid: currentUser.uid,
+      email: currentUser.email,
+      issued_at: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    const [, preloadedBackImg] = await Promise.all([
+      drawCertificateOnCanvas(canvas, certName, certCfg),
+      backImagePromise
+    ]);
 
     // Faktor skala: koordinat QR di Firestore masih dalam basis lama (900x636)
     const SCALE = canvas.width / 900;
 
     // ─── AMBIL CONTEXT CANVAS UNTUK PROSES GAMBAR QR CODE ───
     const ctx = canvas.getContext('2d');
-
-    // ── Baca config sertifikat dari Firestore SEKALI SAJA ──────────
-    // Digabung jadi satu .get() untuk QR config + backImageUrl (sebelumnya
-    // dibaca 2x terpisah — ini hemat 1 round-trip jaringan ke Firestore).
-    let cfgShowQR = false, cfgQrX = 760, cfgQrY = 500, cfgQrW = 100, cfgQrH = 100, cfgQrColor = '#000000';
-    let backImageUrl = null;
-    try {
-      const certCfgSnap = await db.collection('settings').doc('certificate_config').get();
-      if (certCfgSnap.exists) {
-        const qd = certCfgSnap.data();
-        if (qd.showQR   != null) cfgShowQR  = qd.showQR;
-        if (qd.qrX      != null) cfgQrX     = qd.qrX;
-        if (qd.qrY      != null) cfgQrY     = qd.qrY;
-        if (qd.qrWidth  != null) cfgQrW     = qd.qrWidth;
-        if (qd.qrHeight != null) cfgQrH     = qd.qrHeight;
-        if (qd.qrColor  != null) cfgQrColor = qd.qrColor;
-        backImageUrl = qd.backImageUrl || null;
-      }
-    } catch(e) {
-      console.warn('[QR Config] Gagal baca Firestore, QR tidak akan digenerate:', e.message);
-    }
 
     // HANYA GENERATE QR CODE ASLI JIKA ADMIN AKTIFKAN MODE QR (dibaca dari Firestore)
     if (cfgShowQR) {
@@ -5032,10 +5065,9 @@ async function generateAndStore() {
     // itu). Resolusi halaman 1 (sertifikat dgn nama+QR) TIDAK disentuh sama
     // sekali — tetap 6250×4419 seperti yang diminta.
     try {
-      if (backImageUrl) {
-        const backImg = await loadTemplateImage(backImageUrl);
+      if (backImageUrl && preloadedBackImg) {
         pdf.addPage([canvas.width, canvas.height], 'landscape');
-        pdf.addImage(backImg, 'JPEG', 0, 0, canvas.width, canvas.height);
+        pdf.addImage(preloadedBackImg, 'JPEG', 0, 0, canvas.width, canvas.height);
       }
     } catch (backErr) {
       // Gagal muat halaman 2 TIDAK boleh membatalkan seluruh proses —
@@ -5049,14 +5081,11 @@ async function generateAndStore() {
     generatedPDFBlob = isIOS ? new Blob([pdfBlob], { type: 'application/octet-stream' }) : pdfBlob;
 
     // Simpan ke Firestore & Kunci Akun (Anti-Cheat)
+    // Write-nya sudah DIMULAI lebih awal (lihat claimWritePromise di atas,
+    // berjalan paralel dengan proses gambar) — di sini cuma tunggu hasilnya,
+    // bukan kirim ulang.
     const lsKey = `cert_claimed_${currentUser.uid}`;
-    await db.collection(USERS_COLLECTION).doc(currentUser.uid).set({
-      cert_claimed: true, 
-      cert_name: certName, 
-      uid: currentUser.uid, 
-      email: currentUser.email, 
-      issued_at: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    await claimWritePromise;
     localStorage.setItem(lsKey, 'true');
 
     // Ubah UI utama menjadi "Berhasil" + inject preview.
@@ -5150,7 +5179,7 @@ function detectCertificateIdFromAnswers(questions, answers) {
   return findByKeywords(CERT_ID_KEYWORDS_PRIORITY1) || findByKeywords(CERT_ID_KEYWORDS_PRIORITY2);
 }
 
-async function drawCertificateOnCanvas(canvas, name) {
+async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
   const ctx = canvas.getContext('2d');
   const W   = canvas.width;   // 6250 (= 900 * SCALE)
   const H   = canvas.height;  // 4419 (= 636 * SCALE, sepadan resolusi asli template Cloudinary)
@@ -5162,40 +5191,44 @@ async function drawCertificateOnCanvas(canvas, name) {
   // jadi setiap koordinat/ukuran dari Firestore dikali SCALE di sini.
   const SCALE = W / 900; // dinamis: ikut nilai canvas.width saat ini (misal 6250/900 ≈ 6.94)
 
-  // ── Fetch config dari Firestore — SATU SUMBER KEBENARAN: bbox ──
+  // ── Config: pakai yang sudah di-fetch dari pemanggil (preFetchedCfg) kalau
+  // ada — supaya TIDAK baca Firestore certificate_config dua kali (sebelumnya
+  // fungsi ini selalu fetch sendiri, padahal generateAndStore() JUGA fetch
+  // dokumen yang sama persis untuk QR & halaman belakang). Ini salah satu
+  // penyebab utama "Processing..." lama: 2 round-trip jaringan yang
+  // sebenarnya bisa cuma 1. Fallback ke fetch sendiri tetap disediakan kalau
+  // fungsi ini dipanggil tanpa preFetchedCfg (mis. dari preview admin).
   let cfgSrc       = 'sertifikat-template.png';
   let cfgFont      = 'Alex Brush';
   let cfgFontColor = '#d09e3b';
   // Default bbox (persis default ced state) — masih dalam skala 900x636
   let bboxX = 153, bboxY = 240, bboxW = 594, bboxH = 115;
-  // Default QR config (diambil dari Firestore saat generate)
-  let cfgShowQR = false;
-  let cfgQrX    = 760;
-  let cfgQrY    = 500;
-  let cfgQrW    = 100;
-  let cfgQrH    = 100;
 
-  try {
-    const snap = await db.collection('settings').doc('certificate_config').get();
-    if (snap.exists) {
-      const d = snap.data();
-      if (d.templateBase64)  cfgSrc = d.templateBase64;
-      if (d.fontFamily)      cfgFont = d.fontFamily;
-      if (d.fontColor)       cfgFontColor = d.fontColor;
-      // Baca 4 nilai bbox — inilah satu-satunya sumber posisi
-      if (d.bboxX      != null) bboxX = d.bboxX;
-      if (d.bboxY      != null) bboxY = d.bboxY;
-      if (d.bboxWidth  != null) bboxW = d.bboxWidth;
-      if (d.bboxHeight != null) bboxH = d.bboxHeight;
-      // ── Baca QR config yang disimpan Admin ──────────────────
-      if (d.showQR   != null) cfgShowQR = d.showQR;
-      if (d.qrX      != null) cfgQrX    = d.qrX;
-      if (d.qrY      != null) cfgQrY    = d.qrY;
-      if (d.qrWidth  != null) cfgQrW    = d.qrWidth;
-      if (d.qrHeight != null) cfgQrH    = d.qrHeight;
+  if (preFetchedCfg) {
+    const d = preFetchedCfg;
+    if (d.templateBase64)  cfgSrc = d.templateBase64;
+    if (d.fontFamily)      cfgFont = d.fontFamily;
+    if (d.fontColor)       cfgFontColor = d.fontColor;
+    if (d.bboxX      != null) bboxX = d.bboxX;
+    if (d.bboxY      != null) bboxY = d.bboxY;
+    if (d.bboxWidth  != null) bboxW = d.bboxWidth;
+    if (d.bboxHeight != null) bboxH = d.bboxHeight;
+  } else {
+    try {
+      const snap = await db.collection('settings').doc('certificate_config').get();
+      if (snap.exists) {
+        const d = snap.data();
+        if (d.templateBase64)  cfgSrc = d.templateBase64;
+        if (d.fontFamily)      cfgFont = d.fontFamily;
+        if (d.fontColor)       cfgFontColor = d.fontColor;
+        if (d.bboxX      != null) bboxX = d.bboxX;
+        if (d.bboxY      != null) bboxY = d.bboxY;
+        if (d.bboxWidth  != null) bboxW = d.bboxWidth;
+        if (d.bboxHeight != null) bboxH = d.bboxHeight;
+      }
+    } catch (e) {
+      console.warn('[CertDraw] Firestore config fetch failed, using defaults:', e.message);
     }
-  } catch (e) {
-    console.warn('[CertDraw] Firestore config fetch failed, using defaults:', e.message);
   }
 
   // Hitung posisi teks dari bbox (skala lama), lalu kalikan SCALE untuk canvas besar

@@ -1793,6 +1793,22 @@
   .ced-handle[data-h="r"]  { right: -5px;  cursor: ew-resize; }
   .ced-handle[data-h="t"]  { top: -5px;    cursor: ns-resize; }
   .ced-handle[data-h="b"]  { bottom: -5px; cursor: ns-resize; }
+  /* ── Handles untuk UID Watermark ── */
+  .uid-handle {
+    position: absolute; width: 10px; height: 10px;
+    background: #00e5a0; border: 2px solid #fff; border-radius: 50%;
+    box-shadow: 0 0 6px rgba(0,229,160,0.7); z-index: 2;
+  }
+  .uid-handle[data-h="l"], .uid-handle[data-h="r"] { width: 8px; height: 24px; border-radius: 4px; top: 50%; transform: translateY(-50%); }
+  .uid-handle[data-h="t"], .uid-handle[data-h="b"] { width: 24px; height: 8px; border-radius: 4px; left: 50%; transform: translateX(-50%); }
+  .uid-handle[data-h="nw"] { top: -6px; left: -6px; cursor: nw-resize; }
+  .uid-handle[data-h="ne"] { top: -6px; right: -6px; cursor: ne-resize; }
+  .uid-handle[data-h="sw"] { bottom: -6px; left: -6px; cursor: sw-resize; }
+  .uid-handle[data-h="se"] { bottom: -6px; right: -6px; cursor: se-resize; }
+  .uid-handle[data-h="l"]  { left: -5px; cursor: ew-resize; }
+  .uid-handle[data-h="r"]  { right: -5px; cursor: ew-resize; }
+  .uid-handle[data-h="t"]  { top: -5px; cursor: ns-resize; }
+  .uid-handle[data-h="b"]  { bottom: -5px; cursor: ns-resize; }
   /* Dim label inside box */
   #ced-bbox-label {
     position: absolute;
@@ -2765,6 +2781,115 @@
     }
   </style>
 </div>
+
+<!-- ── UID Watermark: posisi & warna bisa diatur, mengikuti pola QR Code ── -->
+<div class="control-group" style="margin-top: 15px;">
+  <label style="display: block; margin-bottom: 8px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">UID Watermark</label>
+  <button type="button" class="btn" id="btn-toggle-uid" onclick="toggleUidBox()" style="width: 100%; justify-content: center; background: rgba(0, 229, 160, 0.1); border: 1px dashed #00e5a0; color: #00e5a0; padding: 10px; font-weight: 600; border-radius: 6px; transition: all 0.2s;">
+    ❌ Sembunyikan UID Watermark
+  </button>
+
+  <!-- UID Color picker — copy pattern dari QR Color picker -->
+  <div id="ced-uidcolor-field" style="margin-top: 10px; display: block;">
+    <label class="ced-label" style="display:block; margin-bottom:6px;">Font UID</label>
+
+    <!-- Hidden input dibaca oleh cedRedraw() / cedSaveConfig() -->
+    <input type="hidden" id="ced-uidfont-select" value="JetBrains Mono" />
+
+    <!-- Trigger button -->
+    <button type="button" id="ced-uidfont-trigger" onclick="cedToggleUidFontPicker()" style="
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      width:100%; padding:9px 13px; border-radius:8px;
+      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+      color:#e8e8f0; font-size:13px; cursor:pointer; text-align:left;
+      transition:border-color .2s, background .2s; margin-bottom:10px;
+    ">
+      <span id="ced-uidfont-label" style="font-family:'JetBrains Mono',monospace; font-size:13px;">JetBrains Mono — Monospace (Default)</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" style="flex-shrink:0;transition:transform .2s;" id="ced-uidfont-chevron"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+
+    <!-- Dropdown panel — opsi digenerate otomatis dari daftar font nama
+         peserta (ced-font-picker) lewat JS, supaya tidak ada duplikasi
+         data font & selalu sinkron kalau daftar font nama berubah. -->
+    <div id="ced-uidfont-picker" style="
+      display:none; margin-bottom:10px;
+      background:#16172b; border:1px solid rgba(204,255,0,0.18);
+      border-radius:10px; overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
+      max-height:280px; overflow-y:auto;
+    "></div>
+
+   <label class="ced-label" style="display:block; margin-bottom:6px;">Warna UID</label>
+    
+    <button type="button" id="ced-uidadvcolor-trigger" onclick="cedToggleUidAdvColorPicker()" style="
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; padding: 9px 13px; border-radius: 8px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      color: #e8e8f0; font-size: 13px; cursor: pointer;
+      transition: border-color .2s, background .2s;
+    ">
+      <span id="ced-uidadvcolor-swatch" style="
+        display: inline-block; width: 20px; height: 20px; border-radius: 50%;
+        background: #cccccc; border: 2px solid rgba(255,255,255,0.2);
+        flex-shrink: 0; box-shadow: 0 0 8px rgba(204,204,204,0.5);
+      "></span>
+      <span id="ced-uidadvcolor-hex" style="font-family: var(--font-mono); letter-spacing: .04em; font-size: 12px;">#cccccc</span>
+      <span style="margin-left:auto; opacity:.5; font-size:11px;">▾</span>
+    </button>
+
+    <div id="ced-uidadvcolor-picker" style="
+      display: none; margin-top: 8px; border-radius: 12px;
+      background: #16172099; backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset;
+      padding: 14px 14px 12px; overflow: hidden;
+    ">
+      <div style="position:relative; margin-bottom: 10px;">
+        <canvas id="ced-uidcolor-grad" width="236" height="150" style="
+          border-radius: 8px; cursor: crosshair; display: block; width: 100%;
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+        "></canvas>
+        <div id="ced-uidcolor-cursor" style="
+          position:absolute; width:14px; height:14px; border-radius:50%;
+          border: 2.5px solid #fff; box-shadow: 0 0 6px rgba(0,0,0,0.8);
+          pointer-events:none; transform: translate(-50%,-50%); top: 30%; left: 80%;
+        "></div>
+      </div>
+      <div style="position:relative; margin-bottom: 10px;">
+        <canvas id="ced-uidhue-bar" width="236" height="16" style="
+          border-radius: 8px; cursor: pointer; display: block; width: 100%;
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+        "></canvas>
+        <div id="ced-uidhue-cursor" style="
+          position:absolute; top:50%; width:18px; height:18px; border-radius:50%;
+          border: 2.5px solid #fff; box-shadow: 0 0 6px rgba(0,0,0,0.8);
+          pointer-events:none; transform: translate(-50%,-50%); left: 25%;
+        "></div>
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+        <button type="button" class="ced-uidswatch-btn" data-color="#cccccc" style="background:#cccccc;"></button>
+        <button type="button" class="ced-uidswatch-btn" data-color="#d09e3b" style="background:#d09e3b;"></button>
+        <button type="button" class="ced-uidswatch-btn" data-color="#00e5a0" style="background:#00e5a0;"></button>
+        <button type="button" class="ced-uidswatch-btn" data-color="#ffffff" style="background:#ffffff;"></button>
+        <button type="button" class="ced-uidswatch-btn" data-color="#1a1a1a" style="background:#1a1a1a; border-color:rgba(255,255,255,0.2)!important;"></button>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:11px; color:rgba(255,255,255,0.35); font-family:var(--font-mono); flex-shrink:0;">#</span>
+        <input id="ced-uidcolor-input" type="text" maxlength="6" placeholder="cccccc"
+          style="
+            flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+            border-radius:6px; padding:6px 10px; color:#e8e8f0; font-family:var(--font-mono); font-size:13px;
+            outline:none; transition: border-color .2s;
+          "
+          oninput="cedUidColorFromHexInput(this.value)"
+        />
+      </div>
+    </div>
+    <p style="margin:6px 0 0; font-size:10.5px; line-height:1.4; color:var(--text-muted);">
+      Geser kotak putus-putus pada canvas untuk mengatur posisi UID di sertifikat.
+    </p>
+  </div>
+</div>
         <!-- 4. Coordinate readout — 1 sumber kebenaran: BBOX -->
         <div class="ced-coords">
           <div class="ced-coords-hd">Text Box Position (drag box to move)</div>
@@ -2817,6 +2942,19 @@
           <div id="qr-bbox" style="display: none; position: absolute; border: 2px dashed #00e5a0; background: rgba(0, 229, 160, 0.15); cursor: move; box-sizing: border-box; z-index: 10;">
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00e5a0; font-family: var(--font-mono); font-size: 10px; font-weight: bold; text-align: center; pointer-events: none; text-shadow: 0 0 4px #000; letter-spacing: 0.05em;">[ QR CODE ]</div>
             <div class="qr-handle" style="position: absolute; width: 12px; height: 12px; background: #00e5a0; right: -6px; bottom: -6px; cursor: se-resize; border-radius: 2px; box-shadow: 0 0 8px rgba(0,229,160,0.8);"></div>
+          </div>
+
+          <!-- UID watermark bbox — posisi saja (tanpa resize, karena cuma 1 baris teks kecil) -->
+          <div id="uid-bbox" style="display: block; position: absolute; border: 2px dashed #00e5a0; background: rgba(0, 229, 160, 0.15); cursor: move; box-sizing: border-box; z-index: 10; touch-action: none; user-select: none;">
+            <span id="uid-bbox-label" style="position: absolute; top: -18px; left: 0; color: #00e5a0; font-family: var(--font-mono); font-size: 10px; font-weight: bold; text-align: left; pointer-events: none; text-shadow: 0 0 4px #000; letter-spacing: 0.05em; white-space: nowrap;">UID Watermark</span>
+            <div class="uid-handle" data-h="nw"></div>
+            <div class="uid-handle" data-h="ne"></div>
+            <div class="uid-handle" data-h="sw"></div>
+            <div class="uid-handle" data-h="se"></div>
+            <div class="uid-handle" data-h="l"></div>
+            <div class="uid-handle" data-h="r"></div>
+            <div class="uid-handle" data-h="t"></div>
+            <div class="uid-handle" data-h="b"></div>
           </div>
 
           <div id="ced-bbox">
@@ -5203,6 +5341,13 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
   let cfgFontColor = '#d09e3b';
   // Default bbox (persis default ced state) — masih dalam skala 900x636
   let bboxX = 153, bboxY = 240, bboxW = 594, bboxH = 115;
+  // Default UID watermark (persis default ced.uid* state, skala 900x636) —
+  // posisi & warna ini SEKARANG bisa diatur Admin lewat Canvas Editor,
+  // bukan lagi hardcoded di pojok kiri bawah.
+  let cfgUidVisible = true;
+  let cfgUidX = 84, cfgUidY = 598;
+  let cfgUidColor = 'rgba(204,204,204,0.45)';
+  let cfgUidFont  = 'JetBrains Mono';
 
   if (preFetchedCfg) {
     const d = preFetchedCfg;
@@ -5213,6 +5358,13 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
     if (d.bboxY      != null) bboxY = d.bboxY;
     if (d.bboxWidth  != null) bboxW = d.bboxWidth;
     if (d.bboxHeight != null) bboxH = d.bboxHeight;
+    if (d.uidVisible != null) cfgUidVisible = d.uidVisible;
+    if (d.uidX       != null) cfgUidX = d.uidX;
+    if (d.uidY       != null) cfgUidY = d.uidY;
+    if (d.uidWidth    != null) ced.uidWidth  = d.uidWidth;
+    if (d.uidHeight   != null) ced.uidHeight = d.uidHeight;
+    if (d.uidColor   != null) cfgUidColor = d.uidColor;
+    if (d.uidFont    != null) cfgUidFont = d.uidFont;
   } else {
     try {
       const snap = await db.collection('settings').doc('certificate_config').get();
@@ -5225,6 +5377,11 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
         if (d.bboxY      != null) bboxY = d.bboxY;
         if (d.bboxWidth  != null) bboxW = d.bboxWidth;
         if (d.bboxHeight != null) bboxH = d.bboxHeight;
+        if (d.uidVisible != null) cfgUidVisible = d.uidVisible;
+        if (d.uidX       != null) cfgUidX = d.uidX;
+        if (d.uidY       != null) cfgUidY = d.uidY;
+        if (d.uidColor   != null) cfgUidColor = d.uidColor;
+        if (d.uidFont    != null) cfgUidFont = d.uidFont;
       }
     } catch (e) {
       console.warn('[CertDraw] Firestore config fetch failed, using defaults:', e.message);
@@ -5319,21 +5476,77 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
   ctx.restore();
 
   // ── 3. Faint UID watermark ────────────────────────────────────
-  // Prioritas: kalau ada pertanyaan survey yang teksnya mengandung
+  // Prioritas teks: kalau ada pertanyaan survey yang teksnya mengandung
   // "Certificate ID"/"Student ID" (atau variannya), jawaban dari
   // pertanyaan itu yang ditampilkan di sini. Kalau tidak ada
   // pertanyaan seperti itu di survey, fallback ke Firebase UID
   // (8 karakter terakhir, huruf besar) seperti sebelumnya.
-  ctx.save();
-  ctx.font      = `400 ${Math.round(10 * SCALE)}px "JetBrains Mono", monospace`;
-  ctx.fillStyle = 'rgba(204,204,204,0.28)';
-  ctx.textAlign = 'left';
-  const detectedCertId = studentSurveyConfig
-    ? detectCertificateIdFromAnswers(studentSurveyConfig.questions, studentSurveyAnswers)
-    : null;
-  const uid = detectedCertId || (currentUser ? currentUser.uid.slice(-8).toUpperCase() : 'UNKNOWN');
-  ctx.fillText('UID: ' + uid, 84 * SCALE, H - 30 * SCALE);
-  ctx.restore();
+  //
+  // Posisi & warna SEKARANG diambil dari config Firestore (cfgUidX/Y/
+  // Color, diatur Admin lewat drag di Canvas Editor) — bukan lagi
+  // hardcoded di pojok kiri bawah. cfgUidVisible juga memungkinkan
+  // Admin menyembunyikan watermark ini sepenuhnya kalau diinginkan.
+  if (cfgUidVisible !== false) {
+    ctx.save();
+    const uidFontFamily = cfgUidFont || 'JetBrains Mono';
+    ctx.fillStyle = cfgUidColor || 'rgba(204,204,204,0.45)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    const detectedCertId = studentSurveyConfig
+      ? detectCertificateIdFromAnswers(studentSurveyConfig.questions, studentSurveyAnswers)
+      : null;
+    const uid = detectedCertId || (currentUser ? currentUser.uid.slice(-8).toUpperCase() : 'UNKNOWN');
+    
+    // ── LOGIKA OTOMATIS MENGUBAH PREFIX LABELS BERDASARKAN FIELD ──
+    let prefixLabel = 'UID';
+    if (studentSurveyConfig && studentSurveyConfig.questions) {
+      const qList = studentSurveyConfig.questions;
+      
+      // Cek apakah ada field bertuliskan Certificate ID / ID Sertifikat
+      const hasCert = qList.some(q => {
+        const t = (q.title || q.label || '').toLowerCase();
+        return t.includes('certificate id') || t.includes('id sertifikat');
+      });
+      
+      // Cek apakah ada field bertuliskan Student ID / ID Siswa / NIM / NPM
+      const hasStudent = qList.some(q => {
+        const t = (q.title || q.label || '').toLowerCase();
+        return t.includes('student id') || t.includes('id siswa') || t.includes('nim') || t.includes('npm');
+      });
+
+      if (hasCert) {
+        prefixLabel = 'Certificate ID';
+      } else if (hasStudent) {
+        prefixLabel = 'Student ID';
+      }
+    }
+
+    const text = prefixLabel + ': ' + uid;
+    // ──────────────────────────────────────────────────────────────
+
+    // Ambil lebar & tinggi dari Config, lalu di Scale
+
+    // Ambil lebar & tinggi dari Config, lalu di Scale
+    const uBoxW = (preFetchedCfg && preFetchedCfg.uidWidth != null ? preFetchedCfg.uidWidth : (ced.uidWidth || 250)) * SCALE;
+    const uBoxH = (preFetchedCfg && preFetchedCfg.uidHeight != null ? preFetchedCfg.uidHeight : (ced.uidHeight || 40)) * SCALE;
+    const uBoxX = cfgUidX * SCALE;
+    const uBoxY = cfgUidY * SCALE;
+
+    // Auto-scale loop
+    let uFontSize = 68 * SCALE;
+    while (uFontSize >= 8) {
+      ctx.font = `400 ${uFontSize}px "${uidFontFamily}", monospace`;
+      const m = ctx.measureText(text);
+      const w = m.width;
+      const h = (m.actualBoundingBoxAscent || uFontSize*0.8) + (m.actualBoundingBoxDescent || uFontSize*0.3);
+      if (w <= uBoxW * 0.95 && h <= uBoxH * 0.8) break;
+      uFontSize -= 1;
+    }
+
+    ctx.fillText(text, uBoxX + (uBoxW / 2), uBoxY + (uBoxH / 2));
+    ctx.restore();
+  }
 }
 // ── Helper: draw shield icon on canvas ───────────────────────────
 function drawShield(ctx, cx, cy, r) {
@@ -6462,7 +6675,10 @@ const ced = {
   y:      240,   // top edge px  (bukan nameY — ini top edge bbox)
   width:  594,   // box width px
   height: 115,   // box height px
+  uidWidth: 250,
+  uidHeight: 40,
 };
+
 
 // ── Toggle panel open / closed ───────────────────────────────────
 function toggleCertEditor() {
@@ -7385,6 +7601,35 @@ async function cedLoadFromFirestore() {
       }
     }
 
+    // ── Load UID watermark config dari Firestore ke state editor ──
+    if (d.uidVisible != null) ced.uidVisible = d.uidVisible;
+    if (d.uidX        != null) ced.uidX      = d.uidX;
+    if (d.uidY        != null) ced.uidY      = d.uidY;
+    if (d.uidColor    != null) ced.uidColor  = d.uidColor;
+    if (d.uidFont     != null) ced.uidFont   = d.uidFont;
+    if (typeof cedSyncUidColorUI === 'function') cedSyncUidColorUI(ced.uidColor || 'rgba(204,204,204,0.45)');
+    if (typeof cedSyncUidFontUI === 'function') cedSyncUidFontUI(ced.uidFont || 'JetBrains Mono');
+    // Sync tombol toggle & bbox overlay UID sesuai state Firestore
+    const uidBbox = document.getElementById('uid-bbox');
+    const uidBtn  = document.getElementById('btn-toggle-uid');
+    const uidColorField = document.getElementById('ced-uidcolor-field');
+    if (uidBbox) uidBbox.style.display = ced.uidVisible !== false ? 'block' : 'none';
+    if (uidColorField) uidColorField.style.display = ced.uidVisible !== false ? 'block' : 'none';
+    if (uidBtn) {
+      if (ced.uidVisible !== false) {
+        uidBtn.innerHTML = '❌ Sembunyikan UID Watermark';
+        uidBtn.style.background  = 'rgba(255, 77, 109, 0.1)';
+        uidBtn.style.borderColor = '#ff4d6d';
+        uidBtn.style.color       = '#ff4d6d';
+      } else {
+        uidBtn.innerHTML = '➕ Tampilkan UID Watermark';
+        uidBtn.style.background  = 'rgba(0, 229, 160, 0.1)';
+        uidBtn.style.borderColor = '#00e5a0';
+        uidBtn.style.color       = '#00e5a0';
+      }
+    }
+    if (typeof syncUidBbox === 'function') syncUidBbox();
+
     // Update panel readout
     document.getElementById('ced-coord-x').textContent = Math.round(ced.x);
     document.getElementById('ced-coord-y').textContent = Math.round(ced.y);
@@ -7717,6 +7962,60 @@ async function _cedDraw() {
     ctx.fillRect(ced.qrX + 11, ced.qrY + ced.qrHeight - pSize - 1, pSize - 10, pSize - 10);
   }
 
+  // MENGGAMBAR PREVIEW UID WATERMARK PADA KANVAS PREVIEW ADMIN
+  // Posisi, warna & font persis sama dengan yang dipakai
+  // drawCertificateOnCanvas (hasil PDF final) — supaya Admin bisa lihat
+  // live preview saat drag, termasuk teks dummy "UID: XXXXXXXX" (UID
+  // asli baru dihasilkan saat student benar2 generate sertifikat).
+  // MENGGAMBAR PREVIEW UID WATERMARK PADA KANVAS PREVIEW ADMIN
+  if (window.ced && ced.uidVisible !== false) {
+    ctx.save();
+    const uidFontFamily = ced.uidFont || 'JetBrains Mono';
+    ctx.fillStyle = ced.uidColor || 'rgba(204,204,204,0.45)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // ── LOGIKA OTOMATIS MENGUBAH PREFIX LABELS UNTUK PREVIEW ADMIN ──
+    let prefixLabel = 'UID';
+    // Mengambil data kuesioner dari variabel global admin yang tersedia
+    const adminQuestions = window.currentQuestions || (window.surveyConfig && window.surveyConfig.questions) || (window.activeSurvey && window.activeSurvey.questions) || (window.studentSurveyConfig && window.studentSurveyConfig.questions);
+    
+    if (adminQuestions && Array.isArray(adminQuestions)) {
+      const hasCert = adminQuestions.some(q => {
+        const t = (q.title || q.label || '').toLowerCase();
+        return t.includes('certificate id') || t.includes('id sertifikat');
+      });
+      const hasStudent = adminQuestions.some(q => {
+        const t = (q.title || q.label || '').toLowerCase();
+        return t.includes('student id') || t.includes('id siswa') || t.includes('nim') || t.includes('npm');
+      });
+
+      if (hasCert) {
+        prefixLabel = 'Certificate ID';
+      } else if (hasStudent) {
+        prefixLabel = 'Student ID';
+      }
+    }
+
+    const text = prefixLabel + ': XXXXXXXX';
+    // ─────────────────────────────────────────────────────────────────
+    
+    const uBoxW = ced.uidWidth || 250;
+    const uBoxH = ced.uidHeight || 40;
+    
+    let uFontSize = 68;
+    while (uFontSize >= 8) {
+      ctx.font = `400 ${uFontSize}px "${uidFontFamily}", monospace`;
+      const m = ctx.measureText(text);
+      const w = m.width;
+      const h = (m.actualBoundingBoxAscent || uFontSize*0.8) + (m.actualBoundingBoxDescent || uFontSize*0.3);
+      if (w <= uBoxW * 0.95 && h <= uBoxH * 0.8) break;
+      uFontSize -= 1;
+    }
+
+    ctx.fillText(text, ced.uidX + (uBoxW / 2), ced.uidY + (uBoxH / 2));
+    ctx.restore();
+  }
   // 5. Debug overlay (font size + Y position info)
   ctx.save();
   ctx.font      = '400 9px "JetBrains Mono",monospace';
@@ -7850,6 +8149,13 @@ async function cedSaveConfig() {
   qrWidth:        isFinite(ced.qrWidth)  ? Math.round(ced.qrWidth)  : 100,
   qrHeight:       isFinite(ced.qrHeight) ? Math.round(ced.qrHeight) : 100,
   qrColor:        ced.qrColor || '#000000',
+  uidVisible:     ced.uidVisible !== false,
+  uidX:           isFinite(ced.uidX) ? Math.round(ced.uidX) : 84,
+  uidY:           isFinite(ced.uidY) ? Math.round(ced.uidY) : 598,
+  uidWidth:       isFinite(ced.uidWidth) ? Math.round(ced.uidWidth) : 250,
+  uidHeight:      isFinite(ced.uidHeight) ? Math.round(ced.uidHeight) : 40,
+  uidColor:       ced.uidColor || 'rgba(204,204,204,0.45)',
+  uidFont:        ced.uidFont || 'JetBrains Mono',
   updatedAt:      firebase.firestore.FieldValue.serverTimestamp(),
 };
 
@@ -8130,6 +8436,332 @@ async function cedSaveConfig() {
   qrBbox.addEventListener('pointercancel', stopAction);
 })();
 // ── END CERTIFICATE VISUAL EDITOR ────────────────────────────────
+
+// ── LOGIKA VISUAL MANIPULATOR UID WATERMARK (RESIZE & DRAG) ──
+(function initUidVisualEditor() {
+  window.ced = window.ced || {};
+  ced.uidVisible = true;
+  ced.uidX     = 84;
+  ced.uidY     = 598;  
+  ced.uidWidth = 250;
+  ced.uidHeight= 40;
+  ced.uidColor = '#cccccc';
+  ced.uidFont  = 'JetBrains Mono';
+
+  window.toggleUidBox = function() {
+    ced.uidVisible = !ced.uidVisible;
+    const uidBbox = document.getElementById('uid-bbox');
+    const btn = document.getElementById('btn-toggle-uid');
+    const colorField = document.getElementById('ced-uidcolor-field');
+    if (!uidBbox || !btn) return;
+
+    if (ced.uidVisible) {
+      uidBbox.style.display = 'block';
+      btn.innerHTML = '❌ Sembunyikan UID Watermark';
+      btn.style.background = 'rgba(255, 77, 109, 0.1)';
+      btn.style.borderColor = '#ff4d6d';
+      btn.style.color = '#ff4d6d';
+      if (colorField) colorField.style.display = 'block';
+    } else {
+      uidBbox.style.display = 'none';
+      btn.innerHTML = '➕ Tampilkan UID Watermark';
+      btn.style.background = 'rgba(0, 229, 160, 0.1)';
+      btn.style.borderColor = '#00e5a0';
+      btn.style.color = '#00e5a0';
+      if (colorField) colorField.style.display = 'none';
+    }
+    if (typeof cedRedraw === 'function') cedRedraw();
+    syncUidBbox();
+  };
+
+  function syncUidBbox() {
+    const canvas  = document.getElementById('ced-canvas');
+    const uidBbox = document.getElementById('uid-bbox');
+    if (!canvas || !uidBbox || !ced.uidVisible) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width / canvas.width;
+    const scaleY = rect.height / canvas.height;
+
+    uidBbox.style.left = (ced.uidX * scaleX) + 'px';
+    uidBbox.style.top  = (ced.uidY * scaleY) + 'px';
+    uidBbox.style.width = (ced.uidWidth * scaleX) + 'px';
+    uidBbox.style.height = (ced.uidHeight * scaleY) + 'px';
+  }
+
+  window.addEventListener('resize', syncUidBbox);
+  window.syncUidBbox = syncUidBbox;
+
+  const origSync2 = window._cedSyncBbox;
+  window._cedSyncBbox = function() {
+    if (origSync2) origSync2();
+    syncUidBbox();
+  };
+
+  const uidBbox = document.getElementById('uid-bbox');
+  if (!uidBbox) return;
+
+  let drag = null;
+  const CANVAS_W = 900, CANVAS_H = 636, MIN_W = 40, MIN_H = 20;
+
+  uidBbox.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    const canvas = document.getElementById('ced-canvas');
+    if (!canvas) return;
+
+    const handle = e.target.closest('[data-h]');
+    drag = {
+      type: handle ? 'resize' : 'move',
+      handle: handle ? handle.dataset.h : null,
+      startMX: e.clientX,
+      startMY: e.clientY,
+      startX: ced.uidX,
+      startY: ced.uidY,
+      startW: ced.uidWidth,
+      startH: ced.uidHeight,
+    };
+    uidBbox.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  uidBbox.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const canvas = document.getElementById('ced-canvas');
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    const dx = (e.clientX - drag.startMX) * scaleX;
+    const dy = (e.clientY - drag.startMY) * scaleY;
+
+    if (drag.type === 'move') {
+      ced.uidX = Math.max(0, Math.min(CANVAS_W - ced.uidWidth, drag.startX + dx));
+      ced.uidY = Math.max(0, Math.min(CANVAS_H - ced.uidHeight, drag.startY + dy));
+    } else {
+      const h = drag.handle;
+      if (h === 'l' || h === 'nw' || h === 'sw') {
+        const newW = Math.max(MIN_W, drag.startW - dx);
+        ced.uidWidth = newW;
+        ced.uidX = Math.max(0, drag.startX + (drag.startW - newW));
+      }
+      if (h === 'r' || h === 'ne' || h === 'se') {
+        ced.uidWidth = Math.max(MIN_W, Math.min(CANVAS_W - ced.uidX, drag.startW + dx));
+      }
+      if (h === 't' || h === 'nw' || h === 'ne') {
+        const newH = Math.max(MIN_H, drag.startH - dy);
+        ced.uidHeight = newH;
+        ced.uidY = drag.startY + (drag.startH - newH);
+      }
+      if (h === 'b' || h === 'sw' || h === 'se') {
+        ced.uidHeight = Math.max(MIN_H, drag.startH + dy);
+      }
+    }
+
+    syncUidBbox();
+    if (typeof cedRedraw === 'function') cedRedraw();
+    e.preventDefault();
+  });
+
+  const stopUidAction = (e) => {
+    if (drag) {
+      drag = null;
+      uidBbox.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  uidBbox.addEventListener('pointerup', stopUidAction);
+  uidBbox.addEventListener('pointercancel', stopUidAction);
+})();
+
+// ── LOGIKA ADVANCED COLOR PICKER UNTUK UID ──
+(function initUidAdvancedColorPicker() {
+  let _ucpHue = 0;   
+  let _ucpSat = 0; 
+  let _ucpVal = 0.8; 
+  let _ucpOpen = false;
+
+  function hsvToRgb(h, s, v) {
+    let r, g, b;
+    const i = Math.floor(h / 60) % 6;
+    const f = h / 60 - Math.floor(h / 60);
+    const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+    [[r,g,b]=[v,t,p],[r,g,b]=[q,v,p],[r,g,b]=[p,v,t],[r,g,b]=[p,q,v],[r,g,b]=[t,p,v],[r,g,b]=[v,p,q]][i];
+    switch(i){ case 0:r=v;g=t;b=p;break;case 1:r=q;g=v;b=p;break;case 2:r=p;g=v;b=t;break;case 3:r=p;g=q;b=v;break;case 4:r=t;g=p;b=v;break;case 5:r=v;g=p;b=q;break; }
+    return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+  }
+  function rgbToHex(r, g, b) {
+    return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
+  }
+  function hexToRgb(hex) {
+    hex = hex.replace('#','');
+    if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+    return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+  }
+  function rgbToHsv(r, g, b) {
+    r/=255; g/=255; b/=255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+    let h=0, s=max===0?0:d/max, v=max;
+    if(d!==0){if(max===r)h=((g-b)/d+6)%6;else if(max===g)h=(b-r)/d+2;else h=(r-g)/d+4; h*=60;}
+    return [h, s, v];
+  }
+
+  function drawUidGradient() {
+    const cvs = document.getElementById('ced-uidcolor-grad');
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    const W = cvs.width, H = cvs.height;
+
+    const hueColor = `hsl(${_ucpHue}, 100%, 50%)`;
+    const gH = ctx.createLinearGradient(0, 0, W, 0);
+    gH.addColorStop(0, '#fff');
+    gH.addColorStop(1, hueColor);
+    ctx.fillStyle = gH;
+    ctx.fillRect(0, 0, W, H);
+
+    const gV = ctx.createLinearGradient(0, 0, 0, H);
+    gV.addColorStop(0, 'rgba(0,0,0,0)');
+    gV.addColorStop(1, '#000');
+    ctx.fillStyle = gV;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawUidHueBar() {
+    const cvs = document.getElementById('ced-uidhue-bar');
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    const W = cvs.width, H = cvs.height;
+    const g = ctx.createLinearGradient(0, 0, W, 0);
+    [0,60,120,180,240,300,360].forEach((h, i) => { g.addColorStop(i/6, `hsl(${h},100%,50%)`); });
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function syncUidCursors() {
+    const gradCvs = document.getElementById('ced-uidcolor-grad');
+    const hueCvs  = document.getElementById('ced-uidhue-bar');
+    const gradCur = document.getElementById('ced-uidcolor-cursor');
+    const hueCur  = document.getElementById('ced-uidhue-cursor');
+    if (!gradCvs || !gradCur || !hueCvs || !hueCur) return;
+
+    const gW = gradCvs.offsetWidth || gradCvs.width;
+    const gH = gradCvs.offsetHeight || gradCvs.height;
+    gradCur.style.left = (_ucpSat * gW) + 'px';
+    gradCur.style.top  = ((1 - _ucpVal) * gH) + 'px';
+
+    const hW = hueCvs.offsetWidth || hueCvs.width;
+    hueCur.style.left = ((_ucpHue / 360) * hW) + 'px';
+
+    const [r,g,b] = hsvToRgb(_ucpHue, _ucpSat, _ucpVal);
+    const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+    gradCur.style.borderColor = lum > 0.5 ? '#000' : '#fff';
+  }
+
+  function applyUidColor(hex) {
+    ced.uidColor = hex;
+    cedSyncUidColorUI(hex);
+    if (typeof cedRedraw === 'function') cedRedraw();
+  }
+
+  window.cedSyncUidColorUI = function(hex) {
+    const swatch  = document.getElementById('ced-uidadvcolor-swatch');
+    const hexSpan = document.getElementById('ced-uidadvcolor-hex');
+    const input   = document.getElementById('ced-uidcolor-input');
+    const trigger = document.getElementById('ced-uidadvcolor-trigger');
+    if (swatch)  { swatch.style.background = hex; swatch.style.boxShadow = `0 0 8px ${hex}88`; }
+    if (hexSpan) hexSpan.textContent = hex;
+    if (input)   input.value = hex.replace('#','');
+    if (trigger) trigger.style.borderColor = `${hex}66`;
+
+    document.querySelectorAll('.ced-uidswatch-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.color === hex);
+    });
+
+    const [r,g,b] = hexToRgb(hex);
+    [_ucpHue, _ucpSat, _ucpVal] = rgbToHsv(r, g, b);
+    drawUidGradient();
+    syncUidCursors();
+  };
+
+  window.cedToggleUidAdvColorPicker = function() {
+    const picker = document.getElementById('ced-uidadvcolor-picker');
+    if (!picker) return;
+    _ucpOpen = !_ucpOpen;
+    picker.style.display = _ucpOpen ? 'block' : 'none';
+    if (_ucpOpen) {
+      requestAnimationFrame(() => {
+        drawUidGradient();
+        drawUidHueBar();
+        syncUidCursors();
+        attachUidPickerEvents();
+      });
+    }
+  };
+
+  window.cedUidColorFromHexInput = function(val) {
+    val = val.replace(/[^0-9a-fA-F]/g,'');
+    if (val.length === 6) applyUidColor('#' + val);
+  };
+
+  let _uidEventsAttached = false;
+  function attachUidPickerEvents() {
+    if (_uidEventsAttached) return;
+    _uidEventsAttached = true;
+
+    const gradCvs = document.getElementById('ced-uidcolor-grad');
+    const hueCvs  = document.getElementById('ced-uidhue-bar');
+
+    let _draggingGrad = false;
+    function pickFromUidGrad(e) {
+      const rect = gradCvs.getBoundingClientRect();
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      _ucpSat = Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
+      _ucpVal = Math.max(0, Math.min(1, 1 - (cy - rect.top) / rect.height));
+      syncUidCursors();
+      applyUidColor(rgbToHex(...hsvToRgb(_ucpHue, _ucpSat, _ucpVal)));
+    }
+    gradCvs.addEventListener('mousedown',  e => { _draggingGrad = true; pickFromUidGrad(e); });
+    gradCvs.addEventListener('touchstart', e => { _draggingGrad = true; pickFromUidGrad(e); e.preventDefault(); }, {passive:false});
+    window.addEventListener('mousemove',  e => { if (_draggingGrad) pickFromUidGrad(e); });
+    window.addEventListener('touchmove',  e => { if (_draggingGrad) pickFromUidGrad(e); }, {passive:true});
+    window.addEventListener('mouseup',    () => _draggingGrad = false);
+    window.addEventListener('touchend',   () => _draggingGrad = false);
+
+    let _draggingHue = false;
+    function pickFromUidHue(e) {
+      const rect = hueCvs.getBoundingClientRect();
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      _ucpHue = Math.max(0, Math.min(360, ((cx - rect.left) / rect.width) * 360));
+      drawUidGradient();
+      syncUidCursors();
+      applyUidColor(rgbToHex(...hsvToRgb(_ucpHue, _ucpSat, _ucpVal)));
+    }
+    hueCvs.addEventListener('mousedown',  e => { _draggingHue = true; pickFromUidHue(e); });
+    hueCvs.addEventListener('touchstart', e => { _draggingHue = true; pickFromUidHue(e); e.preventDefault(); }, {passive:false});
+    window.addEventListener('mousemove',  e => { if (_draggingHue) pickFromUidHue(e); });
+    window.addEventListener('touchmove',  e => { if (_draggingHue) pickFromUidHue(e); }, {passive:true});
+    window.addEventListener('mouseup',    () => _draggingHue = false);
+    window.addEventListener('touchend',   () => _draggingHue = false);
+
+    document.querySelectorAll('.ced-uidswatch-btn').forEach(btn => {
+      btn.addEventListener('click', () => { applyUidColor(btn.dataset.color); });
+      btn.style.width = '22px'; btn.style.height = '22px'; btn.style.borderRadius = '50%';
+      btn.style.border = '2px solid rgba(255,255,255,0.15)'; btn.style.cursor = 'pointer';
+    });
+
+    document.addEventListener('click', e => {
+      if (!_ucpOpen) return;
+      const field = document.getElementById('ced-uidcolor-field');
+      if (field && !field.contains(e.target)) {
+        const picker = document.getElementById('ced-uidadvcolor-picker');
+        if (picker) picker.style.display = 'none';
+        _ucpOpen = false;
+      }
+    });
+  }
+})();
+// ==========================================
+// ── END UID VISUAL EDITOR ─────────────────────────────────────────
 window.setupAdminDevice = function() {
   sessionStorage.setItem(ADMIN_DEVICE_KEY, ADMIN_FINGERPRINT);
   console.log('%c✅ This device is now marked as the Admin device. Refresh the page.', 'color:#ccff00;font-weight:bold;font-size:14px;');
@@ -8328,6 +8960,247 @@ detectDevice();
       if (chevron) chevron.style.transform = 'rotate(0deg)';
       trigger.style.borderColor = 'rgba(255,255,255,0.1)';
       _qcpOpen = false;
+    }
+  });
+})();
+
+// ════════════════════════════════════════════════════════════════
+// UID COLOR PICKER — copy pattern persis dari QR Color Picker di atas
+// ════════════════════════════════════════════════════════════════
+(function initUidColorPicker() {
+  let _ucpOpen = false;
+
+  window.cedToggleUidColorPicker = function() {
+    const picker  = document.getElementById('ced-uidcolor-picker');
+    const chevron = document.getElementById('ced-uidcolor-chevron');
+    const trigger = document.getElementById('ced-uidcolor-trigger');
+    if (!picker) return;
+    _ucpOpen = !_ucpOpen;
+    picker.style.display  = _ucpOpen ? 'block' : 'none';
+    if (chevron) chevron.style.transform = _ucpOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = _ucpOpen ? 'rgba(204,255,0,0.4)' : 'rgba(255,255,255,0.1)';
+  };
+
+  window.cedPickUidColor = function(btn) {
+    const value = btn.dataset.value;
+    const label = btn.dataset.label;
+
+    const hiddenInput = document.getElementById('ced-uidcolor-select');
+    if (hiddenInput) hiddenInput.value = value;
+
+    ced.uidColor = value;
+
+    const labelEl  = document.getElementById('ced-uidcolor-label');
+    const swatchEl = document.getElementById('ced-uidcolor-swatch');
+    if (labelEl)  labelEl.textContent = label;
+    if (swatchEl) swatchEl.style.background = value;
+
+    document.querySelectorAll('#ced-uidcolor-picker .ced-qrcolor-opt').forEach(o => o.classList.remove('active'));
+    btn.classList.add('active');
+
+    const picker  = document.getElementById('ced-uidcolor-picker');
+    const chevron = document.getElementById('ced-uidcolor-chevron');
+    const trigger = document.getElementById('ced-uidcolor-trigger');
+    if (picker)  picker.style.display  = 'none';
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+    _ucpOpen = false;
+
+    if (typeof cedRedraw === 'function') cedRedraw();
+  };
+
+  // Sync UI from a saved uidColor value (called on Firestore load)
+  window.cedSyncUidColorUI = function(value) {
+    const opts = document.querySelectorAll('#ced-uidcolor-picker .ced-qrcolor-opt');
+    let matched = false;
+    opts.forEach(btn => {
+      if (btn.dataset.value === value) {
+        matched = true;
+        btn.classList.add('active');
+        const label    = btn.dataset.label;
+        const labelEl  = document.getElementById('ced-uidcolor-label');
+        const swatchEl = document.getElementById('ced-uidcolor-swatch');
+        if (labelEl)  labelEl.textContent = label;
+        if (swatchEl) swatchEl.style.background = value;
+        const hiddenInput = document.getElementById('ced-uidcolor-select');
+        if (hiddenInput) hiddenInput.value = value;
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    if (!matched) {
+      const labelEl  = document.getElementById('ced-uidcolor-label');
+      const swatchEl = document.getElementById('ced-uidcolor-swatch');
+      const hiddenInput = document.getElementById('ced-uidcolor-select');
+      if (labelEl)  labelEl.textContent = 'Custom';
+      if (swatchEl) swatchEl.style.background = value;
+      if (hiddenInput) hiddenInput.value = value;
+    }
+  };
+
+  // Close picker on outside click
+  document.addEventListener('click', function(e) {
+    if (!_ucpOpen) return;
+    const field = document.getElementById('ced-uidcolor-picker');
+    const trigger = document.getElementById('ced-uidcolor-trigger');
+    if (!field || !trigger) return;
+    if (!field.contains(e.target) && !trigger.contains(e.target)) {
+      field.style.display = 'none';
+      const chevron = document.getElementById('ced-uidcolor-chevron');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+      trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+      _ucpOpen = false;
+    }
+  });
+})();
+
+// ════════════════════════════════════════════════════════════════
+// UID FONT PICKER — opsi DIGENERATE OTOMATIS dari daftar font nama
+// peserta (#ced-font-picker .ced-font-opt), supaya tidak ada
+// duplikasi data font yang harus dirawat di 2 tempat berbeda. Kalau
+// nanti font nama peserta ditambah/diubah, dropdown font UID ini
+// otomatis ikut sinkron tanpa perlu edit kode tambahan.
+// ════════════════════════════════════════════════════════════════
+(function initUidFontPicker() {
+  let _ufpOpen = false;
+
+  // Bangun ulang daftar opsi font UID dari #ced-font-picker (sumber
+  // tunggal daftar font), ditambah 1 opsi khusus "JetBrains Mono" di
+  // posisi paling atas sebagai default watermark (monospace, paling
+  // mudah dibaca untuk teks ID pendek — beda kebutuhan dari font nama
+  // peserta yang memang didesain untuk kesan tanda tangan/kaligrafi).
+  function buildUidFontOptions() {
+    const container = document.getElementById('ced-uidfont-picker');
+    if (!container) return;
+    if (container.dataset.built === '1') return; // hanya build sekali
+
+    let html = `
+      <div class="ced-font-group-label">Monospace (Disarankan)</div>
+      <button class="ced-font-opt active" data-value="JetBrains Mono" data-label="JetBrains Mono — Monospace (Default)" onclick="cedPickUidFont(this)">
+        <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="ced-font-opt-preview" style="font-family:'JetBrains Mono',monospace;">JetBrains Mono</span>
+        <span class="ced-font-opt-tag">Default</span>
+      </button>
+    `;
+
+    // Clone setiap grup & opsi dari font picker nama peserta apa adanya
+    // (group label + tiap button), tapi ganti onclick ke cedPickUidFont.
+    const sourcePicker = document.getElementById('ced-font-picker');
+    if (sourcePicker) {
+      const children = Array.from(sourcePicker.children).filter(el =>
+        el.tagName === 'DIV' && el.classList.contains('ced-font-group-label') ||
+        el.tagName === 'BUTTON' && el.classList.contains('ced-font-opt')
+      );
+      children.forEach(el => {
+        if (el.classList.contains('ced-font-group-label')) {
+          html += `<div class="ced-font-group-label">${el.textContent}</div>`;
+        } else if (el.classList.contains('ced-font-opt')) {
+          const value = el.dataset.value;
+          const label = el.dataset.label;
+          const previewEl = el.querySelector('.ced-font-opt-preview');
+          const tagEl     = el.querySelector('.ced-font-opt-tag');
+          const previewStyle = previewEl ? previewEl.getAttribute('style') : '';
+          html += `
+            <button class="ced-font-opt" data-value="${escapeHtml(value)}" data-label="${escapeHtml(label)}" onclick="cedPickUidFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="${previewStyle}">${previewEl ? previewEl.textContent : value}</span>
+              <span class="ced-font-opt-tag">${tagEl ? tagEl.textContent : ''}</span>
+            </button>
+          `;
+        }
+      });
+    }
+
+    container.innerHTML = html;
+    container.dataset.built = '1';
+  }
+
+  window.cedToggleUidFontPicker = function() {
+    buildUidFontOptions(); // pastikan opsi sudah ter-generate sebelum dibuka
+    const picker  = document.getElementById('ced-uidfont-picker');
+    const chevron = document.getElementById('ced-uidfont-chevron');
+    const trigger = document.getElementById('ced-uidfont-trigger');
+    if (!picker) return;
+    _ufpOpen = !_ufpOpen;
+    picker.style.display  = _ufpOpen ? 'block' : 'none';
+    if (chevron) chevron.style.transform = _ufpOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = _ufpOpen ? 'rgba(204,255,0,0.4)' : 'rgba(255,255,255,0.1)';
+  };
+
+  window.cedPickUidFont = function(btn) {
+    const value = btn.dataset.value;
+    const label = btn.dataset.label;
+
+    const hiddenInput = document.getElementById('ced-uidfont-select');
+    if (hiddenInput) hiddenInput.value = value;
+
+    ced.uidFont = value;
+
+    const labelEl = document.getElementById('ced-uidfont-label');
+    if (labelEl) {
+      labelEl.textContent = label;
+      labelEl.style.fontFamily = value;
+    }
+
+    document.querySelectorAll('#ced-uidfont-picker .ced-font-opt').forEach(o => o.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Sinkronkan font preview di overlay drag HTML (uid-bbox) juga,
+    // supaya tampilan kotak yang di-drag konsisten dengan canvas.
+    const uidBboxLabel = document.getElementById('uid-bbox-label');
+    if (uidBboxLabel) uidBboxLabel.style.fontFamily = `'${value}', monospace`;
+
+    const picker  = document.getElementById('ced-uidfont-picker');
+    const chevron = document.getElementById('ced-uidfont-chevron');
+    const trigger = document.getElementById('ced-uidfont-trigger');
+    if (picker)  picker.style.display  = 'none';
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+    _ufpOpen = false;
+
+    if (typeof cedRedraw === 'function') cedRedraw();
+  };
+
+  // Sync UI dari nilai uidFont yang tersimpan (dipanggil saat load Firestore)
+  window.cedSyncUidFontUI = function(value) {
+    buildUidFontOptions();
+    const opts = document.querySelectorAll('#ced-uidfont-picker .ced-font-opt');
+    let matched = false;
+    opts.forEach(btn => {
+      if (btn.dataset.value === value) {
+        matched = true;
+        btn.classList.add('active');
+        const label = btn.dataset.label;
+        const labelEl = document.getElementById('ced-uidfont-label');
+        if (labelEl) { labelEl.textContent = label; labelEl.style.fontFamily = value; }
+        const hiddenInput = document.getElementById('ced-uidfont-select');
+        if (hiddenInput) hiddenInput.value = value;
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    if (!matched) {
+      const labelEl = document.getElementById('ced-uidfont-label');
+      const hiddenInput = document.getElementById('ced-uidfont-select');
+      if (labelEl) { labelEl.textContent = value; labelEl.style.fontFamily = value; }
+      if (hiddenInput) hiddenInput.value = value;
+    }
+    const uidBboxLabel = document.getElementById('uid-bbox-label');
+    if (uidBboxLabel) uidBboxLabel.style.fontFamily = `'${value}', monospace`;
+  };
+
+  // Close picker on outside click
+  document.addEventListener('click', function(e) {
+    if (!_ufpOpen) return;
+    const field = document.getElementById('ced-uidfont-picker');
+    const trigger = document.getElementById('ced-uidfont-trigger');
+    if (!field || !trigger) return;
+    if (!field.contains(e.target) && !trigger.contains(e.target)) {
+      field.style.display = 'none';
+      const chevron = document.getElementById('ced-uidfont-chevron');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+      trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+      _ufpOpen = false;
     }
   });
 })();

@@ -859,16 +859,15 @@
 
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    // DIKEMBALIKAN ke experimentalForceLongPolling. Sebelumnya saya ganti ke
-    // "auto-detect" dengan asumsi itu lebih cepat (otomatis pilih cara
-    // koneksi tercepat) — tapi auto-detect berarti Firestore harus PROBING
-    // dulu (coba koneksi normal, baru fallback ke long-polling kalau gagal),
-    // dan proses probing itu sendiri menambah delay nyata, terutama di
-    // jaringan yang memang butuh long-polling dari awal (jaringan
-    // terbatas/dengan proxy yang memutus koneksi streaming). Memaksa
-    // long-polling langsung dari awal (seperti semula) jauh lebih cepat
-    // untuk kondisi jaringan peserta di lapangan.
-    db.settings({ experimentalForceLongPolling: true, useFetchStreams: false });
+    // CATATAN: sebelumnya di sini ada override db.settings({...LongPolling...})
+    // yang sudah 2x saya ubah-ubah (force → auto-detect → force lagi) tapi
+    // ternyata bikin koneksi MACET TOTAL (spinner berputar tanpa henti) di
+    // jaringan/hosting Anda saat ini — bukan cuma lambat, tapi benar-benar
+    // tidak pernah selesai. Daripada terus menebak setting mana yang cocok,
+    // override-nya DIHAPUS sepenuhnya di sini — Firestore akan pakai cara
+    // koneksi DEFAULT/standarnya (otomatis menyesuaikan, ini yang dipakai
+    // hampir semua aplikasi produksi tanpa masalah, tanpa perlu dipaksa
+    // salah satu mode secara manual).
 
     function getStudentId() {
       const params = new URLSearchParams(window.location.search);
@@ -1429,7 +1428,25 @@
         scriptEl.textContent = JSON.stringify(jsonLd);
       }
 
-      db.collection('cert_users').doc(studentId).get()
+      // ── Pengaman timeout ─────────────────────────────────────────────
+      // Sebelumnya kalau koneksi ke Firestore macet (bukan error, cuma
+      // tidak pernah selesai), halaman akan spin selamanya tanpa kejelasan
+      // apa pun ke peserta. Sekarang dipasang batas waktu 12 detik — kalau
+      // sampai segitu belum ada jawaban, anggap timeout dan tampilkan
+      // pesan error yang jelas (peserta bisa coba reload).
+      function withTimeout(promise, ms) {
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => {
+            reject(new Error('TIMEOUT'));
+          }, ms);
+          promise.then(
+            val => { clearTimeout(timer); resolve(val); },
+            err => { clearTimeout(timer); reject(err); }
+          );
+        });
+      }
+
+      withTimeout(db.collection('cert_users').doc(studentId).get(), 12000)
         .then(doc => {
           if (doc.exists) {
             const d = doc.data();
@@ -1459,7 +1476,9 @@
           console.error(err);
           showState('error');
           document.getElementById('error-msg').textContent =
-            'A network error occurred. Please check your connection and try again.';
+            (err && err.message === 'TIMEOUT')
+              ? 'Connection is taking too long. Please check your internet and try reloading this page.'
+              : 'A network error occurred. Please check your connection and try again.';
         });
     }
   </script>

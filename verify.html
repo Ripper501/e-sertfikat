@@ -879,6 +879,11 @@
     }
 
     const studentId = getStudentId();
+    // Cache promise hasil pre-generate kartu "Share Achievement" (lihat
+    // renderCertificate & handleShareAchievement) — dimulai di background
+    // begitu data sertifikat tampil, supaya siap dipakai instan saat
+    // pengguna klik tombol share.
+    let _shareCardPromise = null;
 
     // ── SEO: canonical URL dinamis ──────────────────────────────────
     // Tiap sertifikat punya konten unik (nama beda-beda), jadi canonical
@@ -1172,10 +1177,19 @@
         label.textContent = 'Generating…';
 
         try {
-          // Dibungkus timeout 10 detik — sebelumnya kalau ada step yang
-          // hang (mis. logo.png lambat dimuat, atau font belum siap-siap),
-          // tombol bisa macet di "Generating..." selamanya tanpa kejelasan.
-          const { blob } = await withTimeout(buildShareCardImage(data), 10000);
+          // Pakai hasil yang sudah di-pre-generate di background (lihat
+          // renderCertificate) kalau sudah siap — ini biasanya SUDAH SELESAI
+          // duluan sebelum pengguna sempat klik, jadi baris ini langsung
+          // lanjut tanpa nunggu apa pun (krusial untuk Safari/iOS supaya
+          // navigator.share() di bawah masih dianggap "dekat" dengan klik).
+          // Kalau belum siap (mis. koneksi lambat) atau pre-generate gagal,
+          // baru generate ulang di sini sebagai fallback (dibungkus timeout
+          // supaya tidak macet selamanya).
+          let result = _shareCardPromise ? await _shareCardPromise : null;
+          if (!result) {
+            result = await withTimeout(buildShareCardImage(data), 10000);
+          }
+          const { blob } = result;
           const fileName = `FB-Academy-Certificate-${(data.cert_name || 'achievement').replace(/[^a-z0-9]+/gi, '-')}.png`;
           const file = new File([blob], fileName, { type: 'image/png' });
 
@@ -1185,9 +1199,8 @@
 
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
             // Perangkat mendukung share gambar langsung (kebanyakan HP/tablet).
-            // Dibungkus timeout juga — di sebagian Safari, share sheet bisa
-            // macet kalau "izin klik" pengguna sudah keburu basi karena ada
-            // proses async (generate gambar) sebelum share() dipanggil.
+            // Dibungkus timeout juga — kalau Safari tetap menolak diam-diam
+            // (tanpa reject), ini mencegah tombol macet selamanya.
             await withTimeout(
               navigator.share({
                 files: [file],
@@ -1291,6 +1304,18 @@
         const shareBtn = document.getElementById('share-achievement-btn');
         if (shareBtn) {
           shareBtn.style.display = 'flex';
+          // Generate kartu gambarnya DI BACKGROUND mulai dari sekarang (bukan
+          // menunggu klik) — supaya pas pengguna klik tombol, gambarnya
+          // sudah siap dan navigator.share() bisa dipanggil hampir
+          // bersamaan dengan momen klik. Ini PENTING khusus untuk Safari/
+          // iOS: kalau ada proses async yang makan waktu di ANTARA klik dan
+          // panggilan navigator.share(), Safari mobile sering menganggap
+          // "izin klik" pengguna sudah basi dan menolak/membatalkan share
+          // tanpa pesan jelas — beda dengan laptop yang lebih toleran.
+          _shareCardPromise = buildShareCardImage(data).catch(e => {
+            console.warn('[ShareAchievement] Pre-generate gagal, akan dicoba ulang saat diklik:', e.message);
+            return null; // biar handleShareAchievement tahu harus generate ulang
+          });
           shareBtn.onclick = () => handleShareAchievement(data);
         }
 

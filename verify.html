@@ -883,7 +883,10 @@
     // renderCertificate & handleShareAchievement) — dimulai di background
     // begitu data sertifikat tampil, supaya siap dipakai instan saat
     // pengguna klik tombol share.
-    let _shareCardPromise = null;
+    // Hasil pre-generate kartu share disimpan sebagai VALUE langsung
+    // (bukan Promise) — krusial untuk iOS Safari: setiap await antara
+    // user tap dan navigator.share() dianggap bukan direct gesture → share ditolak.
+    let _shareCardResult = null;  // {blob, canvas} kalau sudah siap, null kalau belum
 
     // ── SEO: canonical URL dinamis ──────────────────────────────────
     // Tiap sertifikat punya konten unik (nama beda-beda), jadi canonical
@@ -1162,7 +1165,7 @@
               drawTextContent();
               finish();
             };
-            logo.src = 'logo.png';
+            logo.src = 'https://ripper501.github.io/e-sertfikat/logo.png';
           });
         });
       }
@@ -1173,70 +1176,85 @@
         if (!btn || !label) return;
 
         const originalLabel = label.textContent;
+
+        // ── Kalau hasil pre-generate SUDAH SIAP → share langsung tanpa await ──
+        // Ini path utama di iOS Safari: tidak ada await antara klik dan
+        // navigator.share() sehingga browser menganggap ini direct user gesture.
+        if (_shareCardResult) {
+          btn.disabled = true;
+          try {
+            const { blob } = _shareCardResult;
+            const fileName = `FB-Academy-Certificate-${(data.cert_name || 'achievement').replace(/[^a-z0-9]+/gi, '-')}.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+            const shareText = data.detectedCourse && data.detectedCourse.trim()
+              ? `I just completed "${data.detectedCourse.trim()}" at FB Academy! 🎓`
+              : `I just earned a certificate from FB Academy! 🎓`;
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({ files: [file], title: 'My FB Academy Certificate', text: shareText });
+            } else {
+              // Desktop fallback: download PNG
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = fileName;
+              document.body.appendChild(a); a.click(); a.remove();
+              setTimeout(() => URL.revokeObjectURL(url), 4000);
+              label.textContent = 'Downloaded ✓';
+              setTimeout(() => { label.textContent = originalLabel; btn.disabled = false; }, 2500);
+              return;
+            }
+            label.textContent = originalLabel;
+          } catch (err) {
+            if (err && err.name !== 'AbortError') {
+              console.error('[ShareAchievement] Gagal:', err);
+              label.textContent = 'Failed — try again';
+              setTimeout(() => { label.textContent = originalLabel; }, 2500);
+            } else {
+              label.textContent = originalLabel;
+            }
+          } finally {
+            btn.disabled = false;
+          }
+          return;
+        }
+
+        // ── Hasil belum siap (koneksi lambat / pre-generate gagal) ──
+        // Generate ulang sekarang — tampilkan "Generating…" sambil tunggu.
         btn.disabled = true;
         label.textContent = 'Generating…';
-
         try {
-          // Pakai hasil yang sudah di-pre-generate di background (lihat
-          // renderCertificate) kalau sudah siap — ini biasanya SUDAH SELESAI
-          // duluan sebelum pengguna sempat klik, jadi baris ini langsung
-          // lanjut tanpa nunggu apa pun (krusial untuk Safari/iOS supaya
-          // navigator.share() di bawah masih dianggap "dekat" dengan klik).
-          // Kalau belum siap (mis. koneksi lambat) atau pre-generate gagal,
-          // baru generate ulang di sini sebagai fallback (dibungkus timeout
-          // supaya tidak macet selamanya).
-          let result = _shareCardPromise ? await _shareCardPromise : null;
-          if (!result) {
-            result = await withTimeout(buildShareCardImage(data), 10000);
-          }
+          const result = await withTimeout(buildShareCardImage(data), 12000);
+          _shareCardResult = result; // simpan untuk klik berikutnya
           const { blob } = result;
           const fileName = `FB-Academy-Certificate-${(data.cert_name || 'achievement').replace(/[^a-z0-9]+/gi, '-')}.png`;
           const file = new File([blob], fileName, { type: 'image/png' });
-
           const shareText = data.detectedCourse && data.detectedCourse.trim()
             ? `I just completed "${data.detectedCourse.trim()}" at FB Academy! 🎓`
             : `I just earned a certificate from FB Academy! 🎓`;
 
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            // Perangkat mendukung share gambar langsung (kebanyakan HP/tablet).
-            // Dibungkus timeout juga — kalau Safari tetap menolak diam-diam
-            // (tanpa reject), ini mencegah tombol macet selamanya.
-            await withTimeout(
-              navigator.share({
-                files: [file],
-                title: 'My FB Academy Certificate',
-                text:  shareText,
-              }),
-              10000
-            );
+            await navigator.share({ files: [file], title: 'My FB Academy Certificate', text: shareText });
           } else {
-            // Fallback (umumnya desktop): download PNG-nya langsung
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+            a.href = url; a.download = fileName;
+            document.body.appendChild(a); a.click(); a.remove();
             setTimeout(() => URL.revokeObjectURL(url), 4000);
             label.textContent = 'Downloaded ✓';
-            setTimeout(() => { label.textContent = originalLabel; }, 2500);
-            btn.disabled = false;
+            setTimeout(() => { label.textContent = originalLabel; btn.disabled = false; }, 2500);
             return;
           }
-
           label.textContent = originalLabel;
-          btn.disabled = false;
         } catch (err) {
-          btn.disabled = false;
-          if (err && err.name === 'AbortError') {
-            // Pengguna batal share dari sheet — bukan error, jangan tampilkan apa-apa.
+          if (err && err.name !== 'AbortError') {
+            console.error('[ShareAchievement] Gagal:', err);
+            label.textContent = 'Failed — try again';
+            setTimeout(() => { label.textContent = originalLabel; }, 2500);
+          } else {
             label.textContent = originalLabel;
-            return;
           }
-          console.error('[ShareAchievement] Gagal:', err);
-          label.textContent = 'Failed — try again';
-          setTimeout(() => { label.textContent = originalLabel; }, 2500);
+        } finally {
+          btn.disabled = false;
         }
       }
 
@@ -1312,10 +1330,14 @@
           // panggilan navigator.share(), Safari mobile sering menganggap
           // "izin klik" pengguna sudah basi dan menolak/membatalkan share
           // tanpa pesan jelas — beda dengan laptop yang lebih toleran.
-          _shareCardPromise = buildShareCardImage(data).catch(e => {
-            console.warn('[ShareAchievement] Pre-generate gagal, akan dicoba ulang saat diklik:', e.message);
-            return null; // biar handleShareAchievement tahu harus generate ulang
-          });
+          _shareCardResult = null; // reset dulu sebelum generate baru
+          buildShareCardImage(data)
+            .then(result => {
+              _shareCardResult = result; // simpan hasil, bukan promise
+            })
+            .catch(e => {
+              console.warn('[ShareAchievement] Pre-generate gagal, akan dicoba ulang saat diklik:', e.message);
+            });
           shareBtn.onclick = () => handleShareAchievement(data);
         }
 

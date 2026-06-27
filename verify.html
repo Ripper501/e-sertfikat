@@ -7,7 +7,7 @@
 
   <meta name="description" content="Verify the authenticity of certificates issued by Fantiber Balance Academy (FB Academy), Timor-Leste. Scan the QR code on your certificate to confirm validity." />
   <link rel="canonical" id="canonical-link" href="https://ripper501.github.io/e-sertfikat/verify.html" />
-  <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="icon" type="image/png" href="https://ripper501.github.io/e-sertfikat/logo.png" />
   <meta name="theme-color" content="#0a0a0c" />
 
   <meta property="og:type"        content="website" />
@@ -696,7 +696,7 @@
     <div class="card-body">
 
       <header class="brand-header">
-        <img src="logo.png" alt="FB Academy" class="brand-logo" width="32" height="32" />
+        <img src="https://ripper501.github.io/e-sertfikat/logo.png" alt="FB Academy" class="brand-logo" width="32" height="32" onerror="this.style.display='none'" />
         <span class="brand-name">FB Academy</span>
       </header>
 
@@ -1055,126 +1055,111 @@
       // PNG (fallback di desktop/browser yang belum dukung Web Share dgn
       // file). Tujuannya: peserta bisa langsung posting ke IG Story/WA
       // Status tanpa perlu screenshot manual.
+      // ── Share Achievement card generator ──────────────────────────
+      // Dibuat sesederhana mungkin agar tidak ada titik macet:
+      // - Tidak pakai logo (crossOrigin + CORS = sumber macet utama di iOS)
+      // - Tidak bergantung pada document.fonts.ready (tidak reliable di iOS Safari)
+      // - Canvas murni teks + shapes saja → toBlob() selalu berhasil, tidak tainted
+      // - Timeout 5 detik sebagai safety net terakhir
       function buildShareCardImage(data) {
         return new Promise((resolve, reject) => {
-          const W = 1200, H = 675; // rasio 16:9 — pas untuk story/feed sosmed
-          const canvas = document.createElement('canvas');
-          canvas.width = W;
-          canvas.height = H;
-          const ctx = canvas.getContext('2d');
+          const timer = setTimeout(() => reject(new Error('timeout')), 5000);
 
-          // Background gradasi hitam + radial glow gold lembut
-          ctx.fillStyle = '#000000';
-          ctx.fillRect(0, 0, W, H);
-          const glow = ctx.createRadialGradient(W / 2, H * 0.38, 40, W / 2, H * 0.38, W * 0.65);
-          glow.addColorStop(0, 'rgba(245,230,0,0.14)');
-          glow.addColorStop(1, 'rgba(245,230,0,0)');
-          ctx.fillStyle = glow;
-          ctx.fillRect(0, 0, W, H);
+          try {
+            const W = 1080, H = 1080; // square — optimal untuk IG/WA
+            const canvas = document.createElement('canvas');
+            canvas.width  = W;
+            canvas.height = H;
+            const ctx = canvas.getContext('2d');
 
-          // Frame border gold tipis
-          ctx.strokeStyle = 'rgba(245,230,0,0.45)';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(18, 18, W - 36, H - 36);
-          ctx.strokeStyle = 'rgba(245,230,0,0.18)';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(34, 34, W - 68, H - 68);
+            // ── Background ──
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, W, H);
 
-          function drawTextContent() {
+            // Radial glow gold di tengah
+            const glow = ctx.createRadialGradient(W/2, H*0.45, 30, W/2, H*0.45, W*0.6);
+            glow.addColorStop(0, 'rgba(245,230,0,0.18)');
+            glow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            // ── Border frame ──
+            ctx.strokeStyle = 'rgba(245,230,0,0.5)';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(24, 24, W - 48, H - 48);
+            ctx.strokeStyle = 'rgba(245,230,0,0.15)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(38, 38, W - 76, H - 76);
+
+            // ── Teks ──
             ctx.textAlign = 'center';
 
-            // Eyebrow kecil
-            ctx.fillStyle = 'rgba(245,230,0,0.85)';
-            ctx.font = '600 16px "Space Grotesk", sans-serif';
-            ctx.letterSpacing = '3px';
-            ctx.fillText('CERTIFICATE OF ACHIEVEMENT', W / 2, H * 0.30);
-            ctx.letterSpacing = '0px';
+            // Label atas
+            ctx.fillStyle = 'rgba(245,230,0,0.75)';
+            ctx.font = '500 20px sans-serif';
+            ctx.fillText('FB ACADEMY', W/2, H * 0.18);
 
-            // Nama — font besar serif
-            ctx.fillStyle = '#f5f3e8';
-            let nameFontSize = 64;
-            ctx.font = `600 ${nameFontSize}px "Cormorant Garamond", serif`;
-            // Kecilkan otomatis kalau nama terlalu panjang agar tidak overflow
-            while (ctx.measureText(data.cert_name || '—').width > W - 160 && nameFontSize > 32) {
-              nameFontSize -= 2;
-              ctx.font = `600 ${nameFontSize}px "Cormorant Garamond", serif`;
-            }
-            ctx.fillText(data.cert_name || '—', W / 2, H * 0.46);
+            // "CERTIFICATE OF ACHIEVEMENT"
+            ctx.fillStyle = 'rgba(245,243,232,0.45)';
+            ctx.font = '400 15px sans-serif';
+            ctx.fillText('CERTIFICATE OF ACHIEVEMENT', W/2, H * 0.24);
 
-            // Nama kursus (kalau ada)
-            if (data.detectedCourse && data.detectedCourse.trim()) {
-              ctx.fillStyle = '#f5e600';
-              ctx.font = '500 22px "Space Grotesk", sans-serif';
-              ctx.fillText(data.detectedCourse.trim(), W / 2, H * 0.565);
-            }
-
-            // Garis divider kecil
-            ctx.strokeStyle = 'rgba(245,230,0,0.35)';
+            // Garis dekoratif atas nama
+            ctx.strokeStyle = 'rgba(245,230,0,0.3)';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(W / 2 - 60, H * 0.62);
-            ctx.lineTo(W / 2 + 60, H * 0.62);
+            ctx.moveTo(W/2 - 80, H * 0.30); ctx.lineTo(W/2 + 80, H * 0.30);
             ctx.stroke();
 
-            // Footer wordmark
-            ctx.fillStyle = 'rgba(245,243,232,0.55)';
-            ctx.font = '500 15px "Space Grotesk", sans-serif';
-            ctx.letterSpacing = '1.5px';
-            ctx.fillText('FB ACADEMY · OFFICIALLY VERIFIED', W / 2, H * 0.88);
-            ctx.letterSpacing = '0px';
-          }
-
-          function finish() {
-            try {
-              canvas.toBlob(blob => {
-                if (blob) resolve({ blob, canvas });
-                else reject(new Error('Gagal membuat gambar (toBlob kosong).'));
-              }, 'image/png');
-            } catch (securityErr) {
-              // canvas.toBlob() throw SecurityError kalau canvas tainted
-              // (gambar di-load tanpa crossOrigin dari domain lain).
-              // Jangan biarkan Promise stuck — reject dengan pesan jelas.
-              reject(securityErr);
+            // Nama penerima — auto-scale agar muat
+            const name = data.cert_name || '—';
+            ctx.fillStyle = '#f5f3e8';
+            let fontSize = 72;
+            ctx.font = `600 ${fontSize}px serif`;
+            while (ctx.measureText(name).width > W - 120 && fontSize > 36) {
+              fontSize -= 3;
+              ctx.font = `600 ${fontSize}px serif`;
             }
+            ctx.fillText(name, W/2, H * 0.46);
+
+            // Nama kursus (opsional)
+            if (data.detectedCourse && data.detectedCourse.trim()) {
+              ctx.fillStyle = '#f5e600';
+              ctx.font = '500 24px sans-serif';
+              const course = data.detectedCourse.trim();
+              // Potong kalau terlalu panjang
+              const maxCourse = 55;
+              ctx.fillText(course.length > maxCourse ? course.slice(0, maxCourse) + '…' : course, W/2, H * 0.545);
+            }
+
+            // Garis divider bawah nama
+            ctx.strokeStyle = 'rgba(245,230,0,0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(W/2 - 80, H * 0.60); ctx.lineTo(W/2 + 80, H * 0.60);
+            ctx.stroke();
+
+            // URL verifikasi
+            ctx.fillStyle = 'rgba(245,243,232,0.35)';
+            ctx.font = '400 14px monospace';
+            ctx.fillText('ripper501.github.io/e-sertfikat/verify.html', W/2, H * 0.79);
+
+            // Footer
+            ctx.fillStyle = 'rgba(245,230,0,0.5)';
+            ctx.font = '500 13px sans-serif';
+            ctx.fillText('OFFICIALLY VERIFIED · FANTIBER BALANCE ACADEMY', W/2, H * 0.86);
+
+            // ── Export ──
+            canvas.toBlob(blob => {
+              clearTimeout(timer);
+              if (blob) resolve({ blob });
+              else reject(new Error('toBlob kosong'));
+            }, 'image/png');
+
+          } catch (err) {
+            clearTimeout(timer);
+            reject(err);
           }
-
-          const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
-
-          fontsReady.then(() => {
-            const logo = new Image();
-            // crossOrigin WAJIB di-set SEBELUM .src agar canvas tidak tainted
-            // di iOS Safari — kalau tainted, toBlob() throw SecurityError dan
-            // Promise buildShareCardImage tidak pernah resolve maupun reject.
-            logo.crossOrigin = 'anonymous';
-            logo.onload = () => {
-              const logoSize = 64;
-              const lx = W / 2 - logoSize / 2;
-              const ly = H * 0.12;
-              ctx.save();
-              ctx.beginPath();
-              ctx.arc(W / 2, ly + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
-              ctx.closePath();
-              ctx.clip();
-              ctx.drawImage(logo, lx, ly, logoSize, logoSize);
-              ctx.restore();
-              ctx.strokeStyle = 'rgba(245,230,0,0.45)';
-              ctx.lineWidth = 2;
-              ctx.beginPath();
-              ctx.arc(W / 2, ly + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
-              ctx.stroke();
-
-              drawTextContent();
-              finish();
-            };
-            logo.onerror = () => {
-              // Logo gagal load — lanjut tanpa logo daripada seluruh share gagal
-              drawTextContent();
-              finish();
-            };
-            // Cache-bust untuk hindari cached version tanpa CORS header di iOS
-            const logoCacheBust = `https://ripper501.github.io/e-sertfikat/logo.png?_cb=${Date.now()}`;
-            logo.src = logoCacheBust;
-          }).catch(err => reject(err));
         });
       }
 

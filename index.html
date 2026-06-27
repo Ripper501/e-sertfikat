@@ -2834,7 +2834,7 @@
         flex-shrink: 0; box-shadow: 0 0 8px rgba(204,204,204,0.5);
       "></span>
       <span id="ced-uidadvcolor-hex" style="font-family: var(--font-mono); letter-spacing: .04em; font-size: 12px;">#cccccc</span>
-      <span style="margin-left:auto; opacity:.5; font-size:11px;">▾</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" style="flex-shrink:0; margin-left:auto; transition:transform .2s;" id="ced-uidadvcolor-chevron"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
 
     <div id="ced-uidadvcolor-picker" style="
@@ -8694,10 +8694,14 @@ async function cedSaveConfig() {
   };
 
   window.cedToggleUidAdvColorPicker = function() {
-    const picker = document.getElementById('ced-uidadvcolor-picker');
+    const picker  = document.getElementById('ced-uidadvcolor-picker');
+    const chevron = document.getElementById('ced-uidadvcolor-chevron');
+    const trigger = document.getElementById('ced-uidadvcolor-trigger');
     if (!picker) return;
     _ucpOpen = !_ucpOpen;
     picker.style.display = _ucpOpen ? 'block' : 'none';
+    if (chevron) chevron.style.transform = _ucpOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+    if (trigger) trigger.style.borderColor = _ucpOpen ? 'rgba(204,255,0,0.4)' : 'rgba(255,255,255,0.1)';
     if (_ucpOpen) {
       requestAnimationFrame(() => {
         drawUidGradient();
@@ -8765,7 +8769,11 @@ async function cedSaveConfig() {
       const field = document.getElementById('ced-uidcolor-field');
       if (field && !field.contains(e.target)) {
         const picker = document.getElementById('ced-uidadvcolor-picker');
+        const chevron = document.getElementById('ced-uidadvcolor-chevron');
+        const trigger = document.getElementById('ced-uidadvcolor-trigger');
         if (picker) picker.style.display = 'none';
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+        if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
         _ucpOpen = false;
       }
     });
@@ -8971,96 +8979,6 @@ detectDevice();
       if (chevron) chevron.style.transform = 'rotate(0deg)';
       trigger.style.borderColor = 'rgba(255,255,255,0.1)';
       _qcpOpen = false;
-    }
-  });
-})();
-
-// ════════════════════════════════════════════════════════════════
-// UID COLOR PICKER — copy pattern persis dari QR Color Picker di atas
-// ════════════════════════════════════════════════════════════════
-(function initUidColorPicker() {
-  let _ucpOpen = false;
-
-  window.cedToggleUidColorPicker = function() {
-    const picker  = document.getElementById('ced-uidcolor-picker');
-    const chevron = document.getElementById('ced-uidcolor-chevron');
-    const trigger = document.getElementById('ced-uidcolor-trigger');
-    if (!picker) return;
-    _ucpOpen = !_ucpOpen;
-    picker.style.display  = _ucpOpen ? 'block' : 'none';
-    if (chevron) chevron.style.transform = _ucpOpen ? 'rotate(180deg)' : 'rotate(0deg)';
-    if (trigger) trigger.style.borderColor = _ucpOpen ? 'rgba(204,255,0,0.4)' : 'rgba(255,255,255,0.1)';
-  };
-
-  window.cedPickUidColor = function(btn) {
-    const value = btn.dataset.value;
-    const label = btn.dataset.label;
-
-    const hiddenInput = document.getElementById('ced-uidcolor-select');
-    if (hiddenInput) hiddenInput.value = value;
-
-    ced.uidColor = value;
-
-    const labelEl  = document.getElementById('ced-uidcolor-label');
-    const swatchEl = document.getElementById('ced-uidcolor-swatch');
-    if (labelEl)  labelEl.textContent = label;
-    if (swatchEl) swatchEl.style.background = value;
-
-    document.querySelectorAll('#ced-uidcolor-picker .ced-qrcolor-opt').forEach(o => o.classList.remove('active'));
-    btn.classList.add('active');
-
-    const picker  = document.getElementById('ced-uidcolor-picker');
-    const chevron = document.getElementById('ced-uidcolor-chevron');
-    const trigger = document.getElementById('ced-uidcolor-trigger');
-    if (picker)  picker.style.display  = 'none';
-    if (chevron) chevron.style.transform = 'rotate(0deg)';
-    if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
-    _ucpOpen = false;
-
-    if (typeof cedRedraw === 'function') cedRedraw();
-  };
-
-  // Sync UI from a saved uidColor value (called on Firestore load)
-  window.cedSyncUidColorUI = function(value) {
-    const opts = document.querySelectorAll('#ced-uidcolor-picker .ced-qrcolor-opt');
-    let matched = false;
-    opts.forEach(btn => {
-      if (btn.dataset.value === value) {
-        matched = true;
-        btn.classList.add('active');
-        const label    = btn.dataset.label;
-        const labelEl  = document.getElementById('ced-uidcolor-label');
-        const swatchEl = document.getElementById('ced-uidcolor-swatch');
-        if (labelEl)  labelEl.textContent = label;
-        if (swatchEl) swatchEl.style.background = value;
-        const hiddenInput = document.getElementById('ced-uidcolor-select');
-        if (hiddenInput) hiddenInput.value = value;
-      } else {
-        btn.classList.remove('active');
-      }
-    });
-    if (!matched) {
-      const labelEl  = document.getElementById('ced-uidcolor-label');
-      const swatchEl = document.getElementById('ced-uidcolor-swatch');
-      const hiddenInput = document.getElementById('ced-uidcolor-select');
-      if (labelEl)  labelEl.textContent = 'Custom';
-      if (swatchEl) swatchEl.style.background = value;
-      if (hiddenInput) hiddenInput.value = value;
-    }
-  };
-
-  // Close picker on outside click
-  document.addEventListener('click', function(e) {
-    if (!_ucpOpen) return;
-    const field = document.getElementById('ced-uidcolor-picker');
-    const trigger = document.getElementById('ced-uidcolor-trigger');
-    if (!field || !trigger) return;
-    if (!field.contains(e.target) && !trigger.contains(e.target)) {
-      field.style.display = 'none';
-      const chevron = document.getElementById('ced-uidcolor-chevron');
-      if (chevron) chevron.style.transform = 'rotate(0deg)';
-      trigger.style.borderColor = 'rgba(255,255,255,0.1)';
-      _ucpOpen = false;
     }
   });
 })();

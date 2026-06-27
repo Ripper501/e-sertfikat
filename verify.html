@@ -1172,7 +1172,10 @@
         label.textContent = 'Generating…';
 
         try {
-          const { blob } = await buildShareCardImage(data);
+          // Dibungkus timeout 10 detik — sebelumnya kalau ada step yang
+          // hang (mis. logo.png lambat dimuat, atau font belum siap-siap),
+          // tombol bisa macet di "Generating..." selamanya tanpa kejelasan.
+          const { blob } = await withTimeout(buildShareCardImage(data), 10000);
           const fileName = `FB-Academy-Certificate-${(data.cert_name || 'achievement').replace(/[^a-z0-9]+/gi, '-')}.png`;
           const file = new File([blob], fileName, { type: 'image/png' });
 
@@ -1181,12 +1184,18 @@
             : `I just earned a certificate from FB Academy! 🎓`;
 
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            // Perangkat mendukung share gambar langsung (kebanyakan HP/tablet)
-            await navigator.share({
-              files: [file],
-              title: 'My FB Academy Certificate',
-              text:  shareText,
-            });
+            // Perangkat mendukung share gambar langsung (kebanyakan HP/tablet).
+            // Dibungkus timeout juga — di sebagian Safari, share sheet bisa
+            // macet kalau "izin klik" pengguna sudah keburu basi karena ada
+            // proses async (generate gambar) sebelum share() dipanggil.
+            await withTimeout(
+              navigator.share({
+                files: [file],
+                title: 'My FB Academy Certificate',
+                text:  shareText,
+              }),
+              10000
+            );
           } else {
             // Fallback (umumnya desktop): download PNG-nya langsung
             const url = URL.createObjectURL(blob);
@@ -1479,6 +1488,15 @@
             (err && err.message === 'TIMEOUT')
               ? 'Connection is taking too long. Please check your internet and try reloading this page.'
               : 'A network error occurred. Please check your connection and try again.';
+        })
+        .finally(() => {
+          // Halaman ini cuma butuh baca data SEKALI (bukan listener live),
+          // jadi koneksi Firestore (yang sengaja dibuat tetap terbuka oleh
+          // SDK untuk keperluan real-time sync) ditutup di sini. Beberapa
+          // browser (termasuk Safari) menampilkan indikator "masih loading"
+          // selama ada koneksi jaringan yang masih terbuka di belakang,
+          // walau kontennya sudah selesai ditampilkan ke pengguna.
+          db.terminate().catch(() => {});
         });
     }
   </script>

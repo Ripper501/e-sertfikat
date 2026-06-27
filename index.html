@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-<link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Allura&family=Cormorant+Garamond:wght@400;600;700&family=Great+Vibes&family=Montserrat:wght@400;500;600;700&family=Mr+De+Haviland&family=Parisienne&family=Pinyon+Script&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Tangerine:wght@400;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Allura&family=Cormorant+Garamond:wght@400;600;700&family=Great+Vibes&family=Montserrat:wght@400;500;600;700&family=Mr+De+Haviland&family=Parisienne&family=Pinyon+Script&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Tangerine:wght@400;700&family=Poppins:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Archivo+Black&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Roboto:wght@400;500;700&family=Chewy&display=swap" rel="stylesheet" />
 
 <!-- SweetAlert2 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" />
@@ -2435,7 +2435,23 @@
 
         <!-- 2. Live test name -->
         <div class="ced-field">
-          <label class="ced-label" for="ced-name-input">Preview Name (auto-scales)</label>
+          <label class="ced-label" for="ced-name-input" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span>Preview Name (auto-scales)</span>
+            <span style="display:flex; gap:6px; align-items:center;">
+              <span id="ced-bold-indicator" style="
+                display:inline-flex; align-items:center; justify-content:center;
+                width:22px; height:22px; border-radius:6px; font-weight:800; font-size:12px;
+                background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+                color:rgba(255,255,255,0.35); transition:background .15s,border-color .15s,color .15s;
+              " title="Ctrl+B untuk Bold">B</span>
+              <span id="ced-italic-indicator" style="
+                display:inline-flex; align-items:center; justify-content:center;
+                width:22px; height:22px; border-radius:6px; font-weight:600; font-style:italic; font-size:12px;
+                background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+                color:rgba(255,255,255,0.35); transition:background .15s,border-color .15s,color .15s;
+              " title="Ctrl+I untuk Italic">I</span>
+            </span>
+          </label>
           <input
             class="ced-input"
             id="ced-name-input"
@@ -2444,6 +2460,9 @@
             value="Alex belo boavida ximenes da costa soares"
             oninput="cedRedraw()"
           />
+          <p style="margin:6px 0 0; font-size:10.5px; line-height:1.4; color:var(--text-muted);">
+            Klik di kotak nama lalu tekan <strong style="color:var(--text);">Ctrl+B</strong> untuk tebal, <strong style="color:var(--text);">Ctrl+I</strong> untuk miring.
+          </p>
         </div>
 
         <!-- 3. Font selector — custom dropdown (native select tidak bisa di-style) -->
@@ -2564,9 +2583,29 @@
               <span class="ced-font-opt-preview" style="font-family:'Playfair Display',serif;">Playfair Display</span>
               <span class="ced-font-opt-tag">Elegant Serif</span>
             </button>
+            <button class="ced-font-opt" data-value="Lora" data-label="Lora — Readable Serif" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Lora',serif;">Lora</span>
+              <span class="ced-font-opt-tag">Readable Serif</span>
+            </button>
+            <button class="ced-font-opt" data-value="Archivo Black" data-label="Archivo Black — Bold Display" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Archivo Black',sans-serif;">Archivo Black</span>
+              <span class="ced-font-opt-tag">Bold Display</span>
+            </button>
 
             <!-- Group: System Fonts (Windows) -->
             <div class="ced-font-group-label">System Fonts (Windows only)</div>
+            <button class="ced-font-opt" data-value="'Times New Roman', Times, serif" data-label="Times New Roman — Classic Formal" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Times New Roman',Times,serif;">Times New Roman</span>
+              <span class="ced-font-opt-tag">Classic Formal</span>
+            </button>
+            <button class="ced-font-opt" data-value="'Century Gothic', 'Futura', sans-serif" data-label="Century Gothic — Geometric Clean" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Century Gothic','Futura',sans-serif;">Century Gothic</span>
+              <span class="ced-font-opt-tag">Geometric Clean</span>
+            </button>
             <button class="ced-font-opt" data-value="'Edwardian Script ITC', Allura, cursive" data-label="Edwardian Script ITC — Classic Formal" onclick="cedPickFont(this)">
               <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               <span class="ced-font-opt-preview" style="font-family:'Edwardian Script ITC',Allura,cursive;">Edwardian Script ITC</span>
@@ -2594,6 +2633,44 @@
               <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               <span class="ced-font-opt-preview" style="font-family:'Montserrat',sans-serif;">Montserrat</span>
               <span class="ced-font-opt-tag">Clean Sans-serif</span>
+            </button>
+            <button class="ced-font-opt" data-value="Poppins" data-label="Poppins — Geometric Sans-serif" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Poppins',sans-serif;">Poppins</span>
+              <span class="ced-font-opt-tag">Geometric Sans-serif</span>
+            </button>
+            <button class="ced-font-opt" data-value="Open Sans" data-label="Open Sans — Friendly Sans-serif" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Open Sans',sans-serif;">Open Sans</span>
+              <span class="ced-font-opt-tag">Friendly Sans-serif</span>
+            </button>
+            <button class="ced-font-opt" data-value="DM Sans" data-label="DM Sans — Modern Minimal" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'DM Sans',sans-serif;">DM Sans</span>
+              <span class="ced-font-opt-tag">Modern Minimal</span>
+            </button>
+            <button class="ced-font-opt" data-value="Roboto" data-label="Roboto — Neutral Sans-serif" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Roboto',sans-serif;">Roboto</span>
+              <span class="ced-font-opt-tag">Neutral Sans-serif</span>
+            </button>
+
+            <!-- Group: Fun & Casual -->
+            <div class="ced-font-group-label">Fun &amp; Casual</div>
+            <button class="ced-font-opt" data-value="Chewy" data-label="Chewy — Playful Bubble" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Chewy',cursive;">Chewy</span>
+              <span class="ced-font-opt-tag">Playful Bubble</span>
+            </button>
+            <button class="ced-font-opt" data-value="'Comic Sans MS', 'Comic Sans', cursive" data-label="Comic Sans MS — Casual Handwriting" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Comic Sans MS','Comic Sans',cursive;">Comic Sans MS</span>
+              <span class="ced-font-opt-tag">Casual Handwriting</span>
+            </button>
+            <button class="ced-font-opt" data-value="'Lazy Dog', 'Comic Sans MS', cursive" data-label="Lazy Dog — Hand-drawn Casual" onclick="cedPickFont(this)">
+              <svg class="ced-font-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="ced-font-opt-preview" style="font-family:'Lazy Dog','Comic Sans MS',cursive;">Lazy Dog</span>
+              <span class="ced-font-opt-tag">Hand-drawn Casual</span>
             </button>
           </div>
         </div>
@@ -5339,6 +5416,8 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
   let cfgSrc       = 'sertifikat-template.png';
   let cfgFont      = 'Alex Brush';
   let cfgFontColor = '#d09e3b';
+  let cfgFontBold   = false;
+  let cfgFontItalic = false;
   // Default bbox (persis default ced state) — masih dalam skala 900x636
   let bboxX = 153, bboxY = 240, bboxW = 594, bboxH = 115;
   // Default UID watermark (persis default ced.uid* state, skala 900x636) —
@@ -5354,6 +5433,8 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
     if (d.templateBase64)  cfgSrc = d.templateBase64;
     if (d.fontFamily)      cfgFont = d.fontFamily;
     if (d.fontColor)       cfgFontColor = d.fontColor;
+    cfgFontBold   = d.fontBold   === true;
+    cfgFontItalic = d.fontItalic === true;
     if (d.bboxX      != null) bboxX = d.bboxX;
     if (d.bboxY      != null) bboxY = d.bboxY;
     if (d.bboxWidth  != null) bboxW = d.bboxWidth;
@@ -5373,6 +5454,8 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
         if (d.templateBase64)  cfgSrc = d.templateBase64;
         if (d.fontFamily)      cfgFont = d.fontFamily;
         if (d.fontColor)       cfgFontColor = d.fontColor;
+        cfgFontBold   = d.fontBold   === true;
+        cfgFontItalic = d.fontItalic === true;
         if (d.bboxX      != null) bboxX = d.bboxX;
         if (d.bboxY      != null) bboxY = d.bboxY;
         if (d.bboxWidth  != null) bboxW = d.bboxWidth;
@@ -5394,7 +5477,13 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
 
   // ── Tunggu font ter-load sebelum draw ─────────────────────────
   // (ukuran awal font dites di basis 68px * SCALE, lihat di bawah)
-  try { await document.fonts.load(`${Math.round(68 * SCALE)}px "${cfgFont}"`); } catch(e) {}
+  try {
+    const preloadStyleParts = [];
+    if (cfgFontItalic) preloadStyleParts.push('italic');
+    if (cfgFontBold)   preloadStyleParts.push('bold');
+    preloadStyleParts.push(`${Math.round(68 * SCALE)}px`);
+    await document.fonts.load(`${preloadStyleParts.join(' ')} "${cfgFont}"`);
+  } catch(e) {}
 
   // ── 1. Clear + draw template ──────────────────────────────────
   ctx.clearRect(0, 0, W, H);
@@ -5450,7 +5539,14 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
   let lines, lineH, ascent, descent, totalH;
 
   while (fontSize >= 10 * SCALE) {
-    ctx.font = `${fontSize}px "${cfgFont}"`;
+    // Susun font string dengan style+weight di depan, sama persis pola
+    // dengan _cedDraw (preview admin) — supaya hasil final benar2 identik
+    // dengan apa yang dilihat Admin saat mengatur bold/italic via Ctrl+B/I.
+    const styleParts = [];
+    if (cfgFontItalic) styleParts.push('italic');
+    if (cfgFontBold)   styleParts.push('bold');
+    styleParts.push(`${fontSize}px`);
+    ctx.font = `${styleParts.join(' ')} "${cfgFont}"`;
     lines = wrapTextFinal(ctx, name, BOX_W);
 
     ascent  = 0;
@@ -5489,6 +5585,16 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
   if (cfgUidVisible !== false) {
     ctx.save();
     const uidFontFamily = cfgUidFont || 'JetBrains Mono';
+    // ── Preload font UID watermark sebelum dipakai ──────────────────
+    // Sebelumnya hanya font NAMA yang di-preload (lihat document.fonts.load
+    // di atas) — font UID langsung dipakai tanpa ditunggu dulu. Ini biasanya
+    // tidak masalah selama font UID-nya JetBrains Mono (sudah lama termuat
+    // dari CSS halaman), tapi sekarang pilihan font UID makin banyak
+    // (Poppins, Chewy, dll), jadi perlu di-preload juga supaya tidak
+    // ke-render dengan font fallback browser pada percobaan pertama.
+    try {
+      await document.fonts.load(`400 ${Math.round(68 * SCALE)}px "${uidFontFamily}"`);
+    } catch (e) {}
     ctx.fillStyle = cfgUidColor || 'rgba(204,204,204,0.45)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -6668,6 +6774,8 @@ const ced = {
   backImageUrl:   null,  // gambar halaman 2 (belakang) — statis, tidak diedit (bukan canvas)
   fontFamily:     'Alex Brush',
   fontColor:      '#d09e3b',   // default: gold
+  fontBold:       false,       // toggle lewat Ctrl+B saat fokus di #ced-name-input
+  fontItalic:     false,       // toggle lewat Ctrl+I saat fokus di #ced-name-input
   // ── Bounding box (canvas-space coords, 900×636 grid) ──
   x:      153,   // left edge px
   y:      240,   // top edge px  (bukan nameY — ini top edge bbox)
@@ -6676,6 +6784,61 @@ const ced = {
   uidWidth: 250,
   uidHeight: 40,
 };
+
+// ── Shortcut Ctrl+B (bold) / Ctrl+I (italic) untuk nama sertifikat ──
+// Aktif HANYA saat fokus di kotak #ced-name-input (bukan listener
+// global), supaya tidak mengganggu shortcut bold/italic browser di
+// tempat lain pada halaman. preventDefault() dipanggil supaya browser
+// tidak menjalankan default action-nya sendiri (mis. beberapa browser
+// memetakan Ctrl+B ke toggle bookmarks bar).
+function initNameStyleShortcuts() {
+  const nameInput = document.getElementById('ced-name-input');
+  if (!nameInput) return;
+
+  function updateIndicators() {
+    const boldEl   = document.getElementById('ced-bold-indicator');
+    const italicEl = document.getElementById('ced-italic-indicator');
+    if (boldEl) {
+      boldEl.style.background  = ced.fontBold ? 'rgba(204,255,0,0.18)' : 'rgba(255,255,255,0.06)';
+      boldEl.style.borderColor = ced.fontBold ? 'rgba(204,255,0,0.5)'  : 'rgba(255,255,255,0.12)';
+      boldEl.style.color       = ced.fontBold ? 'var(--accent)'        : 'rgba(255,255,255,0.35)';
+    }
+    if (italicEl) {
+      italicEl.style.background  = ced.fontItalic ? 'rgba(204,255,0,0.18)' : 'rgba(255,255,255,0.06)';
+      italicEl.style.borderColor = ced.fontItalic ? 'rgba(204,255,0,0.5)'  : 'rgba(255,255,255,0.12)';
+      italicEl.style.color       = ced.fontItalic ? 'var(--accent)'        : 'rgba(255,255,255,0.35)';
+    }
+  }
+  window._cedUpdateStyleIndicators = updateIndicators; // dipanggil juga setelah load Firestore
+
+  nameInput.addEventListener('keydown', (e) => {
+    // metaKey untuk Mac (Cmd+B/Cmd+I), ctrlKey untuk Windows/Linux
+    const mod = e.ctrlKey || e.metaKey;
+    if (!mod) return;
+
+    if (e.key.toLowerCase() === 'b') {
+      e.preventDefault();
+      ced.fontBold = !ced.fontBold;
+      updateIndicators();
+      cedRedraw();
+    } else if (e.key.toLowerCase() === 'i') {
+      e.preventDefault();
+      ced.fontItalic = !ced.fontItalic;
+      updateIndicators();
+      cedRedraw();
+    }
+  });
+
+  updateIndicators(); // set tampilan awal sesuai state default
+}
+// DOM mungkin belum lengkap saat script ini jalan (elemen ced-name-input
+// ada di panel yang baru dirender belakangan) — pasang via DOMContentLoaded
+// kalau dokumen belum selesai loading, atau langsung kalau sudah.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initNameStyleShortcuts);
+} else {
+  initNameStyleShortcuts();
+}
 
 
 // ── Toggle panel open / closed ───────────────────────────────────
@@ -7565,6 +7728,11 @@ async function cedLoadFromFirestore() {
       ced.fontColor = d.fontColor;
       cedSyncColorUI(d.fontColor);
     }
+    // fontBold/fontItalic: default false kalau belum pernah disimpan
+    // (sertifikat lama sebelum fitur ini ada tidak akan tiba2 jadi bold/italic)
+    ced.fontBold   = d.fontBold   === true;
+    ced.fontItalic = d.fontItalic === true;
+    if (typeof window._cedUpdateStyleIndicators === 'function') window._cedUpdateStyleIndicators();
     // Satu sumber kebenaran: semua dari bbox
     if (d.bboxX      != null) ced.x      = d.bboxX;
     if (d.bboxY      != null) ced.y      = d.bboxY;
@@ -7844,7 +8012,13 @@ async function _cedDraw() {
   ced.fontFamily = document.getElementById('ced-font-select').value;
 
   // ── Tunggu font ter-load sebelum draw ──────────────────────────
-  try { await document.fonts.load(`68px "${ced.fontFamily}"`); } catch(e) {}
+  try {
+    const preloadStyleParts = [];
+    if (ced.fontItalic) preloadStyleParts.push('italic');
+    if (ced.fontBold)   preloadStyleParts.push('bold');
+    preloadStyleParts.push('68px');
+    await document.fonts.load(`${preloadStyleParts.join(' ')} "${ced.fontFamily}"`);
+  } catch(e) {}
 
   // ── wrapText(): wraps `text` into lines that fit within `ced.width` ──
   function wrapText(ctx, text, maxWidth) {
@@ -7903,7 +8077,14 @@ async function _cedDraw() {
   let lines, lineH, ascent, descent, totalH;
 
   while (fontSize >= 10) {
-    ctx.font = `${fontSize}px "${ced.fontFamily}"`;
+    // Susun font string dengan style+weight di depan — format Canvas API:
+    // "[italic] [bold] <size>px <family>". Bagian yang tidak aktif (style
+    // normal / weight normal) cukup dihilangkan, Canvas API menerima itu.
+    const styleParts = [];
+    if (ced.fontItalic) styleParts.push('italic');
+    if (ced.fontBold)   styleParts.push('bold');
+    styleParts.push(`${fontSize}px`);
+    ctx.font = `${styleParts.join(' ')} "${ced.fontFamily}"`;
 
     // Wrap words to fit box width (no horizontal padding needed — SAFE_RATIO handles slack)
     lines = wrapText(ctx, name, BOX_W);
@@ -7979,6 +8160,13 @@ async function _cedDraw() {
   if (window.ced && ced.uidVisible !== false) {
     ctx.save();
     const uidFontFamily = ced.uidFont || 'JetBrains Mono';
+    // Preload font UID sebelum dipakai di preview — sama seperti alasan di
+    // drawCertificateOnCanvas (versi final student), supaya pilihan font
+    // baru (Poppins/Chewy/dll) langsung akurat tampilannya di preview admin,
+    // bukan fallback font browser pada percobaan pertama pilih font.
+    try {
+      await document.fonts.load(`400 68px "${uidFontFamily}"`);
+    } catch (e) {}
     ctx.fillStyle = ced.uidColor || 'rgba(204,204,204,0.45)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -8160,6 +8348,8 @@ async function cedSaveConfig() {
     backImageUrl:   ced.backImageUrl || null,
     fontFamily:     ced.fontFamily,
     fontColor:      ced.fontColor || '#d09e3b',
+    fontBold:       ced.fontBold   === true,
+    fontItalic:     ced.fontItalic === true,
     bboxX:      isFinite(ced.x)      ? Math.round(ced.x)      : 153,
     bboxY:      isFinite(ced.y)      ? Math.round(ced.y)      : 240,
     bboxWidth:  isFinite(ced.width)  ? Math.round(ced.width)  : 594,

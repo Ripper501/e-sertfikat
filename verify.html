@@ -1125,21 +1125,28 @@
           }
 
           function finish() {
-            canvas.toBlob(blob => {
-              if (blob) resolve({ blob, canvas });
-              else reject(new Error('Gagal membuat gambar (toBlob kosong).'));
-            }, 'image/png');
+            try {
+              canvas.toBlob(blob => {
+                if (blob) resolve({ blob, canvas });
+                else reject(new Error('Gagal membuat gambar (toBlob kosong).'));
+              }, 'image/png');
+            } catch (securityErr) {
+              // canvas.toBlob() throw SecurityError kalau canvas tainted
+              // (gambar di-load tanpa crossOrigin dari domain lain).
+              // Jangan biarkan Promise stuck — reject dengan pesan jelas.
+              reject(securityErr);
+            }
           }
 
-          // Pastikan webfont (Cormorant Garamond / Space Grotesk) sudah siap
-          // sebelum digambar ke canvas — kalau belum, teks bisa fallback ke
-          // font default browser dan terlihat tidak konsisten.
           const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
 
           fontsReady.then(() => {
             const logo = new Image();
+            // crossOrigin WAJIB di-set SEBELUM .src agar canvas tidak tainted
+            // di iOS Safari — kalau tainted, toBlob() throw SecurityError dan
+            // Promise buildShareCardImage tidak pernah resolve maupun reject.
+            logo.crossOrigin = 'anonymous';
             logo.onload = () => {
-              // Logo bundar kecil di atas, sejajar tengah
               const logoSize = 64;
               const lx = W / 2 - logoSize / 2;
               const ly = H * 0.12;
@@ -1160,13 +1167,14 @@
               finish();
             };
             logo.onerror = () => {
-              // Logo gagal dimuat — tetap lanjut tanpa logo, jangan sampai
-              // seluruh fitur share gagal hanya karena gambar logo.
+              // Logo gagal load — lanjut tanpa logo daripada seluruh share gagal
               drawTextContent();
               finish();
             };
-            logo.src = 'https://ripper501.github.io/e-sertfikat/logo.png';
-          });
+            // Cache-bust untuk hindari cached version tanpa CORS header di iOS
+            const logoCacheBust = `https://ripper501.github.io/e-sertfikat/logo.png?_cb=${Date.now()}`;
+            logo.src = logoCacheBust;
+          }).catch(err => reject(err));
         });
       }
 
@@ -1535,15 +1543,6 @@
             (err && err.message === 'TIMEOUT')
               ? 'Connection is taking too long. Please check your internet and try reloading this page.'
               : 'A network error occurred. Please check your connection and try again.';
-        })
-        .finally(() => {
-          // Halaman ini cuma butuh baca data SEKALI (bukan listener live),
-          // jadi koneksi Firestore (yang sengaja dibuat tetap terbuka oleh
-          // SDK untuk keperluan real-time sync) ditutup di sini. Beberapa
-          // browser (termasuk Safari) menampilkan indikator "masih loading"
-          // selama ada koneksi jaringan yang masih terbuka di belakang,
-          // walau kontennya sudah selesai ditampilkan ke pengguna.
-          db.terminate().catch(() => {});
         });
     }
   </script>

@@ -7603,6 +7603,16 @@ async function cedLoadFromFirestore() {
     if (d.uidVisible != null) ced.uidVisible = d.uidVisible;
     if (d.uidX        != null) ced.uidX      = d.uidX;
     if (d.uidY        != null) ced.uidY      = d.uidY;
+    // PENTING: uidWidth & uidHeight WAJIB dimuat juga — keduanya menentukan
+    // ukuran box drag (resize handle 8-arah) yang dipakai algoritma auto-
+    // scale font UID (lihat drawCertificateOnCanvas). Tanpa baris ini,
+    // ukuran box (dan otomatis font-nya) selalu balik ke default (250x40)
+    // setiap kali Admin refresh halaman, walau cedSaveConfig sudah benar
+    // menyimpan nilai custom-nya ke Firestore — bug "reset setelah refresh"
+    // yang dilaporkan disebabkan oleh baris yang hilang ini, bukan oleh
+    // kegagalan penyimpanan.
+    if (d.uidWidth    != null) ced.uidWidth  = d.uidWidth;
+    if (d.uidHeight   != null) ced.uidHeight = d.uidHeight;
     if (d.uidColor    != null) ced.uidColor  = d.uidColor;
     if (d.uidFont     != null) ced.uidFont   = d.uidFont;
     if (typeof cedSyncUidColorUI === 'function') cedSyncUidColorUI(ced.uidColor || 'rgba(204,204,204,0.45)');

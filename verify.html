@@ -859,8 +859,16 @@
 
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    // Pengaturan db.settings dihapus agar Firebase benar-benar bebas
-    // memilih koneksi tercepat (WebChannel/Websocket) tanpa hambatan.
+    // DIKEMBALIKAN ke experimentalForceLongPolling. Sebelumnya saya ganti ke
+    // "auto-detect" dengan asumsi itu lebih cepat (otomatis pilih cara
+    // koneksi tercepat) — tapi auto-detect berarti Firestore harus PROBING
+    // dulu (coba koneksi normal, baru fallback ke long-polling kalau gagal),
+    // dan proses probing itu sendiri menambah delay nyata, terutama di
+    // jaringan yang memang butuh long-polling dari awal (jaringan
+    // terbatas/dengan proxy yang memutus koneksi streaming). Memaksa
+    // long-polling langsung dari awal (seperti semula) jauh lebih cepat
+    // untuk kondisi jaringan peserta di lapangan.
+    db.settings({ experimentalForceLongPolling: true, useFetchStreams: false });
 
     function getStudentId() {
       const params = new URLSearchParams(window.location.search);
@@ -1022,7 +1030,7 @@
         const nameEl = document.getElementById('cert-name');
         nameEl.textContent = ''; // kosongkan dulu (hapus "—" default)
 
-        const STAGGER_MS = 13; // jarak delay antar huruf — cukup cepat agar nama panjang tidak lama
+        const STAGGER_MS = 28; // jarak delay antar huruf — cukup cepat agar nama panjang tidak lama
         const chars = Array.from(fullName);
 
         chars.forEach((ch, i) => {

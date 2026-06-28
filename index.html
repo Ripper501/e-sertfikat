@@ -4684,12 +4684,6 @@ function surveyRenderCurrentQuestion() {
     }
 
     answerArea.innerHTML = `
-      ${(q.scaleMinLabel || q.scaleMaxLabel) ? `
-        <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-muted); margin-bottom:6px;">
-          <span>${escapeHtml(q.scaleMinLabel || '')}</span>
-          <span>${escapeHtml(q.scaleMaxLabel || '')}</span>
-        </div>
-      ` : ''}
       <div style="position:relative; padding:48px 6px 8px;">
         <!-- Bubble angka besar — posisinya (left:%) mengikuti posisi thumb slider secara real-time -->
         <div id="survey-slider-bubble" style="
@@ -4713,8 +4707,18 @@ function surveyRenderCurrentQuestion() {
             outline:none;
           "
         />
-        <div style="display:flex; justify-content:space-between; margin-top:10px; font-family:var(--font-mono); font-size:11px; color:var(--text-dim);">
-          ${dotsForScale(min, max).map(v => `<span>${v}</span>`).join('')}
+        <!-- Angka + label per-titik, tersusun vertikal (angka di atas, label di
+             bawah) supaya label panjang seperti "Sangat Puas" tidak bertumpukan
+             satu sama lain di layar HP yang sempit. -->
+        <div id="survey-scale-labels-row" style="display:flex; justify-content:space-between; margin-top:10px; gap:4px;">
+          ${dotsForScale(min, max).map((v, vi) => `
+            <div class="survey-scale-label-item" data-val="${v}" style="flex:1; min-width:0; text-align:center; ${selectedVal === v ? 'opacity:1;' : 'opacity:0.55;'} transition:opacity 0.15s;">
+              <div class="survey-scale-label-num" style="font-family:var(--font-mono); font-size:11px; color:${selectedVal === v ? 'var(--accent)' : 'var(--text-dim)'}; font-weight:${selectedVal === v ? '700' : '400'};">${v}</div>
+              ${(q.scaleLabels && q.scaleLabels[vi]) ? `
+                <div style="font-size:9.5px; color:var(--text-muted); line-height:1.25; margin-top:2px; word-break:break-word; overflow-wrap:anywhere;">${escapeHtml(q.scaleLabels[vi])}</div>
+              ` : ''}
+            </div>
+          `).join('')}
         </div>
       </div>
     `;
@@ -4734,6 +4738,18 @@ window.surveySliderInput = function(el) {
     bubble.textContent = val;
     bubble.style.left = pct + '%';
   }
+
+  // Sorot label angka yang sesuai dengan nilai slider saat ini (opacity +
+  // warna accent pada angka terpilih), redupkan yang lain.
+  document.querySelectorAll('.survey-scale-label-item').forEach(item => {
+    const isSelected = Number(item.dataset.val) === val;
+    item.style.opacity = isSelected ? '1' : '0.55';
+    const numEl = item.querySelector('.survey-scale-label-num');
+    if (numEl) {
+      numEl.style.color = isSelected ? 'var(--accent)' : 'var(--text-dim)';
+      numEl.style.fontWeight = isSelected ? '700' : '400';
+    }
+  });
 
   // Simpan jawaban setiap kali digeser (tidak perlu nunggu event "change" saja).
   surveySetCurrentAnswer(String(val));
@@ -4850,6 +4866,24 @@ window.surveyGoNext = async function() {
 // Form (fire-and-forget, lihat catatan CORS) + simpan cadangan ke Firestore,
 // baru lanjut generate sertifikat seperti behavior semula.
 // Dipanggil setelah pertanyaan terakhir terjawab. Kirim jawaban ke Google Form
+// ── Format jawaban untuk dikirim ke Sheet/Firestore ───────────
+// Untuk pertanyaan linear_scale, jawaban mentahnya cuma angka (mis. "5"),
+// tidak informatif kalau dibaca orang lain di Sheet tanpa tahu skalanya.
+// Fungsi ini menggabungkan angka dengan label yang Admin tulis untuk
+// titik itu (mis. "5 - Sangat Puas"). Kalau labelnya kosong (Admin
+// tidak mengisi untuk titik tersebut), fallback ke angka polos saja —
+// supaya tidak menampilkan " - " kosong yang aneh.
+function formatSurveyAnswerForExport(q, rawAnswer) {
+  if (q.type === 'linear_scale' && rawAnswer !== '' && rawAnswer != null) {
+    const min = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
+    const val = Number(rawAnswer);
+    const labelIndex = val - min;
+    const label = Array.isArray(q.scaleLabels) ? (q.scaleLabels[labelIndex] || '').trim() : '';
+    return label ? `${val} - ${label}` : String(val);
+  }
+  return rawAnswer;
+}
+
 async function surveyFinishAndGenerate() {
   const nextBtn    = document.getElementById('btn-survey-next');
   const nextLabel  = document.getElementById('survey-next-label');
@@ -4881,6 +4915,10 @@ async function surveyFinishAndGenerate() {
     });
   }
 
+  // ── Format jawaban untuk dikirim ke Sheet/Firestore ───────────
+  // (fungsi formatSurveyAnswerForExport didefinisikan di scope global,
+  // tepat sebelum fungsi ini — lihat definisinya di atas)
+
   // ── 1. KIRIM OTOMATIS KE GOOGLE SHEET (MENGGUNAKAN APPS SCRIPT ARRAY DINAMIS)
   try {
     // Memetakan jawaban survei ke format [{label, value}] — skip Full Name (sudah jadi namaSertifikat)
@@ -4888,7 +4926,7 @@ async function surveyFinishAndGenerate() {
       .filter(q => !q.isName)
       .map(q => ({
         label: q.text,
-        value: studentSurveyAnswers[q.id] || ""
+        value: formatSurveyAnswerForExport(q, studentSurveyAnswers[q.id] || "")
       }));
 
     // Ambil nama event dari config survei yang sudah di-set admin (field "Nama Event")
@@ -4949,7 +4987,7 @@ async function surveyFinishAndGenerate() {
     const answersForFirestore = studentSurveyConfig.questions.map(q => ({
       questionId:   q.id,
       questionText: q.text,
-      answer:       studentSurveyAnswers[q.id] || '',
+      answer:       formatSurveyAnswerForExport(q, studentSurveyAnswers[q.id] || ''),
       type:         q.type || 'text',     // dipakai dashboard admin utk tahu cara rekap (bar chart vs daftar teks)
       isName:       !!q.isName,           // pertanyaan "Nama lengkap" selalu free-text, jangan pernah di-bar-chart
     }));
@@ -6920,7 +6958,9 @@ function _surveyDeepCloneQuestions() {
     id: q.id, text: q.text || '', type: q.type || 'text',
     options: Array.isArray(q.options) ? q.options.slice() : [],
     scaleMin: q.scaleMin, scaleMax: q.scaleMax,
+    scaleLabels: Array.isArray(q.scaleLabels) ? q.scaleLabels.slice() : [],
     scaleMinLabel: q.scaleMinLabel || '', scaleMaxLabel: q.scaleMaxLabel || '',
+    lookup: Array.isArray(q.lookup) ? q.lookup.map(r => ({ name: r.name || '', sid: r.sid || '' })) : [],
   }));
 }
 
@@ -7071,13 +7111,31 @@ function surveyRenderQuestions() {
       </div>
     `).join('');
 
-    // Linear scale: builder min/max + label kiri-kanan + preview titik-titik
-    const scaleMin      = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
-    const scaleMax      = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
-    const scaleMinLabel = q.scaleMinLabel || '';
-    const scaleMaxLabel = q.scaleMaxLabel || '';
+    // Linear scale: builder N label (satu per titik skala) + preview titik-titik.
+    // scaleLabels adalah array sepanjang (scaleMax-scaleMin+1), satu label
+    // teks bebas per angka — menggantikan scaleMinLabel/scaleMaxLabel (versi
+    // lama yang hanya punya 2 label, kiri & kanan, sehingga titik di tengah
+    // seperti 2/3/4 tidak punya keterangan apa pun).
+    const scaleMin   = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
+    const scaleMax   = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
     const scaleDots = [];
     for (let v = scaleMin; v <= scaleMax; v++) scaleDots.push(v);
+    const pointCount = scaleDots.length;
+
+    // Migrasi otomatis dari data lama (scaleMinLabel/scaleMaxLabel) kalau
+    // scaleLabels belum pernah diisi — supaya label yang sudah pernah
+    // ditulis Admin sebelumnya tidak hilang begitu saja.
+    let scaleLabels = Array.isArray(q.scaleLabels) ? q.scaleLabels.slice() : [];
+    if (scaleLabels.length === 0 && (q.scaleMinLabel || q.scaleMaxLabel)) {
+      scaleLabels = new Array(pointCount).fill('');
+      scaleLabels[0] = q.scaleMinLabel || '';
+      scaleLabels[pointCount - 1] = q.scaleMaxLabel || '';
+    }
+    // Pastikan panjang array selalu sinkron dengan jumlah titik saat ini
+    // (kalau Admin baru saja mengubah Min/Max, jumlah kotak ikut menyesuaikan).
+    while (scaleLabels.length < pointCount) scaleLabels.push('');
+    if (scaleLabels.length > pointCount) scaleLabels = scaleLabels.slice(0, pointCount);
+    q.scaleLabels = scaleLabels; // simpan balik ke state supaya tidak hilang saat re-render lain
 
     const linearScaleHtml = isLinearScale ? `
       <div style="margin-top:10px;">
@@ -7088,13 +7146,24 @@ function surveyRenderQuestions() {
           <input class="ced-input survey-scale-num" type="number" placeholder="5" value="${scaleMax}"
             oninput="surveyUpdateField('${q.id}', 'scaleMax', this.value === '' ? '' : Number(this.value))" />
         </div>
-        <div class="survey-scale-row">
-          <input class="ced-input survey-scale-label-input" type="text" placeholder="Label kiri (opsional, mis. Sangat tidak setuju)"
-            value="${escapeHtml(scaleMinLabel)}"
-            oninput="surveyUpdateField('${q.id}', 'scaleMinLabel', this.value)" />
-          <input class="ced-input survey-scale-label-input" type="text" placeholder="Label kanan (opsional, mis. Sangat setuju)"
-            value="${escapeHtml(scaleMaxLabel)}"
-            oninput="surveyUpdateField('${q.id}', 'scaleMaxLabel', this.value)" />
+        <p style="font-size:10.5px; color:var(--text-dim); margin:10px 0 6px; letter-spacing:0.04em; text-transform:uppercase;">
+          Label tiap angka (opsional, kosongkan kalau tidak perlu)
+        </p>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          ${scaleDots.map((v, vi) => `
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="
+                display:inline-flex; align-items:center; justify-content:center;
+                width:26px; height:26px; border-radius:8px; flex-shrink:0;
+                background:rgba(255,255,255,0.06); border:1px solid var(--border-soft);
+                font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--text-dim);
+              ">${v}</span>
+              <input class="ced-input survey-scale-label-input" type="text"
+                placeholder="Label untuk ${v} (mis. ${vi === 0 ? 'Tidak Puas' : vi === scaleDots.length - 1 ? 'Sangat Puas' : 'Biasa Saja'})"
+                value="${escapeHtml(scaleLabels[vi] || '')}"
+                oninput="surveyUpdateScaleLabel('${q.id}', ${vi}, this.value)" style="flex:1;" />
+            </div>
+          `).join('')}
         </div>
         <div class="survey-scale-preview">
           ${scaleDots.map(v => `<div class="survey-scale-preview-dot"><span></span><span>${v}</span></div>`).join('')}
@@ -7460,6 +7529,16 @@ window.surveyUpdateOption = function(qid, optIndex, value) {
   // Tidak perlu re-render penuh di sini — cukup update array, hindari kehilangan fokus input saat mengetik.
 };
 
+// ── Linear Scale: update label untuk satu titik angka tertentu ───
+window.surveyUpdateScaleLabel = function(qid, labelIndex, value) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+  surveySnapshotDebounced(); // ketikan label = debounce, sama seperti ketikan opsi
+  if (!Array.isArray(q.scaleLabels)) q.scaleLabels = [];
+  q.scaleLabels[labelIndex] = value;
+  // Tidak re-render penuh — sama seperti surveyUpdateOption, hindari kehilangan fokus saat mengetik.
+};
+
 // ── ID Lookup: manipulasi daftar pasangan Nama + Student ID ───────
 window.surveyAddLookupRow = function(qid) {
   const q = surveyQuestions.find(q => q.id === qid);
@@ -7639,10 +7718,21 @@ async function surveySaveConfig() {
       options: OPTION_BASED_TYPES.includes(type) ? (q.options || []).map(o => o.trim()).filter(o => o) : [],
     };
     if (type === 'linear_scale') {
-      base.scaleMin      = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
-      base.scaleMax      = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
-      base.scaleMinLabel = (q.scaleMinLabel || '').trim();
-      base.scaleMaxLabel = (q.scaleMaxLabel || '').trim();
+      base.scaleMin = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
+      base.scaleMax = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
+      // scaleLabels: satu label teks per titik skala (panjang array =
+      // scaleMax-scaleMin+1) — menggantikan scaleMinLabel/scaleMaxLabel
+      // (versi lama yang cuma punya label kiri & kanan, titik tengah
+      // seperti 2/3/4 tidak punya keterangan apa pun).
+      const pointCount = base.scaleMax - base.scaleMin + 1;
+      const labels = Array.isArray(q.scaleLabels) ? q.scaleLabels.slice(0, pointCount) : [];
+      while (labels.length < pointCount) labels.push('');
+      base.scaleLabels = labels.map(l => (l || '').trim());
+      // Tetap simpan scaleMinLabel/scaleMaxLabel (dari titik pertama &
+      // terakhir) untuk kompatibilitas mundur — kalau ada bagian lain
+      // sistem yang masih membaca 2 field lama ini, tidak akan rusak.
+      base.scaleMinLabel = base.scaleLabels[0] || '';
+      base.scaleMaxLabel = base.scaleLabels[pointCount - 1] || '';
     }
     if (type === 'id_lookup') {
       // Hanya simpan baris yang benar2 lengkap (nama & id keduanya terisi).
@@ -7687,17 +7777,35 @@ async function surveyLoadFromFirestore() {
     const eventNameInput = document.getElementById('survey-event-name');
     if (eventNameInput) eventNameInput.value = d.eventName || '';
 
-    surveyQuestions = Array.isArray(d.questions) ? d.questions.map(q => ({
-      id:      q.id || _surveyNewId(),
-      text:    q.text || '',
-      type:    ['choice','checkbox','dropdown','linear_scale','id_lookup'].includes(q.type) ? q.type : 'text',
-      options: Array.isArray(q.options) ? q.options.slice() : [],
-      scaleMin:      Number.isFinite(q.scaleMin) ? q.scaleMin : 1,
-      scaleMax:      Number.isFinite(q.scaleMax) ? q.scaleMax : 5,
-      scaleMinLabel: q.scaleMinLabel || '',
-      scaleMaxLabel: q.scaleMaxLabel || '',
-      lookup:  Array.isArray(q.lookup) ? q.lookup.map(r => ({ name: r.name || '', sid: r.sid || '' })) : [],
-    })) : [];
+    surveyQuestions = Array.isArray(d.questions) ? d.questions.map(q => {
+      const scaleMin = Number.isFinite(q.scaleMin) ? q.scaleMin : 1;
+      const scaleMax = Number.isFinite(q.scaleMax) ? q.scaleMax : 5;
+      const pointCount = Math.max(0, scaleMax - scaleMin + 1);
+
+      // Migrasi otomatis: kalau scaleLabels belum ada di data Firestore
+      // (sertifikat survey lama, sebelum fitur N-label ini ada), bangun
+      // dari scaleMinLabel/scaleMaxLabel supaya label yang sudah pernah
+      // ditulis Admin sebelumnya tidak hilang.
+      let scaleLabels = Array.isArray(q.scaleLabels) ? q.scaleLabels.slice(0, pointCount) : [];
+      if (scaleLabels.length === 0 && (q.scaleMinLabel || q.scaleMaxLabel) && pointCount > 0) {
+        scaleLabels = new Array(pointCount).fill('');
+        scaleLabels[0] = q.scaleMinLabel || '';
+        scaleLabels[pointCount - 1] = q.scaleMaxLabel || '';
+      }
+      while (scaleLabels.length < pointCount) scaleLabels.push('');
+
+      return {
+        id:      q.id || _surveyNewId(),
+        text:    q.text || '',
+        type:    ['choice','checkbox','dropdown','linear_scale','id_lookup'].includes(q.type) ? q.type : 'text',
+        options: Array.isArray(q.options) ? q.options.slice() : [],
+        scaleMin, scaleMax,
+        scaleLabels,
+        scaleMinLabel: q.scaleMinLabel || '',
+        scaleMaxLabel: q.scaleMaxLabel || '',
+        lookup:  Array.isArray(q.lookup) ? q.lookup.map(r => ({ name: r.name || '', sid: r.sid || '' })) : [],
+      };
+    }) : [];
 
     surveyRenderQuestions();
     surveyHistoryReset();

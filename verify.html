@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Certificate Verification — FB Academy</title>
 
+  <meta name="description" content="Verify the authenticity of certificates issued by Fantiber Balance Academy (FB Academy), Timor-Leste. Scan the QR code on your certificate to confirm validity." />
+  <link rel="canonical" id="canonical-link" href="https://ripper501.github.io/e-sertfikat/verify.html" />
+  <link rel="icon" type="image/png" href="https://ripper501.github.io/e-sertfikat/logo.png" />
+  <meta name="theme-color" content="#0a0a0c" />
+
   <meta property="og:type"        content="website" />
   <meta property="og:title"       content="Certificate Verification — FB Academy" />
   <meta property="og:description" content="Officially verified certificate issued by Fantiber Balance Academy, Timor-Leste." />
@@ -43,6 +48,27 @@
     }
 
     html { scroll-behavior: smooth; }
+
+    /* A11y: hormati preferensi pengguna yang sensitif terhadap gerakan —
+       matikan animasi/transisi non-esensial (spinner, hover transition, dll)
+       kalau OS/browser pengguna meminta "reduce motion". */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+
+    /* Wrapper semantik <main> — dibuat flex agar perilaku visualnya identik
+       dengan body sebelumnya (yang langsung men-flex .card/.site-cta/.wordmark). */
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
 
     body {
       background: var(--void);
@@ -86,13 +112,12 @@
       width: 100%;
       max-width: 480px;
       z-index: 2;
-      opacity: 0;
-      transform: translateY(28px);
-      animation: cardIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+      animation: cardIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
     }
 
     @keyframes cardIn {
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     /* Gold ribbon top seal */
@@ -217,13 +242,22 @@
       color: var(--text);
       margin-bottom: 14px;
       word-break: break-word;
-      opacity: 0;
-      transform: translateY(10px);
-      animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.55s forwards;
       text-shadow: 0 0 24px rgba(245,230,0,0.12);
     }
+    /* Reveal nama bertahap: tiap huruf dibungkus <span class="name-char">
+       dengan animation-delay berjenjang (diset via JS per karakter), jadi
+       nama "muncul" satu-per-satu dari kiri ke kanan, bukan langsung utuh. */
+    .name-char {
+      display: inline-block;
+      animation: nameCharIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @keyframes nameCharIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
     @keyframes fadeUp {
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     /* ── Course/workshop name ── */
@@ -234,9 +268,7 @@
       color: var(--gold);
       margin-bottom: 24px;
       line-height: 1.4;
-      opacity: 0;
-      transform: translateY(8px);
-      animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.68s forwards;
+      animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.68s both;
     }
     .cert-course-label {
       display: block;
@@ -616,18 +648,125 @@
       transform: translateY(-1px);
     }
     .linkedin-add svg { flex-shrink: 0; }
-  </style>
+
+    /* ── Tombol "Share Achievement" — bertema gold (brand sendiri) ── */
+    .share-achievement {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--gold-line);
+      background: rgba(245,230,0,0.07);
+      color: var(--gold);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+      position: relative;
+      z-index: 2;
+    }
+    .share-achievement:hover,
+    .share-achievement:focus-visible {
+      background: rgba(245,230,0,0.14);
+      border-color: var(--gold);
+      transform: translateY(-1px);
+    }
+    .share-achievement:disabled {
+      opacity: 0.55;
+      cursor: wait;
+      transform: none;
+    }
+    .share-achievement svg { flex-shrink: 0; }
+
+    /* ── E-Certificate Modal ─────────────────────────────────── */
+    #cert-modal-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.88);
+      backdrop-filter: blur(6px);
+      align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    #cert-modal-overlay.open { display: flex; }
+    #cert-modal-box {
+      width: 100%; max-width: 600px;
+      background: #0d0d10;
+      border: 1px solid rgba(245,230,0,0.2);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(245,230,0,0.06);
+      display: flex; flex-direction: column;
+      max-height: 90vh;
+    }
+    #cert-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(245,230,0,0.1);
+      flex-shrink: 0;
+    }
+    #cert-modal-title {
+      font-size: 13px; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--gold);
+    }
+    #cert-modal-close {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; color: var(--text-muted); cursor: pointer;
+      width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    #cert-modal-close:hover { background: rgba(255,77,109,0.15); color: #ff4d6d; border-color: #ff4d6d; }
+    #cert-modal-canvas-wrap {
+      flex: 1; overflow: auto; padding: 16px;
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+    }
+    #cert-modal-canvas {
+      width: 100%; height: auto; border-radius: 8px;
+      display: block;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    #cert-modal-loading {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      padding: 40px; color: var(--text-muted); font-size: 13px;
+    }
+    #cert-modal-actions {
+      display: flex; gap: 10px; padding: 12px 16px;
+      border-top: 1px solid rgba(245,230,0,0.1);
+      flex-shrink: 0;
+    }
+    .cert-modal-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 11px 16px; border-radius: 9px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; border: none;
+    }
+    .cert-modal-btn-dl {
+      background: var(--gold); color: #000;
+    }
+    .cert-modal-btn-dl:hover { background: #fff9a0; }
+    .cert-modal-btn-share {
+      background: rgba(245,230,0,0.08); color: var(--gold);
+      border: 1px solid rgba(245,230,0,0.3);
+    }
+    .cert-modal-btn-share:hover { background: rgba(245,230,0,0.15); }
+    .cert-modal-btn:disabled { opacity: 0.45; cursor: wait; }
 </head>
 <body>
+  <main>
 
-  <div class="card" id="card">
+  <div class="card" id="card" aria-live="polite">
     <div class="card-ribbon"></div>
     <div class="card-body">
 
-      <div class="brand-header">
-        <img src="logo.png" alt="FB Academy" class="brand-logo" />
+      <header class="brand-header">
+        <img src="https://ripper501.github.io/e-sertfikat/logo.png" alt="FB Academy" class="brand-logo" width="32" height="32" onerror="this.style.display='none'" />
         <span class="brand-name">FB Academy</span>
-      </div>
+      </header>
 
       <div id="state-loading" class="loading-state">
         <div class="spinner-ring"></div>
@@ -664,7 +803,7 @@
           </div>
         </div>
 
-        <div class="card-footer">
+        <footer class="card-footer">
           <div class="footer-issued">
             <span class="footer-label">Issued</span>
             <span id="cert-issue" class="footer-date">—</span>
@@ -674,12 +813,20 @@
               <path d="M12 2l2.4 4.8L20 8l-4 3.9.94 5.5L12 15l-4.94 2.4.94-5.5L4 8l5.6-1.2z"/>
             </svg>
           </div>
-        </div>
+        </footer>
 
         <a id="linkedin-add-btn" class="linkedin-add" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14zM8.34 18.34V10.13H5.67v8.21h2.67zM7 8.84A1.46 1.46 0 1 0 7 5.92a1.46 1.46 0 0 0 0 2.92zm11.34 9.5v-4.7c0-2.52-1.35-3.7-3.15-3.7a2.72 2.72 0 0 0-2.46 1.35h-.04v-1.16H9.97c.03.7 0 8.21 0 8.21h2.67v-4.58c0-.24.02-.49.1-.66a1.46 1.46 0 0 1 1.33-.98c.94 0 1.31.71 1.31 1.76v4.46h2.67z"/></svg>
           Add to LinkedIn Profile
         </a>
+
+        <button type="button" id="share-achievement-btn" class="share-achievement" style="display:none;" onclick="openCertModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <span id="share-achievement-label">View E-Certificate</span>
+        </button>
 
         <p id="archive-note" style="display:none; margin-top:14px; font-size:10.5px; color:var(--text-muted); text-align:center; letter-spacing:0.04em;">
           Retrieved from permanent archive
@@ -755,6 +902,14 @@
 
   <p class="wordmark">E-Certificate System</p>
 
+  </main>
+
+  <noscript>
+    <p style="color:#f5f3e8; text-align:center; padding:24px; font-family:sans-serif;">
+      This page requires JavaScript to verify certificates. Please enable JavaScript in your browser and reload this page.
+    </p>
+  </noscript>
+
   <script>
     // Animasi muncul/hilang saat scroll (scroll reveal) untuk social bar &
     // "Visit Website" sudah DIHAPUS sesuai permintaan — elemen-elemen itu
@@ -772,7 +927,15 @@
 
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    db.settings({ experimentalForceLongPolling: true, useFetchStreams: false });
+    // CATATAN: sebelumnya di sini ada override db.settings({...LongPolling...})
+    // yang sudah 2x saya ubah-ubah (force → auto-detect → force lagi) tapi
+    // ternyata bikin koneksi MACET TOTAL (spinner berputar tanpa henti) di
+    // jaringan/hosting Anda saat ini — bukan cuma lambat, tapi benar-benar
+    // tidak pernah selesai. Daripada terus menebak setting mana yang cocok,
+    // override-nya DIHAPUS sepenuhnya di sini — Firestore akan pakai cara
+    // koneksi DEFAULT/standarnya (otomatis menyesuaikan, ini yang dipakai
+    // hampir semua aplikasi produksi tanpa masalah, tanpa perlu dipaksa
+    // salah satu mode secara manual).
 
     function getStudentId() {
       const params = new URLSearchParams(window.location.search);
@@ -784,6 +947,19 @@
     }
 
     const studentId = getStudentId();
+
+    // ── SEO: canonical URL dinamis ──────────────────────────────────
+    // Tiap sertifikat punya konten unik (nama beda-beda), jadi canonical
+    // diarahkan ke URL halaman ini sendiri (bersih, cuma parameter ?id=),
+    // bukan ke template generiknya — supaya tidak dianggap duplicate
+    // content oleh mesin pencari.
+    if (studentId) {
+      const canonicalEl = document.getElementById('canonical-link');
+      if (canonicalEl) {
+        const cleanUrl = window.location.origin + window.location.pathname + '?id=' + encodeURIComponent(studentId);
+        canonicalEl.setAttribute('href', cleanUrl);
+      }
+    }
 
     // ── WhatsApp popover toggle ──
     const waToggle   = document.getElementById('wa-toggle');
@@ -913,6 +1089,38 @@
       document.getElementById('error-msg').textContent =
         'No certificate ID found in this URL. Please scan the QR code again.';
     } else {
+      // ── Reveal nama bertahap: tiap huruf muncul satu-per-satu ──────────
+      // Aman dari XSS karena tiap karakter di-set lewat textContent (bukan
+      // innerHTML), persis seperti cara aman sebelumnya. Spasi antar kata
+      // tetap dipertahankan via &nbsp; supaya word-wrap tidak rusak.
+      function renderRevealName(fullName) {
+        const nameEl = document.getElementById('cert-name');
+        nameEl.textContent = ''; // kosongkan dulu (hapus "—" default)
+
+        const STAGGER_MS = 28; // jarak delay antar huruf — cukup cepat agar nama panjang tidak lama
+        const chars = Array.from(fullName);
+
+        chars.forEach((ch, i) => {
+          const span = document.createElement('span');
+          span.className = 'name-char';
+          span.style.animationDelay = (i * STAGGER_MS) + 'ms';
+          span.textContent = ch === ' ' ? '\u00A0' : ch; // non-breaking space agar tidak collapse
+          nameEl.appendChild(span);
+        });
+      }
+
+      // ── "Share Achievement": generate kartu gambar (PNG) berisi nama,
+      // nama kursus, dan logo FB Academy — lalu dibagikan lewat Web Share
+      // API (kalau didukung perangkat, mis. HP) atau di-download sebagai
+      // PNG (fallback di desktop/browser yang belum dukung Web Share dgn
+      // file). Tujuannya: peserta bisa langsung posting ke IG Story/WA
+      // Status tanpa perlu screenshot manual.
+      // ── Share Achievement card generator ──────────────────────────
+      // Dibuat sesederhana mungkin agar tidak ada titik macet:
+      // - Tidak pakai logo (crossOrigin + CORS = sumber macet utama di iOS)
+      // - Tidak bergantung pada document.fonts.ready (tidak reliable di iOS Safari)
+      // - Canvas murni teks + shapes saja → toBlob() selalu berhasil, tidak tainted
+      // - Timeout 5 detik sebagai safety net terakhir
       function buildLinkedInAddUrl(data) {
         const certificationName = data.detectedCourse && data.detectedCourse.trim()
           ? data.detectedCourse.trim()
@@ -940,7 +1148,7 @@
       }
 
       function renderCertificate(data) {
-        document.getElementById('cert-name').textContent  = data.cert_name || '—';
+        renderRevealName(data.cert_name || '—');
         document.getElementById('cert-email').textContent = data.email     || '—';
         
         // === DIUBAH: Logika Penentuan Tampilan Certificate ID ===
@@ -974,10 +1182,171 @@
           linkedinBtn.style.display = 'flex';
         }
 
+        const shareBtn = document.getElementById('share-achievement-btn');
+        if (shareBtn) shareBtn.style.display = 'flex';
+
+        injectCertificateStructuredData(data);
+
         showState('success');
+        triggerGoldConfetti();
       }
 
-      db.collection('cert_users').doc(studentId).get()
+      // ── Efek "confetti" emas saat sertifikat berhasil diverifikasi ──
+      // Canvas overlay sederhana (tanpa library eksternal), partikel meledak
+      // halus dari tengah kartu lalu jatuh & memudar. Otomatis dinonaktifkan
+      // untuk pengguna yang mengaktifkan "reduce motion" (a11y).
+      function triggerGoldConfetti() {
+        const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduceMotion) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.style.position = 'fixed';
+        canvas.style.inset = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.zIndex = '9999';
+        document.body.appendChild(canvas);
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const W = window.innerWidth, H = window.innerHeight;
+        canvas.width  = W * dpr;
+        canvas.height = H * dpr;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        const GOLD_COLORS = ['#f5e600', '#d4af37', '#fff3b0', '#b8a900', '#e8c547'];
+        const originX = W / 2;
+        const originY = Math.min(H * 0.32, 260); // sekitar posisi badge "Verified" di kartu
+
+        const COUNT = 70;
+        const particles = Array.from({ length: COUNT }, () => {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 2.5 + Math.random() * 5.5;
+          return {
+            x: originX,
+            y: originY,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 2, // bias awal ke atas sedikit, lalu gravitasi narik ke bawah
+            size: 4 + Math.random() * 5,
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 0.3,
+            color: GOLD_COLORS[Math.floor(Math.random() * GOLD_COLORS.length)],
+            life: 1,
+            decay: 0.012 + Math.random() * 0.012,
+            shape: Math.random() > 0.5 ? 'rect' : 'circle',
+          };
+        });
+
+        const GRAVITY = 0.13;
+        let rafId;
+
+        function frame() {
+          ctx.clearRect(0, 0, W, H);
+          let aliveCount = 0;
+
+          particles.forEach(p => {
+            if (p.life <= 0) return;
+            aliveCount++;
+
+            p.vy += GRAVITY;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.rotation += p.rotationSpeed;
+            p.life -= p.decay;
+
+            ctx.save();
+            ctx.globalAlpha = Math.max(p.life, 0);
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            ctx.fillStyle = p.color;
+            if (p.shape === 'rect') {
+              ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+            } else {
+              ctx.beginPath();
+              ctx.arc(0, 0, p.size / 2.4, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          });
+
+          if (aliveCount > 0) {
+            rafId = requestAnimationFrame(frame);
+          } else {
+            cancelAnimationFrame(rafId);
+            canvas.remove();
+          }
+        }
+
+        rafId = requestAnimationFrame(frame);
+
+        // Pengaman: hapus overlay walaupun ada hal tak terduga (mis. tab di-background lama)
+        setTimeout(() => { if (canvas.isConnected) canvas.remove(); }, 4500);
+      }
+
+      // ── SEO: structured data (schema.org EducationalOccupationalCredential) ──
+      // Membantu mesin pencari memahami halaman ini sebagai bukti sertifikasi
+      // resmi (dipakai juga oleh platform sertifikasi internasional seperti
+      // Coursera/Credly) — bisa memunculkan rich result di hasil pencarian.
+      // Disuntik via JS (bukan statis di <head>) karena datanya baru ada
+      // setelah Firestore/Sheet selesai dibaca.
+      function injectCertificateStructuredData(data) {
+        let issuedDateIso = null;
+        if (data.issued_at && typeof data.issued_at.toDate === 'function') {
+          issuedDateIso = data.issued_at.toDate().toISOString();
+        } else if (data.issued_at) {
+          const d = new Date(data.issued_at);
+          if (!isNaN(d)) issuedDateIso = d.toISOString();
+        }
+
+        const jsonLd = {
+          "@context": "https://schema.org",
+          "@type": "EducationalOccupationalCredential",
+          "name": data.detectedCourse && data.detectedCourse.trim()
+            ? data.detectedCourse.trim()
+            : "E-Certificate of Completion",
+          "credentialCategory": "Certificate",
+          "recognizedBy": {
+            "@type": "Organization",
+            "name": "Fantiber Balance Academy",
+            "sameAs": "https://www.fbacademytimorleste.com/"
+          },
+          "about": {
+            "@type": "Person",
+            "name": data.cert_name || undefined
+          }
+        };
+        if (issuedDateIso) jsonLd.dateCreated = issuedDateIso;
+
+        let scriptEl = document.getElementById('cert-jsonld');
+        if (!scriptEl) {
+          scriptEl = document.createElement('script');
+          scriptEl.type = 'application/ld+json';
+          scriptEl.id = 'cert-jsonld';
+          document.head.appendChild(scriptEl);
+        }
+        scriptEl.textContent = JSON.stringify(jsonLd);
+      }
+
+      // ── Pengaman timeout ─────────────────────────────────────────────
+      // Sebelumnya kalau koneksi ke Firestore macet (bukan error, cuma
+      // tidak pernah selesai), halaman akan spin selamanya tanpa kejelasan
+      // apa pun ke peserta. Sekarang dipasang batas waktu 12 detik — kalau
+      // sampai segitu belum ada jawaban, anggap timeout dan tampilkan
+      // pesan error yang jelas (peserta bisa coba reload).
+      function withTimeout(promise, ms) {
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => {
+            reject(new Error('TIMEOUT'));
+          }, ms);
+          promise.then(
+            val => { clearTimeout(timer); resolve(val); },
+            err => { clearTimeout(timer); reject(err); }
+          );
+        });
+      }
+
+      withTimeout(db.collection('cert_users').doc(studentId).get(), 12000)
         .then(doc => {
           if (doc.exists) {
             const d = doc.data();
@@ -1007,9 +1376,247 @@
           console.error(err);
           showState('error');
           document.getElementById('error-msg').textContent =
-            'A network error occurred. Please check your connection and try again.';
+            (err && err.message === 'TIMEOUT')
+              ? 'Connection is taking too long. Please check your internet and try reloading this page.'
+              : 'A network error occurred. Please check your connection and try again.';
         });
     }
+
+    // ── E-Certificate Modal — DALAM scope yang sama dengan db ─────────
+    let _certModalBlob = null;
+    let _certData      = null;
+
+    function openCertModal() {
+      document.getElementById('cert-modal-overlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      const name  = document.getElementById('cert-name')?.textContent?.trim();
+      const uid   = document.getElementById('cert-uid')?.textContent?.trim();
+      const email = document.getElementById('cert-email')?.textContent?.trim();
+      if (!name || !uid) return;
+      _certData = { name, uid, email };
+      _certModalBlob = null;
+      document.getElementById('cert-modal-canvas').style.display  = 'none';
+      document.getElementById('cert-modal-loading').style.display = 'flex';
+      document.getElementById('cert-modal-actions').style.display = 'none';
+      document.addEventListener('keydown', _certModalEsc);
+      renderCertModal(_certData);
+    }
+    function closeCertModal() {
+      document.getElementById('cert-modal-overlay').classList.remove('open');
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', _certModalEsc);
+    }
+    function _certModalEsc(e) { if (e.key === 'Escape') closeCertModal(); }
+
+    async function renderCertModal(data) {
+      const canvas   = document.getElementById('cert-modal-canvas');
+      const loading  = document.getElementById('cert-modal-loading');
+      const actions  = document.getElementById('cert-modal-actions');
+      const shareBtn = document.getElementById('cert-modal-share-btn');
+      if (shareBtn) shareBtn.style.display = navigator.share ? '' : 'none';
+      try {
+        const snap = await db.collection('settings').doc('certificate_config').get();
+        const cfg  = snap.exists ? snap.data() : {};
+        const templateSrc = cfg.templateBase64 || null;
+        const fontFamily  = cfg.fontFamily  || 'serif';
+        const fontColor   = cfg.fontColor   || '#d09e3b';
+        const fontBold    = cfg.fontBold    === true;
+        const fontItalic  = cfg.fontItalic  === true;
+        const bboxX = cfg.bboxX ?? 153, bboxY = cfg.bboxY ?? 240;
+        const bboxW = cfg.bboxWidth ?? 594, bboxH = cfg.bboxHeight ?? 115;
+        const uidVisible = cfg.uidVisible !== false;
+        const uidX = cfg.uidX ?? 84, uidY = cfg.uidY ?? 598;
+        const uidColor = cfg.uidColor || 'rgba(204,204,204,0.45)';
+        const uidFont  = cfg.uidFont  || 'monospace';
+        const uidW = cfg.uidWidth ?? 250, uidH = cfg.uidHeight ?? 40;
+        const showQR = cfg.showQR === true;
+        const qrX = cfg.qrX ?? 760, qrY = cfg.qrY ?? 500;
+        const qrW = cfg.qrWidth ?? 100, qrH = cfg.qrHeight ?? 100;
+        const qrColor = cfg.qrColor || '#000000';
+
+        const CW = 900, CH = 636;
+        canvas.width = CW; canvas.height = CH;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, CW, CH);
+
+        // Template
+        if (templateSrc) {
+          try {
+            const tpl = await _certLoadImg(templateSrc);
+            ctx.drawImage(tpl, 0, 0, CW, CH);
+          } catch (e) {
+            console.warn('[CertModal] Template gagal:', e.message);
+            ctx.fillStyle = '#1b1c27'; ctx.fillRect(0, 0, CW, CH);
+          }
+        } else {
+          ctx.fillStyle = '#1b1c27'; ctx.fillRect(0, 0, CW, CH);
+        }
+
+        // Nama
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = fontColor;
+        const centreX = bboxX + bboxW / 2;
+        function wrapLines(text, maxW) {
+          const words = text.split(' ');
+          const lines = []; let cur = '';
+          words.forEach(w => {
+            const test = cur ? cur + ' ' + w : w;
+            if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; } else cur = test;
+          });
+          if (cur) lines.push(cur);
+          return lines;
+        }
+        let fontSize = 68, lines, lineH, ascent, descent, totalH;
+        while (fontSize >= 10) {
+          const sp = [];
+          if (fontItalic) sp.push('italic');
+          if (fontBold)   sp.push('bold');
+          sp.push(`${fontSize}px`);
+          sp.push(`"${fontFamily}", serif`);
+          ctx.font = sp.join(' ');
+          lines   = wrapLines(data.name, bboxW);
+          ascent  = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxAscent  || fontSize * 0.8));
+          descent = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxDescent || fontSize * 0.3));
+          lineH   = ascent + descent + fontSize * 0.18;
+          totalH  = lines.length * lineH;
+          if (totalH <= bboxH * 0.72) break;
+          fontSize -= 1;
+        }
+        const startY = bboxY + (bboxH - totalH) / 2 + ascent;
+        lines.forEach((ln, i) => ctx.fillText(ln, centreX, startY + i * lineH));
+        ctx.restore();
+
+        // UID watermark
+        if (uidVisible) {
+          ctx.save();
+          ctx.fillStyle = uidColor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          const uidText = 'UID: ' + (data.uid || '');
+          let ufs = 16;
+          while (ufs >= 6) {
+            ctx.font = `400 ${ufs}px "${uidFont}", monospace`;
+            if (ctx.measureText(uidText).width <= uidW * 0.95) break;
+            ufs -= 1;
+          }
+          ctx.fillText(uidText, uidX + uidW / 2, uidY + uidH / 2);
+          ctx.restore();
+        }
+
+        // QR Code
+        if (showQR && typeof QRCode !== 'undefined') {
+          try {
+            const verifyUrl = `https://ripper501.github.io/e-sertfikat/verify.html?id=${encodeURIComponent(data.uid)}`;
+            const qrHelper  = document.getElementById('cert-modal-qr-helper');
+            qrHelper.innerHTML = '';
+            new QRCode(qrHelper, { text: verifyUrl, width: Math.round(qrW), height: Math.round(qrH), colorDark: qrColor, colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+            await new Promise(r => setTimeout(r, 350));
+            let qrDataUrl = null;
+            const qrCvs = qrHelper.querySelector('canvas');
+            const qrImg = qrHelper.querySelector('img');
+            if (qrCvs) { try { qrDataUrl = qrCvs.toDataURL('image/png'); } catch(e){} }
+            if (!qrDataUrl && qrImg?.src) qrDataUrl = qrImg.src;
+            if (qrDataUrl) {
+              await new Promise(r => { const qi = new Image(); qi.onload = () => { ctx.drawImage(qi, qrX, qrY, qrW, qrH); r(); }; qi.onerror = r; setTimeout(r, 2000); qi.src = qrDataUrl; });
+            }
+          } catch(e) { console.warn('[CertModal] QR gagal:', e.message); }
+        }
+
+        // Export
+        try {
+          canvas.toBlob(blob => {
+            if (blob) _certModalBlob = blob;
+            loading.style.display = 'none';
+            canvas.style.display  = 'block';
+            actions.style.display = 'flex';
+          }, 'image/png');
+        } catch(secErr) {
+          loading.style.display = 'none';
+          canvas.style.display  = 'block';
+          actions.style.display = 'none';
+        }
+      } catch (err) {
+        console.error('[CertModal]', err);
+        loading.innerHTML = '<p style="color:#e05555;font-size:13px;">Gagal generate. Coba refresh halaman.</p>';
+      }
+    }
+
+    function _certLoadImg(src) {
+      if (src && src.startsWith('data:')) {
+        return new Promise((res, rej) => { const img = new Image(); img.onload = () => res(img); img.onerror = rej; img.src = src; });
+      }
+      const tryLoad = (url, cors) => new Promise((res, rej) => {
+        const img = new Image();
+        if (cors) img.crossOrigin = 'anonymous';
+        const t = setTimeout(() => rej(new Error('timeout')), 15000);
+        img.onload  = () => { clearTimeout(t); res(img); };
+        img.onerror = () => { clearTimeout(t); rej(new Error('onerror')); };
+        img.src = url;
+      });
+      const bust = src.includes('?') ? `${src}&_cb=${Date.now()}` : `${src}?_cb=${Date.now()}`;
+      return tryLoad(src, true).catch(() => tryLoad(bust, true)).catch(() => tryLoad(bust, false));
+    }
+
+    function certModalDownload() {
+      if (!_certModalBlob) return;
+      const name = (_certData?.name || 'certificate').replace(/[^a-z0-9]/gi, '_');
+      const url  = URL.createObjectURL(_certModalBlob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `Sertifikat_${name}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+    }
+    async function certModalShare() {
+      if (!_certModalBlob || !navigator.share) return;
+      const name = (_certData?.name || 'certificate').replace(/[^a-z0-9]/gi, '_');
+      const file = new File([_certModalBlob], `Sertifikat_${name}.png`, { type: 'image/png' });
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'E-Certificate FB Academy' }); }
+        else certModalDownload();
+      } catch(e) { if (e.name !== 'AbortError') certModalDownload(); }
+    }
   </script>
+
+  <!-- ── E-Certificate Modal ─────────────────────────────────── -->
+  <div id="cert-modal-overlay" onclick="if(event.target===this)closeCertModal()">
+    <div id="cert-modal-box">
+      <div id="cert-modal-header">
+        <span id="cert-modal-title">E-Certificate</span>
+        <button id="cert-modal-close" onclick="closeCertModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div id="cert-modal-canvas-wrap">
+        <div id="cert-modal-loading">
+          <div class="spinner-ring"></div>
+          Generating certificate…
+        </div>
+        <canvas id="cert-modal-canvas" style="display:none;"></canvas>
+      </div>
+      <div id="cert-modal-actions" style="display:none;">
+        <button class="cert-modal-btn cert-modal-btn-dl" onclick="certModalDownload()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download PNG
+        </button>
+        <button class="cert-modal-btn cert-modal-btn-share" id="cert-modal-share-btn" onclick="certModalShare()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Share
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR helper khusus modal -->
+  <div id="cert-modal-qr-helper" style="position:absolute;left:-9999px;top:-9999px;visibility:hidden;"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
 </html>

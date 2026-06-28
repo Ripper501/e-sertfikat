@@ -24,6 +24,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <!-- Font sertifikat — sama persis dengan index.html agar nama peserta
+       tampil dengan font yang dipilih admin (Alex Brush, Allura, dll) -->
+  <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Allura&family=Great+Vibes&family=Mr+De+Haviland&family=Parisienne&family=Pinyon+Script&family=Tangerine:wght@400;700&family=Montserrat:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Poppins:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Archivo+Black&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Roboto:wght@400;500;700&family=Chewy&display=swap" rel="stylesheet" />
 
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -1661,33 +1664,65 @@
       }
       const cfg = _certConfig || {};
 
-      const templateSrc = cfg.templateBase64 || null;
-      const fontFamily  = cfg.fontFamily  || 'serif';
-      const fontColor   = cfg.fontColor   || '#d09e3b';
-      const fontBold    = cfg.fontBold    === true;
-      const fontItalic  = cfg.fontItalic  === true;
-      const bboxX = cfg.bboxX ?? 153,  bboxY = cfg.bboxY ?? 240;
-      const bboxW = cfg.bboxWidth ?? 594, bboxH = cfg.bboxHeight ?? 115;
-      const uidVisible = cfg.uidVisible !== false;
-      const uidX = cfg.uidX ?? 84, uidY = cfg.uidY ?? 598;
-      const uidColor = cfg.uidColor || 'rgba(204,204,204,0.45)';
-      const uidFont  = cfg.uidFont  || 'monospace';
-      const uidW = cfg.uidWidth ?? 250, uidH = cfg.uidHeight ?? 40;
-      const showQR  = cfg.showQR === true;
-      const qrX = cfg.qrX ?? 760, qrY = cfg.qrY ?? 500;
-      const qrW = cfg.qrWidth ?? 100, qrH = cfg.qrHeight ?? 100;
-      const qrColor = cfg.qrColor || '#000000';
+      // ── Baca config PERSIS seperti drawCertificateOnCanvas di index.html ──
+      let cfgSrc       = 'sertifikat-template.png';
+      let cfgFont      = 'Alex Brush';
+      let cfgFontColor = '#d09e3b';
+      let cfgFontBold   = false;
+      let cfgFontItalic = false;
+      let bboxX = 153, bboxY = 240, bboxW = 594, bboxH = 115;
+      let cfgUidVisible = true;
+      let cfgUidX = 84,  cfgUidY = 598;
+      let cfgUidW = 250, cfgUidH = 40;
+      let cfgUidColor = 'rgba(204,204,204,0.45)';
+      let cfgUidFont  = 'JetBrains Mono';
+      let showQR  = false;
+      let qrX = 760, qrY = 500, qrW = 100, qrH = 100;
+      let qrColor = '#000000';
+
+      if (cfg.templateBase64)  cfgSrc       = cfg.templateBase64;
+      if (cfg.fontFamily)      cfgFont       = cfg.fontFamily;
+      if (cfg.fontColor)       cfgFontColor  = cfg.fontColor;
+      cfgFontBold   = cfg.fontBold   === true;
+      cfgFontItalic = cfg.fontItalic === true;
+      if (cfg.bboxX      != null) bboxX = cfg.bboxX;
+      if (cfg.bboxY      != null) bboxY = cfg.bboxY;
+      if (cfg.bboxWidth  != null) bboxW = cfg.bboxWidth;
+      if (cfg.bboxHeight != null) bboxH = cfg.bboxHeight;
+      if (cfg.uidVisible != null) cfgUidVisible = cfg.uidVisible;
+      if (cfg.uidX       != null) cfgUidX = cfg.uidX;
+      if (cfg.uidY       != null) cfgUidY = cfg.uidY;
+      if (cfg.uidWidth   != null) cfgUidW = cfg.uidWidth;
+      if (cfg.uidHeight  != null) cfgUidH = cfg.uidHeight;
+      if (cfg.uidColor   != null) cfgUidColor = cfg.uidColor;
+      if (cfg.uidFont    != null) cfgUidFont  = cfg.uidFont;
+      showQR = cfg.showQR === true;
+      if (cfg.qrX      != null) qrX = cfg.qrX;
+      if (cfg.qrY      != null) qrY = cfg.qrY;
+      if (cfg.qrWidth  != null) qrW = cfg.qrWidth;
+      if (cfg.qrHeight != null) qrH = cfg.qrHeight;
+      if (cfg.qrColor  != null) qrColor = cfg.qrColor;
+
+      // Canvas 900×636 (skala dasar) — koordinat Firestore sudah dalam skala ini
+      const CW = 900, CH = 636;
+      canvas.width = CW; canvas.height = CH;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, CW, CH);
 
       try {
-        const CW = 900, CH = 636;
-        canvas.width = CW; canvas.height = CH;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, CW, CH);
+        // ── 1. Preload font nama ───────────────────────────────────────
+        try {
+          const fp = [];
+          if (cfgFontItalic) fp.push('italic');
+          if (cfgFontBold)   fp.push('bold');
+          fp.push('68px');
+          await document.fonts.load(fp.join(' ') + ' "' + cfgFont + '"');
+        } catch(e) {}
 
-        // Template
-        if (templateSrc) {
+        // ── 2. Gambar template dari Cloudinary ────────────────────────
+        if (cfgSrc) {
           try {
-            const tpl = await _cmLoadImg(templateSrc);
+            const tpl = await _cmLoadImg(cfgSrc);
             ctx.drawImage(tpl, 0, 0, CW, CH);
           } catch(e) {
             ctx.fillStyle = '#1b1c27'; ctx.fillRect(0, 0, CW, CH);
@@ -1696,59 +1731,88 @@
           ctx.fillStyle = '#1b1c27'; ctx.fillRect(0, 0, CW, CH);
         }
 
-        // Nama (auto-scale + wrap)
+        // ── 3. Nama — auto-scale + wrap (identik dengan drawCertificateOnCanvas) ──
         ctx.save();
         ctx.textAlign = 'center';
-        ctx.fillStyle = fontColor;
-        const cx = bboxX + bboxW / 2;
-        function wrapLines(txt, mw) {
-          const ws = txt.split(' '), ls = []; let cur = '';
-          ws.forEach(w => { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > mw && cur) { ls.push(cur); cur = w; } else cur = t; });
-          if (cur) ls.push(cur); return ls;
+        ctx.fillStyle = cfgFontColor;
+        const centreX = bboxX + bboxW / 2;
+
+        function wrapTextFinal(c, text, maxWidth) {
+          const words = text.split(' '), lines = []; let cur = '';
+          for (let i = 0; i < words.length; i++) {
+            const test = cur ? cur + ' ' + words[i] : words[i];
+            if (c.measureText(test).width > maxWidth && cur) { lines.push(cur); cur = words[i]; }
+            else cur = test;
+          }
+          if (cur) lines.push(cur); return lines;
         }
-        let fs = 68, lines, lh, asc, desc, th;
-        while (fs >= 10) {
-          const sp = []; if (fontItalic) sp.push('italic'); if (fontBold) sp.push('bold');
-          sp.push(fs + 'px'); sp.push('"' + fontFamily + '", serif');
-          ctx.font = sp.join(' ');
-          lines = wrapLines(data.name, bboxW);
-          asc  = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxAscent  || fs * 0.8));
-          desc = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxDescent || fs * 0.3));
-          lh = asc + desc + fs * 0.18; th = lines.length * lh;
-          if (th <= bboxH * 0.72) break; fs--;
+
+        let fontSize = 68, lines, lineH, ascent, descent, totalH;
+        const SAFE_RATIO = 0.72;
+        while (fontSize >= 10) {
+          const sp = [];
+          if (cfgFontItalic) sp.push('italic');
+          if (cfgFontBold)   sp.push('bold');
+          sp.push(fontSize + 'px');
+          ctx.font = sp.join(' ') + ' "' + cfgFont + '"';
+          lines = wrapTextFinal(ctx, data.name, bboxW);
+          ascent  = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxAscent  || fontSize * 0.80));
+          descent = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxDescent || fontSize * 0.30));
+          lineH  = ascent + descent + fontSize * 0.18;
+          totalH = lines.length * lineH;
+          if (totalH <= bboxH * SAFE_RATIO) break;
+          fontSize--;
         }
-        const sy = bboxY + (bboxH - th) / 2 + asc;
-        lines.forEach((ln, i) => ctx.fillText(ln, cx, sy + i * lh));
+        const startY = bboxY + (bboxH - totalH) / 2 + ascent;
+        lines.forEach((ln, i) => ctx.fillText(ln, centreX, startY + i * lineH));
         ctx.restore();
 
-        // UID watermark
-        if (uidVisible) {
+        // ── 4. UID watermark ──────────────────────────────────────────
+        if (cfgUidVisible) {
           ctx.save();
-          ctx.fillStyle = uidColor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          const ut = 'UID: ' + (data.uid || '');
+          try { await document.fonts.load('400 16px "' + cfgUidFont + '"'); } catch(e) {}
+          ctx.fillStyle    = cfgUidColor;
+          ctx.textAlign    = 'center';
+          ctx.textBaseline = 'middle';
+          // Di verify.html pakai uid langsung (cert_id dari survey tidak tersedia)
+          const uidText = 'UID: ' + (data.uid || '');
           let ufs = 16;
-          while (ufs >= 6) { ctx.font = '400 ' + ufs + 'px "' + uidFont + '", monospace'; if (ctx.measureText(ut).width <= uidW * 0.95) break; ufs--; }
-          ctx.fillText(ut, uidX + uidW / 2, uidY + uidH / 2);
+          while (ufs >= 6) {
+            ctx.font = '400 ' + ufs + 'px "' + cfgUidFont + '", monospace';
+            const m = ctx.measureText(uidText);
+            if (m.width <= cfgUidW * 0.95) break;
+            ufs--;
+          }
+          ctx.fillText(uidText, cfgUidX + cfgUidW / 2, cfgUidY + cfgUidH / 2);
           ctx.restore();
         }
 
-        // QR Code
+        // ── 5. QR Code ────────────────────────────────────────────────
         if (showQR && typeof QRCode !== 'undefined') {
           try {
             const vUrl = 'https://ripper501.github.io/e-sertfikat/verify.html?id=' + encodeURIComponent(data.uid);
             const qrEl = document.getElementById('cert-modal-qr-helper');
             qrEl.innerHTML = '';
-            new QRCode(qrEl, { text: vUrl, width: Math.round(qrW), height: Math.round(qrH), colorDark: qrColor, colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+            new QRCode(qrEl, {
+              text: vUrl, width: Math.round(qrW), height: Math.round(qrH),
+              colorDark: qrColor, colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H
+            });
             await new Promise(r => setTimeout(r, 350));
-            let qrUrl = null;
+            let qrDataUrl = null;
             const qc = qrEl.querySelector('canvas'); const qi = qrEl.querySelector('img');
-            if (qc) { try { qrUrl = qc.toDataURL('image/png'); } catch(e){} }
-            if (!qrUrl && qi?.src) qrUrl = qi.src;
-            if (qrUrl) await new Promise(r => { const im = new Image(); im.onload = () => { ctx.drawImage(im, qrX, qrY, qrW, qrH); r(); }; im.onerror = r; setTimeout(r, 2000); im.src = qrUrl; });
-          } catch(e) { console.warn('QR gagal:', e.message); }
+            if (qc) { try { qrDataUrl = qc.toDataURL('image/png'); } catch(e){} }
+            if (!qrDataUrl && qi?.src) qrDataUrl = qi.src;
+            if (qrDataUrl) {
+              await new Promise(r => {
+                const im = new Image();
+                im.onload = () => { ctx.drawImage(im, qrX, qrY, qrW, qrH); r(); };
+                im.onerror = r; setTimeout(r, 2000); im.src = qrDataUrl;
+              });
+            }
+          } catch(e) { console.warn('[CertModal] QR gagal:', e.message); }
         }
 
-        // Export
+        // ── 6. Export ke blob ─────────────────────────────────────────
         try {
           canvas.toBlob(blob => {
             if (blob) _certModalBlob = blob;
@@ -1757,9 +1821,12 @@
             actions.style.display = 'flex';
           }, 'image/png');
         } catch(e) {
+          // Canvas tainted — tetap tampilkan meski tidak bisa didownload
           loading.style.display = 'none';
           canvas.style.display  = 'block';
+          if (actions) actions.style.display = 'none';
         }
+
       } catch(err) {
         console.error('[CertModal]', err);
         loading.innerHTML = '<p style="color:#e05555;font-size:13px;">Gagal generate. Coba refresh.</p>';

@@ -7,7 +7,7 @@
 
   <meta name="description" content="Verify the authenticity of certificates issued by Fantiber Balance Academy (FB Academy), Timor-Leste. Scan the QR code on your certificate to confirm validity." />
   <link rel="canonical" id="canonical-link" href="https://ripper501.github.io/e-sertfikat/verify.html" />
-  <link rel="icon" type="image/png" href="https://ripper501.github.io/e-sertfikat/logo.png" />
+  <link rel="icon" type="image/png" href="logo.png" />
   <meta name="theme-color" content="#0a0a0c" />
 
   <meta property="og:type"        content="website" />
@@ -677,84 +677,59 @@
       border-color: var(--gold);
       transform: translateY(-1px);
     }
-    .share-achievement:disabled {
-      opacity: 0.55;
-      cursor: wait;
-      transform: none;
-    }
+    .share-achievement:disabled { opacity: 0.55; cursor: wait; transform: none; }
     .share-achievement svg { flex-shrink: 0; }
 
-    /* ── E-Certificate Modal ─────────────────────────────────── */
+    /* ── E-Certificate Modal ──────────────────────────────────── */
     #cert-modal-overlay {
-      display: none;
-      position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,0.88);
-      backdrop-filter: blur(6px);
-      align-items: center; justify-content: center;
-      padding: 16px;
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.9); backdrop-filter: blur(6px);
+      align-items: center; justify-content: center; padding: 16px;
     }
     #cert-modal-overlay.open { display: flex; }
     #cert-modal-box {
-      width: 100%; max-width: 600px;
-      background: #0d0d10;
-      border: 1px solid rgba(245,230,0,0.2);
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(245,230,0,0.06);
-      display: flex; flex-direction: column;
-      max-height: 90vh;
+      width: 100%; max-width: 600px; max-height: 90vh;
+      background: #0d0d10; border: 1px solid rgba(245,230,0,0.2);
+      border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.9);
     }
     #cert-modal-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 18px;
-      border-bottom: 1px solid rgba(245,230,0,0.1);
-      flex-shrink: 0;
+      padding: 14px 18px; border-bottom: 1px solid rgba(245,230,0,0.1); flex-shrink: 0;
     }
-    #cert-modal-title {
-      font-size: 13px; font-weight: 600; letter-spacing: 0.08em;
-      text-transform: uppercase; color: var(--gold);
-    }
+    #cert-modal-title { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); }
     #cert-modal-close {
       background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; color: var(--text-muted); cursor: pointer;
-      width: 30px; height: 30px;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s;
+      border-radius: 8px; color: #aaa; cursor: pointer;
+      width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
     }
-    #cert-modal-close:hover { background: rgba(255,77,109,0.15); color: #ff4d6d; border-color: #ff4d6d; }
+    #cert-modal-close:hover { background: rgba(224,57,43,0.15); color: #e05555; border-color: #e05555; }
     #cert-modal-canvas-wrap {
       flex: 1; overflow: auto; padding: 16px;
       display: flex; flex-direction: column; align-items: center; gap: 14px;
     }
-    #cert-modal-canvas {
-      width: 100%; height: auto; border-radius: 8px;
-      display: block;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    }
+    #cert-modal-canvas { width: 100%; height: auto; border-radius: 8px; display: block; }
     #cert-modal-loading {
       display: flex; flex-direction: column; align-items: center; gap: 12px;
-      padding: 40px; color: var(--text-muted); font-size: 13px;
+      padding: 48px; color: #888; font-size: 13px;
     }
     #cert-modal-actions {
       display: flex; gap: 10px; padding: 12px 16px;
-      border-top: 1px solid rgba(245,230,0,0.1);
-      flex-shrink: 0;
+      border-top: 1px solid rgba(245,230,0,0.1); flex-shrink: 0;
     }
     .cert-modal-btn {
       flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
       padding: 11px 16px; border-radius: 9px; font-size: 13px; font-weight: 600;
-      cursor: pointer; transition: all 0.2s; border: none;
+      cursor: pointer; border: none; font-family: 'Space Grotesk', sans-serif;
     }
-    .cert-modal-btn-dl {
-      background: var(--gold); color: #000;
-    }
-    .cert-modal-btn-dl:hover { background: #fff9a0; }
+    .cert-modal-btn-dl { background: var(--gold); color: #000; }
+    .cert-modal-btn-dl:hover { background: #ffffa0; }
     .cert-modal-btn-share {
       background: rgba(245,230,0,0.08); color: var(--gold);
       border: 1px solid rgba(245,230,0,0.3);
     }
-    .cert-modal-btn-share:hover { background: rgba(245,230,0,0.15); }
-    .cert-modal-btn:disabled { opacity: 0.45; cursor: wait; }
+    .cert-modal-btn-share:hover { background: rgba(245,230,0,0.16); }
+  </style>
 </head>
 <body>
   <main>
@@ -764,7 +739,7 @@
     <div class="card-body">
 
       <header class="brand-header">
-        <img src="https://ripper501.github.io/e-sertfikat/logo.png" alt="FB Academy" class="brand-logo" width="32" height="32" onerror="this.style.display='none'" />
+        <img src="logo.png" alt="FB Academy" class="brand-logo" width="32" height="32" />
         <span class="brand-name">FB Academy</span>
       </header>
 
@@ -822,7 +797,8 @@
 
         <button type="button" id="share-achievement-btn" class="share-achievement" style="display:none;" onclick="openCertModal()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
             <polyline points="21 15 16 10 5 21"/>
           </svg>
           <span id="share-achievement-label">View E-Certificate</span>
@@ -904,6 +880,46 @@
 
   </main>
 
+  <!-- ── E-Certificate Modal ───────────────────────────────── -->
+  <div id="cert-modal-overlay" onclick="if(event.target===this)closeCertModal()">
+    <div id="cert-modal-box">
+      <div id="cert-modal-header">
+        <span id="cert-modal-title">E-Certificate</span>
+        <button id="cert-modal-close" onclick="closeCertModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div id="cert-modal-canvas-wrap">
+        <div id="cert-modal-loading">
+          <div class="spinner-ring"></div>
+          Generating certificate…
+        </div>
+        <canvas id="cert-modal-canvas" style="display:none;"></canvas>
+      </div>
+      <div id="cert-modal-actions" style="display:none;">
+        <button class="cert-modal-btn cert-modal-btn-dl" onclick="certModalDownload()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download PNG
+        </button>
+        <button class="cert-modal-btn cert-modal-btn-share" id="cert-modal-share-btn" onclick="certModalShare()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Share
+        </button>
+      </div>
+    </div>
+  </div>
+  <div id="cert-modal-qr-helper" style="position:absolute;left:-9999px;top:-9999px;visibility:hidden;"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
   <noscript>
     <p style="color:#f5f3e8; text-align:center; padding:24px; font-family:sans-serif;">
       This page requires JavaScript to verify certificates. Please enable JavaScript in your browser and reload this page.
@@ -947,6 +963,11 @@
     }
 
     const studentId = getStudentId();
+    // Cache promise hasil pre-generate kartu "Share Achievement" (lihat
+    // renderCertificate & handleShareAchievement) — dimulai di background
+    // begitu data sertifikat tampil, supaya siap dipakai instan saat
+    // pengguna klik tombol share.
+    let _shareCardPromise = null;
 
     // ── SEO: canonical URL dinamis ──────────────────────────────────
     // Tiap sertifikat punya konten unik (nama beda-beda), jadi canonical
@@ -1115,12 +1136,194 @@
       // PNG (fallback di desktop/browser yang belum dukung Web Share dgn
       // file). Tujuannya: peserta bisa langsung posting ke IG Story/WA
       // Status tanpa perlu screenshot manual.
-      // ── Share Achievement card generator ──────────────────────────
-      // Dibuat sesederhana mungkin agar tidak ada titik macet:
-      // - Tidak pakai logo (crossOrigin + CORS = sumber macet utama di iOS)
-      // - Tidak bergantung pada document.fonts.ready (tidak reliable di iOS Safari)
-      // - Canvas murni teks + shapes saja → toBlob() selalu berhasil, tidak tainted
-      // - Timeout 5 detik sebagai safety net terakhir
+      function buildShareCardImage(data) {
+        return new Promise((resolve, reject) => {
+          const W = 1200, H = 675; // rasio 16:9 — pas untuk story/feed sosmed
+          const canvas = document.createElement('canvas');
+          canvas.width = W;
+          canvas.height = H;
+          const ctx = canvas.getContext('2d');
+
+          // Background gradasi hitam + radial glow gold lembut
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(0, 0, W, H);
+          const glow = ctx.createRadialGradient(W / 2, H * 0.38, 40, W / 2, H * 0.38, W * 0.65);
+          glow.addColorStop(0, 'rgba(245,230,0,0.14)');
+          glow.addColorStop(1, 'rgba(245,230,0,0)');
+          ctx.fillStyle = glow;
+          ctx.fillRect(0, 0, W, H);
+
+          // Frame border gold tipis
+          ctx.strokeStyle = 'rgba(245,230,0,0.45)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(18, 18, W - 36, H - 36);
+          ctx.strokeStyle = 'rgba(245,230,0,0.18)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(34, 34, W - 68, H - 68);
+
+          function drawTextContent() {
+            ctx.textAlign = 'center';
+
+            // Eyebrow kecil
+            ctx.fillStyle = 'rgba(245,230,0,0.85)';
+            ctx.font = '600 16px "Space Grotesk", sans-serif';
+            ctx.letterSpacing = '3px';
+            ctx.fillText('CERTIFICATE OF ACHIEVEMENT', W / 2, H * 0.30);
+            ctx.letterSpacing = '0px';
+
+            // Nama — font besar serif
+            ctx.fillStyle = '#f5f3e8';
+            let nameFontSize = 64;
+            ctx.font = `600 ${nameFontSize}px "Cormorant Garamond", serif`;
+            // Kecilkan otomatis kalau nama terlalu panjang agar tidak overflow
+            while (ctx.measureText(data.cert_name || '—').width > W - 160 && nameFontSize > 32) {
+              nameFontSize -= 2;
+              ctx.font = `600 ${nameFontSize}px "Cormorant Garamond", serif`;
+            }
+            ctx.fillText(data.cert_name || '—', W / 2, H * 0.46);
+
+            // Nama kursus (kalau ada)
+            if (data.detectedCourse && data.detectedCourse.trim()) {
+              ctx.fillStyle = '#f5e600';
+              ctx.font = '500 22px "Space Grotesk", sans-serif';
+              ctx.fillText(data.detectedCourse.trim(), W / 2, H * 0.565);
+            }
+
+            // Garis divider kecil
+            ctx.strokeStyle = 'rgba(245,230,0,0.35)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(W / 2 - 60, H * 0.62);
+            ctx.lineTo(W / 2 + 60, H * 0.62);
+            ctx.stroke();
+
+            // Footer wordmark
+            ctx.fillStyle = 'rgba(245,243,232,0.55)';
+            ctx.font = '500 15px "Space Grotesk", sans-serif';
+            ctx.letterSpacing = '1.5px';
+            ctx.fillText('FB ACADEMY · OFFICIALLY VERIFIED', W / 2, H * 0.88);
+            ctx.letterSpacing = '0px';
+          }
+
+          function finish() {
+            canvas.toBlob(blob => {
+              if (blob) resolve({ blob, canvas });
+              else reject(new Error('Gagal membuat gambar (toBlob kosong).'));
+            }, 'image/png');
+          }
+
+          // Pastikan webfont (Cormorant Garamond / Space Grotesk) sudah siap
+          // sebelum digambar ke canvas — kalau belum, teks bisa fallback ke
+          // font default browser dan terlihat tidak konsisten.
+          const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+
+          fontsReady.then(() => {
+            const logo = new Image();
+            logo.onload = () => {
+              // Logo bundar kecil di atas, sejajar tengah
+              const logoSize = 64;
+              const lx = W / 2 - logoSize / 2;
+              const ly = H * 0.12;
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(W / 2, ly + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+              ctx.closePath();
+              ctx.clip();
+              ctx.drawImage(logo, lx, ly, logoSize, logoSize);
+              ctx.restore();
+              ctx.strokeStyle = 'rgba(245,230,0,0.45)';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(W / 2, ly + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+              ctx.stroke();
+
+              drawTextContent();
+              finish();
+            };
+            logo.onerror = () => {
+              // Logo gagal dimuat — tetap lanjut tanpa logo, jangan sampai
+              // seluruh fitur share gagal hanya karena gambar logo.
+              drawTextContent();
+              finish();
+            };
+            logo.src = 'logo.png';
+          });
+        });
+      }
+
+      async function handleShareAchievement(data) {
+        const btn   = document.getElementById('share-achievement-btn');
+        const label = document.getElementById('share-achievement-label');
+        if (!btn || !label) return;
+
+        const originalLabel = label.textContent;
+        btn.disabled = true;
+        label.textContent = 'Generating…';
+
+        try {
+          // Pakai hasil yang sudah di-pre-generate di background (lihat
+          // renderCertificate) kalau sudah siap — ini biasanya SUDAH SELESAI
+          // duluan sebelum pengguna sempat klik, jadi baris ini langsung
+          // lanjut tanpa nunggu apa pun (krusial untuk Safari/iOS supaya
+          // navigator.share() di bawah masih dianggap "dekat" dengan klik).
+          // Kalau belum siap (mis. koneksi lambat) atau pre-generate gagal,
+          // baru generate ulang di sini sebagai fallback (dibungkus timeout
+          // supaya tidak macet selamanya).
+          let result = _shareCardPromise ? await _shareCardPromise : null;
+          if (!result) {
+            result = await withTimeout(buildShareCardImage(data), 10000);
+          }
+          const { blob } = result;
+          const fileName = `FB-Academy-Certificate-${(data.cert_name || 'achievement').replace(/[^a-z0-9]+/gi, '-')}.png`;
+          const file = new File([blob], fileName, { type: 'image/png' });
+
+          const shareText = data.detectedCourse && data.detectedCourse.trim()
+            ? `I just completed "${data.detectedCourse.trim()}" at FB Academy! 🎓`
+            : `I just earned a certificate from FB Academy! 🎓`;
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            // Perangkat mendukung share gambar langsung (kebanyakan HP/tablet).
+            // Dibungkus timeout juga — kalau Safari tetap menolak diam-diam
+            // (tanpa reject), ini mencegah tombol macet selamanya.
+            await withTimeout(
+              navigator.share({
+                files: [file],
+                title: 'My FB Academy Certificate',
+                text:  shareText,
+              }),
+              10000
+            );
+          } else {
+            // Fallback (umumnya desktop): download PNG-nya langsung
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
+            label.textContent = 'Downloaded ✓';
+            setTimeout(() => { label.textContent = originalLabel; }, 2500);
+            btn.disabled = false;
+            return;
+          }
+
+          label.textContent = originalLabel;
+          btn.disabled = false;
+        } catch (err) {
+          btn.disabled = false;
+          if (err && err.name === 'AbortError') {
+            // Pengguna batal share dari sheet — bukan error, jangan tampilkan apa-apa.
+            label.textContent = originalLabel;
+            return;
+          }
+          console.error('[ShareAchievement] Gagal:', err);
+          label.textContent = 'Failed — try again';
+          setTimeout(() => { label.textContent = originalLabel; }, 2500);
+        }
+      }
+
       function buildLinkedInAddUrl(data) {
         const certificationName = data.detectedCourse && data.detectedCourse.trim()
           ? data.detectedCourse.trim()
@@ -1183,7 +1386,22 @@
         }
 
         const shareBtn = document.getElementById('share-achievement-btn');
-        if (shareBtn) shareBtn.style.display = 'flex';
+        if (shareBtn) {
+          shareBtn.style.display = 'flex';
+          // Generate kartu gambarnya DI BACKGROUND mulai dari sekarang (bukan
+          // menunggu klik) — supaya pas pengguna klik tombol, gambarnya
+          // sudah siap dan navigator.share() bisa dipanggil hampir
+          // bersamaan dengan momen klik. Ini PENTING khusus untuk Safari/
+          // iOS: kalau ada proses async yang makan waktu di ANTARA klik dan
+          // panggilan navigator.share(), Safari mobile sering menganggap
+          // "izin klik" pengguna sudah basi dan menolak/membatalkan share
+          // tanpa pesan jelas — beda dengan laptop yang lebih toleran.
+          _shareCardPromise = buildShareCardImage(data).catch(e => {
+            console.warn('[ShareAchievement] Pre-generate gagal, akan dicoba ulang saat diklik:', e.message);
+            return null; // biar handleShareAchievement tahu harus generate ulang
+          });
+          shareBtn.onclick = () => handleShareAchievement(data);
+        }
 
         injectCertificateStructuredData(data);
 
@@ -1379,16 +1597,33 @@
             (err && err.message === 'TIMEOUT')
               ? 'Connection is taking too long. Please check your internet and try reloading this page.'
               : 'A network error occurred. Please check your connection and try again.';
+        })
+        .finally(() => {
+          // Halaman ini cuma butuh baca data SEKALI (bukan listener live),
+          // jadi koneksi Firestore (yang sengaja dibuat tetap terbuka oleh
+          // SDK untuk keperluan real-time sync) ditutup di sini. Beberapa
+        })
+        .catch(err => {
+          console.error(err);
+          showState('error');
+          document.getElementById('error-msg').textContent =
+            (err && err.message === 'TIMEOUT')
+              ? 'Connection is taking too long. Please check your internet and try reloading.'
+              : 'A network error occurred. Please check your connection and try again.';
         });
     }
 
-    // ── E-Certificate Modal — DALAM scope yang sama dengan db ─────────
+    // ── E-Certificate Modal ── (dalam scope sama dengan db) ──────────
     let _certModalBlob = null;
     let _certData      = null;
+    let _certConfig    = null;
+
+    // Fetch certificate_config paralel dengan cert_users saat halaman load
+    db.collection('settings').doc('certificate_config').get()
+      .then(s => { _certConfig = s.exists ? s.data() : {}; })
+      .catch(() => { _certConfig = {}; });
 
     function openCertModal() {
-      document.getElementById('cert-modal-overlay').classList.add('open');
-      document.body.style.overflow = 'hidden';
       const name  = document.getElementById('cert-name')?.textContent?.trim();
       const uid   = document.getElementById('cert-uid')?.textContent?.trim();
       const email = document.getElementById('cert-email')?.textContent?.trim();
@@ -1398,15 +1633,17 @@
       document.getElementById('cert-modal-canvas').style.display  = 'none';
       document.getElementById('cert-modal-loading').style.display = 'flex';
       document.getElementById('cert-modal-actions').style.display = 'none';
-      document.addEventListener('keydown', _certModalEsc);
+      document.getElementById('cert-modal-overlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', _cmEsc);
       renderCertModal(_certData);
     }
     function closeCertModal() {
       document.getElementById('cert-modal-overlay').classList.remove('open');
       document.body.style.overflow = '';
-      document.removeEventListener('keydown', _certModalEsc);
+      document.removeEventListener('keydown', _cmEsc);
     }
-    function _certModalEsc(e) { if (e.key === 'Escape') closeCertModal(); }
+    function _cmEsc(e) { if (e.key === 'Escape') closeCertModal(); }
 
     async function renderCertModal(data) {
       const canvas   = document.getElementById('cert-modal-canvas');
@@ -1414,26 +1651,34 @@
       const actions  = document.getElementById('cert-modal-actions');
       const shareBtn = document.getElementById('cert-modal-share-btn');
       if (shareBtn) shareBtn.style.display = navigator.share ? '' : 'none';
-      try {
-        const snap = await db.collection('settings').doc('certificate_config').get();
-        const cfg  = snap.exists ? snap.data() : {};
-        const templateSrc = cfg.templateBase64 || null;
-        const fontFamily  = cfg.fontFamily  || 'serif';
-        const fontColor   = cfg.fontColor   || '#d09e3b';
-        const fontBold    = cfg.fontBold    === true;
-        const fontItalic  = cfg.fontItalic  === true;
-        const bboxX = cfg.bboxX ?? 153, bboxY = cfg.bboxY ?? 240;
-        const bboxW = cfg.bboxWidth ?? 594, bboxH = cfg.bboxHeight ?? 115;
-        const uidVisible = cfg.uidVisible !== false;
-        const uidX = cfg.uidX ?? 84, uidY = cfg.uidY ?? 598;
-        const uidColor = cfg.uidColor || 'rgba(204,204,204,0.45)';
-        const uidFont  = cfg.uidFont  || 'monospace';
-        const uidW = cfg.uidWidth ?? 250, uidH = cfg.uidHeight ?? 40;
-        const showQR = cfg.showQR === true;
-        const qrX = cfg.qrX ?? 760, qrY = cfg.qrY ?? 500;
-        const qrW = cfg.qrWidth ?? 100, qrH = cfg.qrHeight ?? 100;
-        const qrColor = cfg.qrColor || '#000000';
 
+      // Tunggu _certConfig siap (max 5 detik)
+      if (_certConfig === null) {
+        await new Promise(r => {
+          const t = setTimeout(r, 5000);
+          const iv = setInterval(() => { if (_certConfig !== null) { clearInterval(iv); clearTimeout(t); r(); } }, 80);
+        });
+      }
+      const cfg = _certConfig || {};
+
+      const templateSrc = cfg.templateBase64 || null;
+      const fontFamily  = cfg.fontFamily  || 'serif';
+      const fontColor   = cfg.fontColor   || '#d09e3b';
+      const fontBold    = cfg.fontBold    === true;
+      const fontItalic  = cfg.fontItalic  === true;
+      const bboxX = cfg.bboxX ?? 153,  bboxY = cfg.bboxY ?? 240;
+      const bboxW = cfg.bboxWidth ?? 594, bboxH = cfg.bboxHeight ?? 115;
+      const uidVisible = cfg.uidVisible !== false;
+      const uidX = cfg.uidX ?? 84, uidY = cfg.uidY ?? 598;
+      const uidColor = cfg.uidColor || 'rgba(204,204,204,0.45)';
+      const uidFont  = cfg.uidFont  || 'monospace';
+      const uidW = cfg.uidWidth ?? 250, uidH = cfg.uidHeight ?? 40;
+      const showQR  = cfg.showQR === true;
+      const qrX = cfg.qrX ?? 760, qrY = cfg.qrY ?? 500;
+      const qrW = cfg.qrWidth ?? 100, qrH = cfg.qrHeight ?? 100;
+      const qrColor = cfg.qrColor || '#000000';
+
+      try {
         const CW = 900, CH = 636;
         canvas.width = CW; canvas.height = CH;
         const ctx = canvas.getContext('2d');
@@ -1442,83 +1687,65 @@
         // Template
         if (templateSrc) {
           try {
-            const tpl = await _certLoadImg(templateSrc);
+            const tpl = await _cmLoadImg(templateSrc);
             ctx.drawImage(tpl, 0, 0, CW, CH);
-          } catch (e) {
-            console.warn('[CertModal] Template gagal:', e.message);
+          } catch(e) {
             ctx.fillStyle = '#1b1c27'; ctx.fillRect(0, 0, CW, CH);
           }
         } else {
           ctx.fillStyle = '#1b1c27'; ctx.fillRect(0, 0, CW, CH);
         }
 
-        // Nama
+        // Nama (auto-scale + wrap)
         ctx.save();
         ctx.textAlign = 'center';
         ctx.fillStyle = fontColor;
-        const centreX = bboxX + bboxW / 2;
-        function wrapLines(text, maxW) {
-          const words = text.split(' ');
-          const lines = []; let cur = '';
-          words.forEach(w => {
-            const test = cur ? cur + ' ' + w : w;
-            if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; } else cur = test;
-          });
-          if (cur) lines.push(cur);
-          return lines;
+        const cx = bboxX + bboxW / 2;
+        function wrapLines(txt, mw) {
+          const ws = txt.split(' '), ls = []; let cur = '';
+          ws.forEach(w => { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > mw && cur) { ls.push(cur); cur = w; } else cur = t; });
+          if (cur) ls.push(cur); return ls;
         }
-        let fontSize = 68, lines, lineH, ascent, descent, totalH;
-        while (fontSize >= 10) {
-          const sp = [];
-          if (fontItalic) sp.push('italic');
-          if (fontBold)   sp.push('bold');
-          sp.push(`${fontSize}px`);
-          sp.push(`"${fontFamily}", serif`);
+        let fs = 68, lines, lh, asc, desc, th;
+        while (fs >= 10) {
+          const sp = []; if (fontItalic) sp.push('italic'); if (fontBold) sp.push('bold');
+          sp.push(fs + 'px'); sp.push('"' + fontFamily + '", serif');
           ctx.font = sp.join(' ');
-          lines   = wrapLines(data.name, bboxW);
-          ascent  = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxAscent  || fontSize * 0.8));
-          descent = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxDescent || fontSize * 0.3));
-          lineH   = ascent + descent + fontSize * 0.18;
-          totalH  = lines.length * lineH;
-          if (totalH <= bboxH * 0.72) break;
-          fontSize -= 1;
+          lines = wrapLines(data.name, bboxW);
+          asc  = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxAscent  || fs * 0.8));
+          desc = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxDescent || fs * 0.3));
+          lh = asc + desc + fs * 0.18; th = lines.length * lh;
+          if (th <= bboxH * 0.72) break; fs--;
         }
-        const startY = bboxY + (bboxH - totalH) / 2 + ascent;
-        lines.forEach((ln, i) => ctx.fillText(ln, centreX, startY + i * lineH));
+        const sy = bboxY + (bboxH - th) / 2 + asc;
+        lines.forEach((ln, i) => ctx.fillText(ln, cx, sy + i * lh));
         ctx.restore();
 
         // UID watermark
         if (uidVisible) {
           ctx.save();
           ctx.fillStyle = uidColor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          const uidText = 'UID: ' + (data.uid || '');
+          const ut = 'UID: ' + (data.uid || '');
           let ufs = 16;
-          while (ufs >= 6) {
-            ctx.font = `400 ${ufs}px "${uidFont}", monospace`;
-            if (ctx.measureText(uidText).width <= uidW * 0.95) break;
-            ufs -= 1;
-          }
-          ctx.fillText(uidText, uidX + uidW / 2, uidY + uidH / 2);
+          while (ufs >= 6) { ctx.font = '400 ' + ufs + 'px "' + uidFont + '", monospace'; if (ctx.measureText(ut).width <= uidW * 0.95) break; ufs--; }
+          ctx.fillText(ut, uidX + uidW / 2, uidY + uidH / 2);
           ctx.restore();
         }
 
         // QR Code
         if (showQR && typeof QRCode !== 'undefined') {
           try {
-            const verifyUrl = `https://ripper501.github.io/e-sertfikat/verify.html?id=${encodeURIComponent(data.uid)}`;
-            const qrHelper  = document.getElementById('cert-modal-qr-helper');
-            qrHelper.innerHTML = '';
-            new QRCode(qrHelper, { text: verifyUrl, width: Math.round(qrW), height: Math.round(qrH), colorDark: qrColor, colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+            const vUrl = 'https://ripper501.github.io/e-sertfikat/verify.html?id=' + encodeURIComponent(data.uid);
+            const qrEl = document.getElementById('cert-modal-qr-helper');
+            qrEl.innerHTML = '';
+            new QRCode(qrEl, { text: vUrl, width: Math.round(qrW), height: Math.round(qrH), colorDark: qrColor, colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
             await new Promise(r => setTimeout(r, 350));
-            let qrDataUrl = null;
-            const qrCvs = qrHelper.querySelector('canvas');
-            const qrImg = qrHelper.querySelector('img');
-            if (qrCvs) { try { qrDataUrl = qrCvs.toDataURL('image/png'); } catch(e){} }
-            if (!qrDataUrl && qrImg?.src) qrDataUrl = qrImg.src;
-            if (qrDataUrl) {
-              await new Promise(r => { const qi = new Image(); qi.onload = () => { ctx.drawImage(qi, qrX, qrY, qrW, qrH); r(); }; qi.onerror = r; setTimeout(r, 2000); qi.src = qrDataUrl; });
-            }
-          } catch(e) { console.warn('[CertModal] QR gagal:', e.message); }
+            let qrUrl = null;
+            const qc = qrEl.querySelector('canvas'); const qi = qrEl.querySelector('img');
+            if (qc) { try { qrUrl = qc.toDataURL('image/png'); } catch(e){} }
+            if (!qrUrl && qi?.src) qrUrl = qi.src;
+            if (qrUrl) await new Promise(r => { const im = new Image(); im.onload = () => { ctx.drawImage(im, qrX, qrY, qrW, qrH); r(); }; im.onerror = r; setTimeout(r, 2000); im.src = qrUrl; });
+          } catch(e) { console.warn('QR gagal:', e.message); }
         }
 
         // Export
@@ -1529,94 +1756,44 @@
             canvas.style.display  = 'block';
             actions.style.display = 'flex';
           }, 'image/png');
-        } catch(secErr) {
+        } catch(e) {
           loading.style.display = 'none';
           canvas.style.display  = 'block';
-          actions.style.display = 'none';
         }
-      } catch (err) {
+      } catch(err) {
         console.error('[CertModal]', err);
-        loading.innerHTML = '<p style="color:#e05555;font-size:13px;">Gagal generate. Coba refresh halaman.</p>';
+        loading.innerHTML = '<p style="color:#e05555;font-size:13px;">Gagal generate. Coba refresh.</p>';
       }
     }
 
-    function _certLoadImg(src) {
-      if (src && src.startsWith('data:')) {
-        return new Promise((res, rej) => { const img = new Image(); img.onload = () => res(img); img.onerror = rej; img.src = src; });
-      }
-      const tryLoad = (url, cors) => new Promise((res, rej) => {
-        const img = new Image();
-        if (cors) img.crossOrigin = 'anonymous';
-        const t = setTimeout(() => rej(new Error('timeout')), 15000);
-        img.onload  = () => { clearTimeout(t); res(img); };
-        img.onerror = () => { clearTimeout(t); rej(new Error('onerror')); };
-        img.src = url;
+    function _cmLoadImg(src) {
+      if (src && src.startsWith('data:')) return new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = src; });
+      const try1 = (url, cors) => new Promise((r, j) => {
+        const i = new Image(); if (cors) i.crossOrigin = 'anonymous';
+        const t = setTimeout(() => j(new Error('timeout')), 15000);
+        i.onload = () => { clearTimeout(t); r(i); }; i.onerror = () => { clearTimeout(t); j(new Error('err')); }; i.src = url;
       });
-      const bust = src.includes('?') ? `${src}&_cb=${Date.now()}` : `${src}?_cb=${Date.now()}`;
-      return tryLoad(src, true).catch(() => tryLoad(bust, true)).catch(() => tryLoad(bust, false));
+      const bust = src.includes('?') ? src + '&_cb=' + Date.now() : src + '?_cb=' + Date.now();
+      return try1(src, true).catch(() => try1(bust, true)).catch(() => try1(bust, false));
     }
 
     function certModalDownload() {
       if (!_certModalBlob) return;
-      const name = (_certData?.name || 'certificate').replace(/[^a-z0-9]/gi, '_');
-      const url  = URL.createObjectURL(_certModalBlob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `Sertifikat_${name}.png`;
+      const n = (_certData?.name || 'cert').replace(/[^a-z0-9]/gi, '_');
+      const u = URL.createObjectURL(_certModalBlob);
+      const a = document.createElement('a'); a.href = u; a.download = 'Sertifikat_' + n + '.png';
       document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 3000);
+      setTimeout(() => URL.revokeObjectURL(u), 3000);
     }
     async function certModalShare() {
       if (!_certModalBlob || !navigator.share) return;
-      const name = (_certData?.name || 'certificate').replace(/[^a-z0-9]/gi, '_');
-      const file = new File([_certModalBlob], `Sertifikat_${name}.png`, { type: 'image/png' });
+      const n = (_certData?.name || 'cert').replace(/[^a-z0-9]/gi, '_');
+      const f = new File([_certModalBlob], 'Sertifikat_' + n + '.png', { type: 'image/png' });
       try {
-        if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'E-Certificate FB Academy' }); }
+        if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f], title: 'E-Certificate FB Academy' });
         else certModalDownload();
       } catch(e) { if (e.name !== 'AbortError') certModalDownload(); }
     }
   </script>
-
-  <!-- ── E-Certificate Modal ─────────────────────────────────── -->
-  <div id="cert-modal-overlay" onclick="if(event.target===this)closeCertModal()">
-    <div id="cert-modal-box">
-      <div id="cert-modal-header">
-        <span id="cert-modal-title">E-Certificate</span>
-        <button id="cert-modal-close" onclick="closeCertModal()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      <div id="cert-modal-canvas-wrap">
-        <div id="cert-modal-loading">
-          <div class="spinner-ring"></div>
-          Generating certificate…
-        </div>
-        <canvas id="cert-modal-canvas" style="display:none;"></canvas>
-      </div>
-      <div id="cert-modal-actions" style="display:none;">
-        <button class="cert-modal-btn cert-modal-btn-dl" onclick="certModalDownload()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Download PNG
-        </button>
-        <button class="cert-modal-btn cert-modal-btn-share" id="cert-modal-share-btn" onclick="certModalShare()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-          </svg>
-          Share
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- QR helper khusus modal -->
-  <div id="cert-modal-qr-helper" style="position:absolute;left:-9999px;top:-9999px;visibility:hidden;"></div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
 </html>

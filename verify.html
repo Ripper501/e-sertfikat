@@ -966,11 +966,6 @@
     }
 
     const studentId = getStudentId();
-    // Cache promise hasil pre-generate kartu "Share Achievement" (lihat
-    // renderCertificate & handleShareAchievement) — dimulai di background
-    // begitu data sertifikat tampil, supaya siap dipakai instan saat
-    // pengguna klik tombol share.
-    let _shareCardPromise = null;
 
     // ── SEO: canonical URL dinamis ──────────────────────────────────
     // Tiap sertifikat punya konten unik (nama beda-beda), jadi canonical
@@ -1133,200 +1128,6 @@
         });
       }
 
-      // ── "Share Achievement": generate kartu gambar (PNG) berisi nama,
-      // nama kursus, dan logo FB Academy — lalu dibagikan lewat Web Share
-      // API (kalau didukung perangkat, mis. HP) atau di-download sebagai
-      // PNG (fallback di desktop/browser yang belum dukung Web Share dgn
-      // file). Tujuannya: peserta bisa langsung posting ke IG Story/WA
-      // Status tanpa perlu screenshot manual.
-      function buildShareCardImage(data) {
-        return new Promise((resolve, reject) => {
-          const W = 1200, H = 675; // rasio 16:9 — pas untuk story/feed sosmed
-          const canvas = document.createElement('canvas');
-          canvas.width = W;
-          canvas.height = H;
-          const ctx = canvas.getContext('2d');
-
-          // Background gradasi hitam + radial glow gold lembut
-          ctx.fillStyle = '#000000';
-          ctx.fillRect(0, 0, W, H);
-          const glow = ctx.createRadialGradient(W / 2, H * 0.38, 40, W / 2, H * 0.38, W * 0.65);
-          glow.addColorStop(0, 'rgba(245,230,0,0.14)');
-          glow.addColorStop(1, 'rgba(245,230,0,0)');
-          ctx.fillStyle = glow;
-          ctx.fillRect(0, 0, W, H);
-
-          // Frame border gold tipis
-          ctx.strokeStyle = 'rgba(245,230,0,0.45)';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(18, 18, W - 36, H - 36);
-          ctx.strokeStyle = 'rgba(245,230,0,0.18)';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(34, 34, W - 68, H - 68);
-
-          function drawTextContent() {
-            ctx.textAlign = 'center';
-
-            // Eyebrow kecil
-            ctx.fillStyle = 'rgba(245,230,0,0.85)';
-            ctx.font = '600 16px "Space Grotesk", sans-serif';
-            ctx.letterSpacing = '3px';
-            ctx.fillText('CERTIFICATE OF ACHIEVEMENT', W / 2, H * 0.30);
-            ctx.letterSpacing = '0px';
-
-            // Nama — font besar serif
-            ctx.fillStyle = '#f5f3e8';
-            let nameFontSize = 64;
-            ctx.font = `600 ${nameFontSize}px "Cormorant Garamond", serif`;
-            // Kecilkan otomatis kalau nama terlalu panjang agar tidak overflow
-            while (ctx.measureText(data.cert_name || '—').width > W - 160 && nameFontSize > 32) {
-              nameFontSize -= 2;
-              ctx.font = `600 ${nameFontSize}px "Cormorant Garamond", serif`;
-            }
-            ctx.fillText(data.cert_name || '—', W / 2, H * 0.46);
-
-            // Nama kursus (kalau ada)
-            if (data.detectedCourse && data.detectedCourse.trim()) {
-              ctx.fillStyle = '#f5e600';
-              ctx.font = '500 22px "Space Grotesk", sans-serif';
-              ctx.fillText(data.detectedCourse.trim(), W / 2, H * 0.565);
-            }
-
-            // Garis divider kecil
-            ctx.strokeStyle = 'rgba(245,230,0,0.35)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(W / 2 - 60, H * 0.62);
-            ctx.lineTo(W / 2 + 60, H * 0.62);
-            ctx.stroke();
-
-            // Footer wordmark
-            ctx.fillStyle = 'rgba(245,243,232,0.55)';
-            ctx.font = '500 15px "Space Grotesk", sans-serif';
-            ctx.letterSpacing = '1.5px';
-            ctx.fillText('FB ACADEMY · OFFICIALLY VERIFIED', W / 2, H * 0.88);
-            ctx.letterSpacing = '0px';
-          }
-
-          function finish() {
-            canvas.toBlob(blob => {
-              if (blob) resolve({ blob, canvas });
-              else reject(new Error('Gagal membuat gambar (toBlob kosong).'));
-            }, 'image/png');
-          }
-
-          // Pastikan webfont (Cormorant Garamond / Space Grotesk) sudah siap
-          // sebelum digambar ke canvas — kalau belum, teks bisa fallback ke
-          // font default browser dan terlihat tidak konsisten.
-          const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
-
-          fontsReady.then(() => {
-            const logo = new Image();
-            logo.onload = () => {
-              // Logo bundar kecil di atas, sejajar tengah
-              const logoSize = 64;
-              const lx = W / 2 - logoSize / 2;
-              const ly = H * 0.12;
-              ctx.save();
-              ctx.beginPath();
-              ctx.arc(W / 2, ly + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
-              ctx.closePath();
-              ctx.clip();
-              ctx.drawImage(logo, lx, ly, logoSize, logoSize);
-              ctx.restore();
-              ctx.strokeStyle = 'rgba(245,230,0,0.45)';
-              ctx.lineWidth = 2;
-              ctx.beginPath();
-              ctx.arc(W / 2, ly + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
-              ctx.stroke();
-
-              drawTextContent();
-              finish();
-            };
-            logo.onerror = () => {
-              // Logo gagal dimuat — tetap lanjut tanpa logo, jangan sampai
-              // seluruh fitur share gagal hanya karena gambar logo.
-              drawTextContent();
-              finish();
-            };
-            logo.src = 'logo.png';
-          });
-        });
-      }
-
-      async function handleShareAchievement(data) {
-        const btn   = document.getElementById('share-achievement-btn');
-        const label = document.getElementById('share-achievement-label');
-        if (!btn || !label) return;
-
-        const originalLabel = label.textContent;
-        btn.disabled = true;
-        label.textContent = 'Generating…';
-
-        try {
-          // Pakai hasil yang sudah di-pre-generate di background (lihat
-          // renderCertificate) kalau sudah siap — ini biasanya SUDAH SELESAI
-          // duluan sebelum pengguna sempat klik, jadi baris ini langsung
-          // lanjut tanpa nunggu apa pun (krusial untuk Safari/iOS supaya
-          // navigator.share() di bawah masih dianggap "dekat" dengan klik).
-          // Kalau belum siap (mis. koneksi lambat) atau pre-generate gagal,
-          // baru generate ulang di sini sebagai fallback (dibungkus timeout
-          // supaya tidak macet selamanya).
-          let result = _shareCardPromise ? await _shareCardPromise : null;
-          if (!result) {
-            result = await withTimeout(buildShareCardImage(data), 10000);
-          }
-          const { blob } = result;
-          const fileName = `FB-Academy-Certificate-${(data.cert_name || 'achievement').replace(/[^a-z0-9]+/gi, '-')}.png`;
-          const file = new File([blob], fileName, { type: 'image/png' });
-
-          const shareText = data.detectedCourse && data.detectedCourse.trim()
-            ? `I just completed "${data.detectedCourse.trim()}" at FB Academy! 🎓`
-            : `I just earned a certificate from FB Academy! 🎓`;
-
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            // Perangkat mendukung share gambar langsung (kebanyakan HP/tablet).
-            // Dibungkus timeout juga — kalau Safari tetap menolak diam-diam
-            // (tanpa reject), ini mencegah tombol macet selamanya.
-            await withTimeout(
-              navigator.share({
-                files: [file],
-                title: 'My FB Academy Certificate',
-                text:  shareText,
-              }),
-              10000
-            );
-          } else {
-            // Fallback (umumnya desktop): download PNG-nya langsung
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 4000);
-            label.textContent = 'Downloaded ✓';
-            setTimeout(() => { label.textContent = originalLabel; }, 2500);
-            btn.disabled = false;
-            return;
-          }
-
-          label.textContent = originalLabel;
-          btn.disabled = false;
-        } catch (err) {
-          btn.disabled = false;
-          if (err && err.name === 'AbortError') {
-            // Pengguna batal share dari sheet — bukan error, jangan tampilkan apa-apa.
-            label.textContent = originalLabel;
-            return;
-          }
-          console.error('[ShareAchievement] Gagal:', err);
-          label.textContent = 'Failed — try again';
-          setTimeout(() => { label.textContent = originalLabel; }, 2500);
-        }
-      }
-
       function buildLinkedInAddUrl(data) {
         const certificationName = data.detectedCourse && data.detectedCourse.trim()
           ? data.detectedCourse.trim()
@@ -1391,19 +1192,13 @@
         const shareBtn = document.getElementById('share-achievement-btn');
         if (shareBtn) {
           shareBtn.style.display = 'flex';
-          // Generate kartu gambarnya DI BACKGROUND mulai dari sekarang (bukan
-          // menunggu klik) — supaya pas pengguna klik tombol, gambarnya
-          // sudah siap dan navigator.share() bisa dipanggil hampir
-          // bersamaan dengan momen klik. Ini PENTING khusus untuk Safari/
-          // iOS: kalau ada proses async yang makan waktu di ANTARA klik dan
-          // panggilan navigator.share(), Safari mobile sering menganggap
-          // "izin klik" pengguna sudah basi dan menolak/membatalkan share
-          // tanpa pesan jelas — beda dengan laptop yang lebih toleran.
-          _shareCardPromise = buildShareCardImage(data).catch(e => {
-            console.warn('[ShareAchievement] Pre-generate gagal, akan dicoba ulang saat diklik:', e.message);
-            return null; // biar handleShareAchievement tahu harus generate ulang
-          });
-          shareBtn.onclick = () => handleShareAchievement(data);
+          // onclick sudah di-set di HTML: onclick="openCertModal()"
+          // Jangan di-override di sini — simpan data untuk dipakai modal
+          _certData = {
+            name:  data.cert_name  || data.name  || '',
+            uid:   data.uid        || '',
+            email: data.email      || ''
+          };
         }
 
         injectCertificateStructuredData(data);
@@ -1627,11 +1422,17 @@
       .catch(() => { _certConfig = {}; });
 
     function openCertModal() {
-      const name  = document.getElementById('cert-name')?.textContent?.trim();
-      const uid   = document.getElementById('cert-uid')?.textContent?.trim();
-      const email = document.getElementById('cert-email')?.textContent?.trim();
-      if (!name || !uid) return;
-      _certData = { name, uid, email };
+      // _certData sudah diisi oleh renderCertificate() saat halaman load
+      // Fallback: baca langsung dari DOM jika perlu
+      if (!_certData || !_certData.uid) {
+        _certData = {
+          name:  document.getElementById('cert-name')?.textContent?.trim()  || '',
+          uid:   document.getElementById('cert-uid')?.textContent?.trim()   || '',
+          email: document.getElementById('cert-email')?.textContent?.trim() || ''
+        };
+      }
+      if (!_certData.name || !_certData.uid) return;
+
       _certModalBlob = null;
       document.getElementById('cert-modal-canvas').style.display  = 'none';
       document.getElementById('cert-modal-loading').style.display = 'flex';

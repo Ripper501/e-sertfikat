@@ -1609,6 +1609,8 @@
                 im.onload = () => { ctx.drawImage(im, qrX, qrY, qrW, qrH); r(); };
                 im.onerror = r; setTimeout(r, 2000); im.src = qrDataUrl;
               });
+              // Gambar logo di tengah QR (identik dengan drawLogoOnQRCenter di index.html)
+              await _cmDrawLogoOnQR(ctx, qrX, qrY, qrW, qrH);
             }
           } catch(e) { console.warn('[CertModal] QR gagal:', e.message); }
         }
@@ -1643,6 +1645,74 @@
       });
       const bust = src.includes('?') ? src + '&_cb=' + Date.now() : src + '?_cb=' + Date.now();
       return try1(src, true).catch(() => try1(bust, true)).catch(() => try1(bust, false));
+    }
+
+    // ── Logo di tengah QR ─────────────────────────────────────────────
+    // Identik dengan drawLogoOnQRCenter di index.html:
+    // lingkaran putih sebagai bantalan, logo di-clip jadi bulat di tengahnya.
+    let _cmLogoCache = null;
+    function _cmLoadLogo() {
+      if (_cmLogoCache) return Promise.resolve(_cmLogoCache);
+      return new Promise((resolve, reject) => {
+        const tryLoad = (url, cors) => new Promise((res, rej) => {
+          const img = new Image();
+          if (cors) img.crossOrigin = 'anonymous';
+          const t = setTimeout(() => rej(new Error('timeout')), 8000);
+          img.onload  = () => { clearTimeout(t); res(img); };
+          img.onerror = () => { clearTimeout(t); rej(new Error('error')); };
+          img.src = url;
+        });
+        const absUrl = 'https://ripper501.github.io/e-sertfikat/logo.png';
+        const bust   = absUrl + '?_cb=' + Date.now();
+        tryLoad(absUrl, true)
+          .catch(() => tryLoad(bust, true))
+          .catch(() => tryLoad(bust, false))
+          .then(img => { _cmLogoCache = img; resolve(img); })
+          .catch(reject);
+      });
+    }
+
+    async function _cmDrawLogoOnQR(ctx, qrX, qrY, qrW, qrH) {
+      let logoImg;
+      try { logoImg = await _cmLoadLogo(); } catch(e) { return; } // logo gagal load — skip, QR tetap ada
+
+      const logoDiameter  = qrW * 0.30;
+      const centerX       = qrX + qrW / 2;
+      const centerY       = qrY + qrH / 2;
+      const logoRadius    = logoDiameter / 2;
+      const paddingRadius = logoRadius + Math.max(3, qrW * 0.025);
+
+      ctx.save();
+
+      // Lingkaran putih bantalan
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, paddingRadius, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.lineWidth = Math.max(1, qrW * 0.008);
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+
+      // Logo di-clip bulat dengan object-fit:cover
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, logoRadius, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+
+      const srcW = logoImg.naturalWidth  || logoImg.width;
+      const srcH = logoImg.naturalHeight || logoImg.height;
+      const srcRatio = srcW / srcH;
+      let srcX, srcY, sW, sH;
+      if (srcRatio > 1) {
+        sH = srcH; sW = srcH; srcX = (srcW - sW) / 2; srcY = 0;
+      } else {
+        sW = srcW; sH = srcW; srcX = 0; srcY = (srcH - sH) / 2;
+      }
+      ctx.drawImage(logoImg, srcX, srcY, sW, sH, centerX - logoRadius, centerY - logoRadius, logoDiameter, logoDiameter);
+      ctx.restore();
+      ctx.restore();
     }
 
     function certModalDownload() {

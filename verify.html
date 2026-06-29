@@ -1020,7 +1020,7 @@
       });
     }
 
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxUWefLapwBRHntmZjIcLffgMwJYMeAX9AKqpVsO4lbLYzrj1m-oHA9_UQ3jqj8nL7FFw/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpQIwnXA7omIX9vRlS4FnGSoFMfE88J7PpoYOgsDTCmm7PJYYsg4E9K_enbjzgebTxgA/exec";
 
     // ── Deteksi otomatis "kursus/profesi" dari jawaban survey ──────
     const COURSE_KEYWORDS = [
@@ -1068,8 +1068,7 @@
         .then(res => res.json())
         .then(data => {
           if (data && data.status === 'success' && data.found) {
-            let detectedCourse = data.course_name || null;
-            // Cek apakah Apps Script langsung mengirim properti id khusus kustom
+            let detectedCourse   = data.course_name || null;
             let detectedCustomId = data.certificate_id || data.student_id || null;
 
             if (!detectedCourse || !detectedCustomId) {
@@ -1080,19 +1079,21 @@
                   answer:       item.answer       || item.value || '',
                   isName:       !!item.isName,
                 }));
-                if (!detectedCourse) detectedCourse = detectCourseFromAnswers(normalized);
+                if (!detectedCourse)   detectedCourse   = detectCourseFromAnswers(normalized);
                 if (!detectedCustomId) detectedCustomId = detectCustomIdFromAnswers(normalized);
               }
             }
 
             return {
-              cert_name: data.cert_name || '—',
-              email:     data.email     || '—',
-              issued_at: data.issued_at || null,
-              source:    'sheet',
-              event:     data.event || null,
+              cert_name:       data.cert_name || '—',
+              email:           data.email     || '—',
+              issued_at:       data.issued_at || null,
+              source:          'sheet',
+              event:           data.event     || null,
               detectedCourse,
-              detectedCustomId, // dimasukkan ke dalam return object
+              detectedCustomId,
+              // certConfig dari Sheet — dipakai renderCertModal kalau Firestore kosong
+              sheetCertConfig: data.certConfig || null,
             };
           }
           return null;
@@ -1380,6 +1381,14 @@
 
           return fetchFromSheetFallback(studentId).then(sheetData => {
             if (sheetData) {
+              // Simpan certConfig dari Sheet agar modal bisa render tanpa Firestore
+              if (sheetData.sheetCertConfig) {
+                _sheetCertConfig = sheetData.sheetCertConfig;
+                // Kalau Firestore sudah resolve tapi kosong, pakai Sheet config
+                if (!_certConfig || !_certConfig.templateBase64) {
+                  _certConfig = _sheetCertConfig;
+                }
+              }
               renderCertificate(sheetData);
             } else {
               showState('error');
@@ -1393,33 +1402,35 @@
           showState('error');
           document.getElementById('error-msg').textContent =
             (err && err.message === 'TIMEOUT')
-              ? 'Connection is taking too long. Please check your internet and try reloading this page.'
-              : 'A network error occurred. Please check your connection and try again.';
-        })
-        .finally(() => {
-          // Halaman ini cuma butuh baca data SEKALI (bukan listener live),
-          // jadi koneksi Firestore (yang sengaja dibuat tetap terbuka oleh
-          // SDK untuk keperluan real-time sync) ditutup di sini. Beberapa
-        })
-        .catch(err => {
-          console.error(err);
-          showState('error');
-          document.getElementById('error-msg').textContent =
-            (err && err.message === 'TIMEOUT')
               ? 'Connection is taking too long. Please check your internet and try reloading.'
               : 'A network error occurred. Please check your connection and try again.';
         });
     }
 
     // ── E-Certificate Modal ── (dalam scope sama dengan db) ──────────
-    let _certModalBlob = null;
-    let _certData      = null;
-    let _certConfig    = null;
+    let _certModalBlob     = null;
+    let _certData          = null;
+    let _certConfig        = null;
+    let _sheetCertConfig   = null; // config dari Sheet (diisi oleh renderCertificate)
 
-    // Fetch certificate_config paralel dengan cert_users saat halaman load
+    // Fetch certificate_config dari Firestore paralel saat halaman load.
+    // Kalau Firestore kosong/gagal, _certConfig akan diisi dari Sheet
+    // via _sheetCertConfig (diset oleh renderCertificate saat dapat data Sheet).
     db.collection('settings').doc('certificate_config').get()
-      .then(s => { _certConfig = s.exists ? s.data() : {}; })
-      .catch(() => { _certConfig = {}; });
+      .then(s => {
+        if (s.exists && s.data() && s.data().templateBase64) {
+          // Firestore punya config lengkap — pakai ini
+          _certConfig = s.data();
+        } else {
+          // Firestore kosong/belum ada config — tunggu Sheet fallback
+          // (akan diisi oleh renderCertificate via _sheetCertConfig)
+          _certConfig = _sheetCertConfig || null;
+        }
+      })
+      .catch(() => {
+        // Firestore error — pakai config dari Sheet kalau sudah ada
+        _certConfig = _sheetCertConfig || null;
+      });
 
     function openCertModal() {
       // _certData sudah diisi oleh renderCertificate() saat halaman load
@@ -1462,6 +1473,10 @@
           const t = setTimeout(r, 5000);
           const iv = setInterval(() => { if (_certConfig !== null) { clearInterval(iv); clearTimeout(t); r(); } }, 80);
         });
+      }
+      // Kalau Firestore masih null/kosong, pakai config dari Sheet
+      if (!_certConfig || !_certConfig.templateBase64) {
+        _certConfig = _sheetCertConfig || _certConfig || {};
       }
       const cfg = _certConfig || {};
 

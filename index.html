@@ -2415,7 +2415,7 @@
 
         <!-- 1b. Back page image upload (halaman 2 — gambar statis, tidak diedit) -->
         <div class="ced-field">
-          <label class="ced-label">Certificate Back Page (Page 2 — static image)</label>
+          <label class="ced-label">Certificate Back Page (Halaman 2 — gambar statis)</label>
           <div class="ced-upload" id="ced-upload-zone-back">
             <svg class="ced-upload-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -2423,12 +2423,12 @@
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
             <div class="ced-upload-lbl">Upload Back Page</div>
-            <div class="ced-upload-sub">PNG · JPG · WEBP — final module/attachment image</div>
+            <div class="ced-upload-sub">PNG · JPG · WEBP — gambar modul/lampiran sudah jadi</div>
             <div class="ced-upload-name" id="ced-upload-name-back"></div>
           </div>
           <p style="font-size:11px; color:var(--text-dim); margin-top:6px; line-height:1.5;">
             Gambar ini TIDAK diedit (tanpa nama/QR) — akan ditempel apa adanya sebagai
-            <b style="color:var(--text);">page 2</b> in the PDF. Attendees will automatically get a single 2-page PDF file:
+            <b style="color:var(--text);">halaman ke-2</b> di PDF. Peserta akan otomatis dapat 1 file PDF berisi 2 halaman:
             halaman 1 = sertifikat (nama + QR), halaman 2 = gambar ini.
           </p>
         </div>
@@ -2443,13 +2443,13 @@
                 width:22px; height:22px; border-radius:6px; font-weight:800; font-size:12px;
                 background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
                 color:rgba(255,255,255,0.35); transition:background .15s,border-color .15s,color .15s;
-              " title="Ctrl+B for Bold">B</span>
+              " title="Ctrl+B untuk Bold">B</span>
               <span id="ced-italic-indicator" style="
                 display:inline-flex; align-items:center; justify-content:center;
                 width:22px; height:22px; border-radius:6px; font-weight:600; font-style:italic; font-size:12px;
                 background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
                 color:rgba(255,255,255,0.35); transition:background .15s,border-color .15s,color .15s;
-              " title="Ctrl+I for Italic">I</span>
+              " title="Ctrl+I untuk Italic">I</span>
             </span>
           </label>
           <input
@@ -2461,7 +2461,7 @@
             oninput="cedRedraw()"
           />
           <p style="margin:6px 0 0; font-size:10.5px; line-height:1.4; color:var(--text-muted);">
-            Click in the name box then press <strong style="color:var(--text);">Ctrl+B</strong> for bold, <strong style="color:var(--text);">Ctrl+I</strong> for italic.
+            Klik di kotak nama lalu tekan <strong style="color:var(--text);">Ctrl+B</strong> untuk tebal, <strong style="color:var(--text);">Ctrl+I</strong> untuk miring.
           </p>
         </div>
 
@@ -2963,7 +2963,7 @@
       </div>
     </div>
     <p style="margin:6px 0 0; font-size:10.5px; line-height:1.4; color:var(--text-muted);">
-      Drag the dashed box on the canvas to set the UID position on the certificate.
+      Geser kotak putus-putus pada canvas untuk mengatur posisi UID di sertifikat.
     </p>
   </div>
 </div>
@@ -3073,7 +3073,7 @@
       </div>
       <div class="ced-title-wrap">
         <div class="ced-title">Survey Form Settings</div>
-        <div class="ced-subtitle">Survey Questions · Google Form Sync · Firestore</div>
+        <div class="ced-subtitle">Pertanyaan Survei · Sinkron Google Form · Firestore</div>
       </div>
       <button class="ced-close" onclick="toggleSurveyEditor()" title="Close editor">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -3090,17 +3090,17 @@
 
           <!-- Kolom kiri: Nama Event -->
           <div style="flex:1; min-width:0;">
-            <label class="ced-label">Event Name</label>
+            <label class="ced-label">Nama Event</label>
             <input
               class="ced-input"
               id="survey-event-name"
               type="text"
-              placeholder="e.g. UNTL"
+              placeholder="Contoh: UNTL"
               spellcheck="false"
               autocomplete="off"
             />
             <p style="margin:4px 0 0; font-size:10.5px; line-height:1.5; color:var(--text-dim);">
-              Used as the <code style="color:var(--accent);">sheet tab name</code> (e.g. <code style="color:var(--accent);">UNTL</code> or <code style="color:var(--accent);">Workshop_Dili</code>)
+              Jadi nama <code style="color:var(--accent);">tab sheet</code> (contoh: <code style="color:var(--accent);">UNTL</code> atau <code style="color:var(--accent);">Workshop_Dili</code>)
             </p>
           </div>
 
@@ -3112,7 +3112,7 @@
               href="https://docs.google.com/spreadsheets/d/1k0BHEvoMg1nltOTLeJorZqgP4-DxXLgCVgH9QqDN1u0/edit?gid=1981152439#gid=1981152439"
               target="_blank"
               rel="noopener"
-              title="Open Google Sheet"
+              title="Buka Google Sheet"
               style="
                 display:flex; flex-direction:column; align-items:center; justify-content:center;
                 gap:5px;
@@ -3138,7 +3138,7 @@
                 <line x1="3" y1="15" x2="21" y2="15"/>
                 <line x1="9" y1="3" x2="9" y2="21"/>
               </svg>
-              Open
+              Buka
             </a>
           </div>
 
@@ -3148,17 +3148,17 @@
       <!-- Survey question cards (rendered dynamically) -->
       <div class="ced-field">
         <div style="display:flex; align-items:center; justify-content:space-between;">
-          <label class="ced-label" style="margin:0;">Survey Question List</label>
+          <label class="ced-label" style="margin:0;">Daftar Pertanyaan Survei</label>
           <button type="button" class="survey-add-btn" onclick="surveyAddQuestion()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Question
+            Tambah Pertanyaan
           </button>
         </div>
         <div id="survey-questions-list" style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
           <!-- Question cards injected here by JS -->
         </div>
         <div id="survey-empty-hint" style="display:none; text-align:center; padding:24px 12px; color:var(--text-dim); font-size:12px; border:1.5px dashed var(--border-soft); border-radius:var(--radius-sm); margin-top:10px;">
-          No questions yet. Click "Add Question" to get started.
+          Belum ada pertanyaan. Klik "Tambah Pertanyaan" untuk mulai.
         </div>
       </div>
 
@@ -3169,7 +3169,7 @@
           <polyline points="17 21 17 13 7 13 7 21"/>
           <polyline points="7 3 7 8 15 8"/>
         </svg>
-        Save Survey Settings
+        Simpan Pengaturan Survei
       </button>
       <div class="ced-save-status" id="survey-save-status"></div>
 
@@ -3304,7 +3304,7 @@
     </div>
     <div id="projector-qr-giant"></div>
     <div id="projector-qr-title">—</div>
-    <div id="projector-qr-subtitle">Click outside to close</div>
+    <div id="projector-qr-subtitle">Klik liur atu taka</div>
   </div>
 
   <div class="projector-label">Scan to claim your certificate</div>
@@ -3373,11 +3373,11 @@
 <div class="gv-context-menu" id="gv-context-menu">
   <button type="button" class="gv-context-item gv-context-item-access" id="gv-ctx-access-btn" onclick="gvContextGrantAccess()">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-    Access
+    Akses
   </button>
   <button type="button" class="gv-context-item gv-context-item-danger" onclick="gvContextDelete()">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-    Delete
+    Hapus
   </button>
 </div>
 
@@ -3403,7 +3403,7 @@
             class="gv-modal-close"
             id="survey-history-btn"
             onclick="toggleSurveyHistoryDropdown()"
-            title="View survey history from previous events"
+            title="Lihat riwayat survey dari event sebelumnya"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/>
@@ -3419,7 +3419,7 @@
             padding:6px;
           ">
             <div id="survey-history-list" style="display:flex; flex-direction:column; gap:2px;">
-              <div style="padding:10px 12px; font-size:12.5px; color:var(--text-muted); text-align:center;">Loading event list…</div>
+              <div style="padding:10px 12px; font-size:12.5px; color:var(--text-muted); text-align:center;">Memuat daftar event…</div>
             </div>
           </div>
         </div>
@@ -3434,11 +3434,11 @@
          HANYA saat sedang melihat riwayat (bukan data live/terbaru). -->
     <div id="survey-history-active-badge" style="display:none; margin:0 20px 12px; padding:8px 12px; border-radius:10px; background:rgba(204,255,0,0.08); border:1px solid rgba(204,255,0,0.25); font-size:12px; color:var(--accent); display:none; align-items:center; gap:8px;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 3"/></svg>
-      <span>Showing history: <strong id="survey-history-active-name">—</strong></span>
+      <span>Menampilkan riwayat: <strong id="survey-history-active-name">—</strong></span>
       <button onclick="exitSurveyHistoryView()" style="
         margin-left:auto; background:none; border:none; color:var(--accent);
         font-size:11.5px; text-decoration:underline; cursor:pointer; padding:0;
-      ">Back to latest data</button>
+      ">Kembali ke data terbaru</button>
     </div>
     <div class="gv-modal-body" id="survey-results-wrap">
       <div class="admin-table-empty" style="
@@ -3477,7 +3477,7 @@
         </svg>
         Geofence Location
       </div>
-      <p class="as-section-desc">Center location of the event. Attendees must be within this radius to claim a certificate.</p>
+      <p class="as-section-desc">Lokasi pusat event. Audiens harus berada dalam radius ini untuk klaim sertifikat.</p>
 
       <div style="display:flex; gap:10px; margin-bottom:10px;">
         <div style="flex:1;">
@@ -4311,7 +4311,7 @@ function srEscHandler(e) {
 
 let _survHistoryDropdownOpen = false;
 let _survHistorySheetsCache  = null; // cache daftar nama sheet, supaya tidak fetch ulang tiap toggle
-let _survHistoryLiveRows     = null; // simpan rows Firestore (data live) supaya bisa "Back to latest data"
+let _survHistoryLiveRows     = null; // simpan rows Firestore (data live) supaya bisa "Kembali ke data terbaru"
 
 window.toggleSurveyHistoryDropdown = async function() {
   const dropdown = document.getElementById('survey-history-dropdown');
@@ -4327,7 +4327,7 @@ window.toggleSurveyHistoryDropdown = async function() {
     return;
   }
 
-  listEl.innerHTML = `<div style="padding:10px 12px; font-size:12.5px; color:var(--text-muted); text-align:center;">Loading event list…</div>`;
+  listEl.innerHTML = `<div style="padding:10px 12px; font-size:12.5px; color:var(--text-muted); text-align:center;">Memuat daftar event…</div>`;
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}?action=listSheets`);
     const data = await res.json();
@@ -4335,11 +4335,11 @@ window.toggleSurveyHistoryDropdown = async function() {
       _survHistorySheetsCache = data.sheets;
       renderSurveyHistoryList(data.sheets);
     } else {
-      listEl.innerHTML = `<div style="padding:10px 12px; font-size:12.5px; color:var(--danger);">Failed to load event list.</div>`;
+      listEl.innerHTML = `<div style="padding:10px 12px; font-size:12.5px; color:var(--danger);">Gagal memuat daftar event.</div>`;
     }
   } catch (e) {
     console.warn('[SurveyHistory] Gagal fetch listSheets:', e.message);
-    listEl.innerHTML = `<div style="padding:10px 12px; font-size:12.5px; color:var(--danger);">Failed to connect to Google Sheet.</div>`;
+    listEl.innerHTML = `<div style="padding:10px 12px; font-size:12.5px; color:var(--danger);">Gagal terhubung ke Google Sheet.</div>`;
   }
 };
 
@@ -4347,7 +4347,7 @@ function renderSurveyHistoryList(sheetNames) {
   const listEl = document.getElementById('survey-history-list');
   if (!listEl) return;
   if (!sheetNames.length) {
-    listEl.innerHTML = `<div style="padding:10px 12px; font-size:12.5px; color:var(--text-muted); text-align:center;">No events recorded yet.</div>`;
+    listEl.innerHTML = `<div style="padding:10px 12px; font-size:12.5px; color:var(--text-muted); text-align:center;">Belum ada event tercatat.</div>`;
     return;
   }
   listEl.innerHTML = sheetNames.map(name => `
@@ -4412,7 +4412,7 @@ window.loadSurveyHistoryFor = async function(sheetName) {
       background:rgba(255,255,255,0.03); border:1px solid var(--border-soft);
       border-radius:var(--radius-md); padding:20px; text-align:center;
       color:var(--text-muted); font-size:13px;
-    ">Loading data from "${escapeHtml(sheetName)}"…</div>`;
+    ">Memuat data dari "${escapeHtml(sheetName)}"…</div>`;
   }
 
   try {
@@ -4437,7 +4437,7 @@ window.loadSurveyHistoryFor = async function(sheetName) {
         background:rgba(255,255,255,0.03); border:1px solid var(--border-soft);
         border-radius:var(--radius-md); padding:20px; text-align:center;
         color:var(--danger); font-size:13px;
-      ">Failed to load data from "${escapeHtml(sheetName)}". Please try again.</div>`;
+      ">Gagal memuat data dari "${escapeHtml(sheetName)}". Coba lagi.</div>`;
     }
     if (countEl) countEl.textContent = 'Error';
   }
@@ -4507,14 +4507,14 @@ function asUseCurrentLocation() {
       btn.disabled = false;
       btn.classList.remove('spinning');
       label.textContent = 'Lokasi saat ini';
-      status.textContent = `✓ Location found (accuracy ±${Math.round(pos.coords.accuracy)}m). Click "Save Location" to save it.`;
+      status.textContent = `✓ Lokasi ditemukan (akurasi ±${Math.round(pos.coords.accuracy)}m). Klik "Save Location" untuk menyimpan.`;
       status.style.color = 'var(--success)';
     },
     (err) => {
       btn.disabled = false;
       btn.classList.remove('spinning');
       label.textContent = 'Lokasi saat ini';
-      status.textContent = `✗ Failed to get location: ${err.message}`;
+      status.textContent = `✗ Gagal ambil lokasi: ${err.message}`;
       status.style.color = 'var(--danger)';
     },
     { enableHighAccuracy: true, timeout: 15000 }
@@ -4561,11 +4561,11 @@ async function asSaveLocation() {
     GEO_TARGET.lng    = lng;
     GEO_TARGET.radius = radius;
 
-    status.textContent = '✓ Location saved! Geofence is now active.';
+    status.textContent = '✓ Lokasi tersimpan! Geofence langsung aktif.';
     status.style.color = 'var(--success)';
     showToast('success', 'Location saved', `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)} · radius ${radius.toLocaleString('id-ID')}m`);
   } catch (err) {
-    status.textContent = '✗ Failed to save: ' + err.message;
+    status.textContent = '✗ Gagal menyimpan: ' + err.message;
     status.style.color = 'var(--danger)';
   } finally {
     saveBtn.disabled = false;
@@ -4727,7 +4727,7 @@ function surveyRenderCurrentQuestion() {
           id="survey-text-input"
           type="text"
           value="${escapeHtml(existingAnswer)}"
-          placeholder="${q.isName ? 'e.g. Rivaldo Ota da Costa' : 'Write your answer...'}"
+          placeholder="${q.isName ? 'e.g. Maria Antonia de Silva' : 'Tulis jawaban kamu...'}"
           autocomplete="${q.isName ? 'name' : 'off'}"
           spellcheck="false"
           oninput="surveySetCurrentAnswer(this.value)"
@@ -4735,7 +4735,7 @@ function surveyRenderCurrentQuestion() {
         />
       </div>
       ${q.isName ? `<p style="font-size:11.5px; color:var(--text-dim); margin-top:6px; line-height:1.5;">
-        ⚠️ This name will be printed <strong style="color:var(--text);">exactly as you write it</strong> on the certificate. Please check the spelling carefully.
+        ⚠️ Nama ini akan tercetak <strong style="color:var(--text);">persis seperti yang kamu tulis</strong> di sertifikat. Periksa ejaan dengan teliti.
       </p>` : ''}
     `;
     setTimeout(() => {
@@ -4788,7 +4788,7 @@ function surveyRenderCurrentQuestion() {
           <span class="survey-answer-card-text">${escapeHtml(opt)}</span>
         </label>
       `;
-    }).join('') + `</div>` + `<p style="font-size:11.5px; color:rgba(255,255,255,0.4); margin-top:10px;">☑️ You may select more than one.</p>`;
+    }).join('') + `</div>` + `<p style="font-size:11.5px; color:rgba(255,255,255,0.4); margin-top:10px;">☑️ Boleh pilih lebih dari satu.</p>`;
 
   } else if (q.type === 'dropdown') {
     // Dropdown native <select> — kartu pembungkus diwarnai gradient solid
@@ -4812,7 +4812,7 @@ function surveyRenderCurrentQuestion() {
           font-family:var(--font-main); font-size:15px; font-weight:${existingAnswer ? '600' : '400'}; cursor:pointer;
           appearance:none; -webkit-appearance:none;
         ">
-          <option value="" disabled ${!existingAnswer ? 'selected' : ''} style="background:#1e2033;">Select one...</option>
+          <option value="" disabled ${!existingAnswer ? 'selected' : ''} style="background:#1e2033;">Pilih salah satu...</option>
           ${(q.options || []).map(opt => `
             <option value="${escapeHtml(opt)}" ${existingAnswer === opt ? 'selected' : ''} style="background:#1e2033; color:#fff;">${escapeHtml(opt)}</option>
           `).join('')}
@@ -4854,7 +4854,7 @@ function surveyRenderCurrentQuestion() {
           font-family:var(--font-main); font-size:15px; font-weight:${existingAnswer ? '600' : '400'}; cursor:pointer;
           appearance:none; -webkit-appearance:none;
         ">
-          <option value="" disabled ${!existingAnswer ? 'selected' : ''} style="background:#1e2033;">Search your name...</option>
+          <option value="" disabled ${!existingAnswer ? 'selected' : ''} style="background:#1e2033;">Cari nama kamu...</option>
           ${lookupRows.map(row => `
             <option value="${escapeHtml(row.sid)}" ${existingAnswer === row.sid ? 'selected' : ''} style="background:#1e2033; color:#fff;">${escapeHtml(row.name)}</option>
           `).join('')}
@@ -5387,7 +5387,7 @@ async function generateAndStore() {
       issued_at: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
-    const [, preloadedBackImg] = await Promise.all([
+    const [certDrawMeta, preloadedBackImg] = await Promise.all([
       drawCertificateOnCanvas(canvas, certName, certCfg),
       backImagePromise
     ]);
@@ -5497,8 +5497,8 @@ async function generateAndStore() {
       imgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
     } catch (taintErr) {
       console.error('[Canvas] toDataURL gagal (canvas tainted):', taintErr.message);
-      showToast('error', 'Failed to generate certificate',
-        'The template image could not be safely loaded in this browser. Try refreshing the page or use a different browser.');
+      showToast('error', 'Gagal generate sertifikat',
+        'Template gambar tidak bisa dimuat dengan aman di browser ini. Coba refresh halaman atau gunakan browser lain.');
       throw taintErr;
     }
     certPreviewUrl = imgDataUrl; // simpan untuk preview di screen-done
@@ -5547,6 +5547,69 @@ async function generateAndStore() {
     await claimWritePromise;
     localStorage.setItem(lsKey, 'true');
 
+    // ── Kirim METADATA TEKNIS sebagai update tambahan ke Google Sheet ──
+    // Dikirim TERPISAH dari payload pertama (yang dikirim di
+    // surveyFinishAndGenerate, SEBELUM PDF ini selesai digambar) karena
+    // metadata seperti font size hasil akhir hanya tersedia SETELAH proses
+    // auto-shrink-to-fit di drawCertificateOnCanvas selesai. Dicari di
+    // Apps Script berdasarkan UID (baris yang sama persis dengan payload
+    // pertama), bukan menambah baris baru — lihat action=updateMetadata.
+    //
+    // Fire-and-forget (tidak di-await) — sama seperti pengiriman pertama,
+    // supaya peserta tidak merasakan delay tambahan apa pun; mereka sudah
+    // diarahkan ke showSuccessScreen() tanpa perlu menunggu update ini.
+    try {
+      const metaPayload = {
+        action:       'updateMetadata',
+        uid:          currentUser?.uid || '',
+        // ── Data peserta ────────────────────────────────
+        name:         certDrawMeta ? certDrawMeta.name : null,
+        uidWatermark: certDrawMeta ? certDrawMeta.uid  : null,
+        // ── Config template & font ──────────────────────
+        templateUrl:  (certCfg && certCfg.templateBase64)  || '',
+        fontFamily:   (certCfg && certCfg.fontFamily)      || 'Alex Brush',
+        fontColor:    (certCfg && certCfg.fontColor)       || '#d09e3b',
+        fontBold:     (certCfg && certCfg.fontBold)        === true,
+        fontItalic:   (certCfg && certCfg.fontItalic)      === true,
+        // ── Bounding box posisi nama ────────────────────
+        bboxX:        certCfg?.bboxX      ?? 153,
+        bboxY:        certCfg?.bboxY      ?? 240,
+        bboxWidth:    certCfg?.bboxWidth  ?? 594,
+        bboxHeight:   certCfg?.bboxHeight ?? 115,
+        // ── UID watermark ───────────────────────────────
+        uidVisible:   certCfg?.uidVisible !== false,
+        uidX:         certCfg?.uidX       ?? 84,
+        uidY:         certCfg?.uidY       ?? 598,
+        uidWidth:     certCfg?.uidWidth   ?? 250,
+        uidHeight:    certCfg?.uidHeight  ?? 40,
+        uidColor:     certCfg?.uidColor   || 'rgba(204,204,204,0.45)',
+        uidFont:      certCfg?.uidFont    || 'JetBrains Mono',
+        // ── QR Code ─────────────────────────────────────
+        qr: {
+          visible: cfgShowQR,
+          x:       Math.round(cfgQrX),
+          y:       Math.round(cfgQrY),
+          width:   Math.round(cfgQrW),
+          height:  Math.round(cfgQrH),
+          color:   cfgQrColor,
+        },
+        // ── Halaman 2 (back page) ───────────────────────
+        backImageUrl: (certCfg && certCfg.backImageUrl) || '',
+      };
+      fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(metaPayload)
+      }).then(() => {
+        console.log('[CertGen] Metadata teknis berhasil dikirim sebagai update ke Google Sheet.');
+      }).catch(e => {
+        console.warn('[CertGen] Gagal kirim update metadata teknis:', e.message);
+      });
+    } catch (e) {
+      console.warn('[CertGen] Gagal menyusun payload metadata teknis:', e.message);
+    }
+
     // Ubah UI utama menjadi "Berhasil" + inject preview.
     // TIDAK ADA auto-download & TIDAK ADA pop-up tambahan di sini —
     // audiens diarahkan langsung ke screen-success (kartu sertifikat +
@@ -5555,7 +5618,7 @@ async function generateAndStore() {
     showSuccessScreen();
 
   } catch (err) {
-    Swal.fire('Error', 'Failed to process certificate: ' + err.message, 'error');
+    Swal.fire('Error', 'Gagal memproses sertifikat: ' + err.message, 'error');
     console.error('[CertGen]', err);
   }
 }
@@ -5781,7 +5844,6 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
 
   let fontSize = 68 * SCALE;
   let lines, lineH, ascent, descent, totalH;
-
   while (fontSize >= 10 * SCALE) {
     // Susun font string dengan style+weight di depan, sama persis pola
     // dengan _cedDraw (preview admin) — supaya hasil final benar2 identik
@@ -5826,6 +5888,13 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
   // Color, diatur Admin lewat drag di Canvas Editor) — bukan lagi
   // hardcoded di pojok kiri bawah. cfgUidVisible juga memungkinkan
   // Admin menyembunyikan watermark ini sepenuhnya kalau diinginkan.
+  //
+  // uidMeta & nameMeta dikumpulkan di sini (bukan cuma digambar) supaya
+  // bisa di-return ke pemanggil (generateAndStore) — dipakai untuk
+  // mengirim metadata teknis sertifikat (posisi/font/size) sebagai
+  // update tambahan ke Google Sheet, lihat action=updateMetadata.
+  let uidMeta = { visible: false, fontSize: null, font: cfgUidFont || 'JetBrains Mono', x: cfgUidX, y: cfgUidY, width: null, height: null };
+
   if (cfgUidVisible !== false) {
     ctx.save();
     const uidFontFamily = cfgUidFont || 'JetBrains Mono';
@@ -5874,10 +5943,10 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
     // ──────────────────────────────────────────────────────────────
 
     // Ambil lebar & tinggi dari Config, lalu di Scale
-
-    // Ambil lebar & tinggi dari Config, lalu di Scale
-    const uBoxW = (preFetchedCfg && preFetchedCfg.uidWidth != null ? preFetchedCfg.uidWidth : (ced.uidWidth || 250)) * SCALE;
-    const uBoxH = (preFetchedCfg && preFetchedCfg.uidHeight != null ? preFetchedCfg.uidHeight : (ced.uidHeight || 40)) * SCALE;
+    const uBoxWRaw = (preFetchedCfg && preFetchedCfg.uidWidth != null ? preFetchedCfg.uidWidth : (ced.uidWidth || 250));
+    const uBoxHRaw = (preFetchedCfg && preFetchedCfg.uidHeight != null ? preFetchedCfg.uidHeight : (ced.uidHeight || 40));
+    const uBoxW = uBoxWRaw * SCALE;
+    const uBoxH = uBoxHRaw * SCALE;
     const uBoxX = cfgUidX * SCALE;
     const uBoxY = cfgUidY * SCALE;
 
@@ -5894,7 +5963,38 @@ async function drawCertificateOnCanvas(canvas, name, preFetchedCfg) {
 
     ctx.fillText(text, uBoxX + (uBoxW / 2), uBoxY + (uBoxH / 2));
     ctx.restore();
+
+    // Catat metadata UID watermark — fontSize & posisi/ukuran dikembalikan
+    // dalam basis 900x636 (dibagi SCALE) supaya angkanya masuk akal dibaca
+    // manusia di Sheet, terlepas dari resolusi canvas yang sebenarnya.
+    uidMeta = {
+      visible:  true,
+      fontSize: Math.round(uFontSize / SCALE),
+      font:     uidFontFamily,
+      x:        Math.round(cfgUidX),
+      y:        Math.round(cfgUidY),
+      width:    Math.round(uBoxWRaw),
+      height:   Math.round(uBoxHRaw),
+    };
   }
+
+  // ── Metadata teknis nama sertifikat — dikembalikan ke pemanggil ──
+  // (generateAndStore) untuk dikirim sebagai update tambahan ke Google
+  // Sheet, lihat action=updateMetadata di Apps Script. fontSize dalam
+  // basis 900x636 (dibagi SCALE), sama seperti uidMeta di atas.
+  return {
+    name: {
+      fontSize: Math.round(fontSize / SCALE),
+      font:     cfgFont,
+      bold:     !!cfgFontBold,
+      italic:   !!cfgFontItalic,
+      x:        Math.round(bboxX),
+      y:        Math.round(bboxY),
+      width:    Math.round(bboxW),
+      height:   Math.round(bboxH),
+    },
+    uid: uidMeta,
+  };
 }
 // ── Helper: draw shield icon on canvas ───────────────────────────
 function drawShield(ctx, cx, cy, r) {
@@ -5996,7 +6096,7 @@ function certDownloadAgain() {
   const a = document.createElement('a');
   a.style.display = 'none';
   a.href = url;
-  a.download = `Certificate_${safeName}.pdf`;
+  a.download = `Sertifikat_${safeName}.pdf`;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 1000);
@@ -6032,7 +6132,7 @@ window.certDownloadThenPromptWA = function() {
   } else {
     // ── Klik kedua dst: buka WhatsApp admin dengan pesan siap ──
     const adminNumber = "67078486500";
-    const message = `Hello Admin, this is *${certName}*. I have successfully received my certificate from the portal. Thank you!`;
+    const message = `Halo Admin, saya *${certName}*. Saya sudah berhasil menerima sertifikat saya dari portal. Terima kasih!`;
     window.open(`https://wa.me/${adminNumber}?text=${encodeURIComponent(message)}`, '_blank');
   }
 };
@@ -6063,7 +6163,7 @@ async function certShareNative() {
   if (!generatedPDFBlob || !navigator.share) return;
 
   const safeName = certName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  const fileName = `Certificate_${safeName}.pdf`;
+  const fileName = `Sertifikat_${safeName}.pdf`;
 
   // Buat File object dari blob (diperlukan untuk share file)
   const pdfFile = new File([generatedPDFBlob], fileName, { type: 'application/pdf' });
@@ -6075,15 +6175,15 @@ async function certShareNative() {
     if (canShareFile) {
       // Share file PDF langsung — muncul sheet native (WhatsApp, Drive, Telegram, dll)
       await navigator.share({
-        title: `Certificate - ${certName}`,
-        text:  `Official certificate for ${certName}`,
+        title: `Sertifikat - ${certName}`,
+        text:  `Sertifikat resmi atas nama ${certName}`,
         files: [pdfFile],
       });
     } else {
       // Fallback: share hanya teks + link verifikasi (jika share file tidak didukung)
       await navigator.share({
-        title: `Certificate - ${certName}`,
-        text:  `Official certificate for ${certName}. Downloaded from the official portal.`,
+        title: `Sertifikat - ${certName}`,
+        text:  `Sertifikat resmi atas nama ${certName}. Download dari portal resmi.`,
       });
     }
   } catch (err) {
@@ -6153,7 +6253,7 @@ async function downloadAndReportCertificate() {
           const a = document.createElement('a');
           a.style.display = 'none';
           a.href = url;
-          a.download = `Certificate_${safeName}.pdf`;
+          a.download = `Sertifikat_${safeName}.pdf`;
           document.body.appendChild(a);
           a.click();
 
@@ -6182,7 +6282,7 @@ async function downloadAndReportCertificate() {
             const adminNumber = "67078486500"; 
             
             // Cleaned up message without the redundant phone number variable
-            const message = `Hello Admin, this is *${certName}*. I have successfully received my certificate from the portal. Thank you!`;
+            const message = `Halo Admin, saya *${certName}*. Saya sudah berhasil menerima sertifikat saya dari portal. Terima kasih!`;
             const waUrl = `https://wa.me/${adminNumber}?text=${encodeURIComponent(message)}`;
             
             // Redirect to WA Deep Link
@@ -6525,17 +6625,17 @@ function adminRefreshTable() {
         tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty" style="color:var(--danger);">
           <b>Firestore error:</b> ${escapeHtml(err.message)}<br><br>
           <span style="color:var(--text-muted);font-size:12px;">
-            Possible causes:<br>
-            1. Firestore Security Rules don't yet allow admin to read the <code>${USERS_COLLECTION}</code> collection<br>
-            2. Composite Index hasn't been created (open the error link in console to auto-create it)<br>
-            3. Internet connection lost
+            Kemungkinan penyebab:<br>
+            1. Firestore Security Rules belum mengizinkan admin baca collection <code>${USERS_COLLECTION}</code><br>
+            2. Composite Index belum dibuat (buka link error di console untuk buat otomatis)<br>
+            3. Koneksi internet terputus
           </span>
         </td></tr>`;
         console.error('[Admin] onSnapshot listener error:', err);
       });
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty" style="color:var(--danger);">
-      Failed to set up listener: ${escapeHtml(err.message)}
+      Gagal setup listener: ${escapeHtml(err.message)}
     </td></tr>`;
     console.error('[Admin] adminRefreshTable setup error:', err);
   }
@@ -7316,10 +7416,10 @@ function surveyRenderQuestions() {
           margin-right:2px; opacity:0.4;
           ${isDropdown ? 'font-size:10px; font-family:var(--font-mono); color:var(--text-dim); border-style:dashed;' : ''}
         ">${isDropdown ? (oi + 1) : ''}</span>
-        <input class="ced-input" type="text" placeholder="Option ${oi + 1}"
+        <input class="ced-input" type="text" placeholder="Opsi ${oi + 1}"
           value="${escapeHtml(opt)}"
           oninput="surveyUpdateOption('${q.id}', ${oi}, this.value)" />
-        <button type="button" class="survey-opt-remove" onclick="surveyRemoveOption('${q.id}', ${oi})" title="Remove option">
+        <button type="button" class="survey-opt-remove" onclick="surveyRemoveOption('${q.id}', ${oi})" title="Hapus opsi">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -7373,7 +7473,7 @@ function surveyRenderQuestions() {
                 font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--text-dim);
               ">${v}</span>
               <input class="ced-input survey-scale-label-input" type="text"
-                placeholder="Label for ${v} (e.g. ${vi === 0 ? 'Not Satisfied' : vi === scaleDots.length - 1 ? 'Very Satisfied' : 'Neutral'})"
+                placeholder="Label untuk ${v} (mis. ${vi === 0 ? 'Tidak Puas' : vi === scaleDots.length - 1 ? 'Sangat Puas' : 'Biasa Saja'})"
                 value="${escapeHtml(scaleLabels[vi] || '')}"
                 oninput="surveyUpdateScaleLabel('${q.id}', ${vi}, this.value)" style="flex:1;" />
             </div>
@@ -7392,7 +7492,7 @@ function surveyRenderQuestions() {
     const lookupRows = Array.isArray(q.lookup) ? q.lookup : [];
     const lookupRowsHtml = lookupRows.map((row, ri) => `
       <div class="survey-opt-row">
-        <input class="ced-input" type="text" placeholder="Name (e.g. Ripper)"
+        <input class="ced-input" type="text" placeholder="Nama (mis. Tomas)"
           value="${escapeHtml(row.name || '')}"
           oninput="surveyUpdateLookupRow('${q.id}', ${ri}, 'name', this.value)"
           style="flex:1.4;" />
@@ -7400,7 +7500,7 @@ function surveyRenderQuestions() {
           value="${escapeHtml(row.sid || '')}"
           oninput="surveyUpdateLookupRow('${q.id}', ${ri}, 'sid', this.value)"
           style="flex:1; font-family:var(--font-mono);" />
-        <button type="button" class="survey-opt-remove" onclick="surveyRemoveLookupRow('${q.id}', ${ri})" title="Remove row">
+        <button type="button" class="survey-opt-remove" onclick="surveyRemoveLookupRow('${q.id}', ${ri})" title="Hapus baris">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -7409,30 +7509,30 @@ function surveyRenderQuestions() {
     const idLookupHtml = isIdLookup ? `
       <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
         <div style="display:flex; gap:8px; font-size:10.5px; color:var(--text-dim); padding:0 2px 2px 2px; letter-spacing:0.04em; text-transform:uppercase;">
-          <span style="flex:1.4;">Name (shown to student)</span>
-          <span style="flex:1;">Student ID (sent to Firestore/Sheet)</span>
+          <span style="flex:1.4;">Nama (tampil ke student)</span>
+          <span style="flex:1;">Student ID (terkirim ke Firestore/Sheet)</span>
           <span style="width:25px;"></span>
         </div>
         ${lookupRowsHtml}
         <button type="button" class="survey-opt-add" onclick="surveyAddLookupRow('${q.id}')">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Row
+          Tambah Baris
         </button>
 
         <details style="margin-top:8px;">
-          <summary style="cursor:pointer; font-size:11.5px; color:var(--text-dim); padding:4px 0;">📋 Bulk paste from Excel/Sheet (multiple rows at once)</summary>
+          <summary style="cursor:pointer; font-size:11.5px; color:var(--text-dim); padding:4px 0;">📋 Paste massal dari Excel/Sheet (banyak baris sekaligus)</summary>
           <div style="margin-top:8px;">
             <textarea
               id="survey-lookup-paste-${q.id}"
-              placeholder="Paste here, one per line: Name, ID${String.fromCharCode(10)}Example:${String.fromCharCode(10)}Ripper, 20554${String.fromCharCode(10)}Valdo, 20892"
+              placeholder="Tempel di sini, format per baris: Nama, ID${String.fromCharCode(10)}Contoh:${String.fromCharCode(10)}Tomas, 20554${String.fromCharCode(10)}Maria, 20892"
               style="width:100%; min-height:90px; padding:10px 12px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); color:var(--text); font-family:var(--font-mono); font-size:12.5px; resize:vertical;"
             ></textarea>
             <button type="button" class="survey-opt-add" style="margin-top:6px;" onclick="surveyImportLookupPaste('${q.id}')">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 15 11"/><line x1="12" y1="3" x2="12" y2="14"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
-              Import This List
+              Impor Daftar Ini
             </button>
             <p style="font-size:10.5px; color:var(--text-dim); margin-top:6px; line-height:1.5;">
-              Separate Name & ID with a comma ( , ), semicolon ( ; ), or tab. One pair per line. Rows that already exist (exact match) won't be duplicated.
+              Pisahkan Nama & ID dengan koma ( , ), titik koma ( ; ), atau tab. Satu pasangan per baris. Baris yang sudah ada (sama persis) tidak diduplikasi.
             </p>
           </div>
         </details>
@@ -7466,12 +7566,12 @@ function surveyRenderQuestions() {
 
         <!-- Header: nomor + tombol insert + hapus -->
         <div class="survey-q-card-hd">
-          <span class="survey-q-card-num">Question ${i + 1}</span>
+          <span class="survey-q-card-num">Pertanyaan ${i + 1}</span>
           <div style="display:flex; align-items:center; gap:6px;">
-            <button type="button" class="survey-q-insert" onclick="surveyInsertAfter('${q.id}')" title="Add a new question here">
+            <button type="button" class="survey-q-insert" onclick="surveyInsertAfter('${q.id}')" title="Tambah pertanyaan baru di sini">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
-            <button type="button" class="survey-q-remove" onclick="surveyRemoveQuestion('${q.id}')" title="Remove question">
+            <button type="button" class="survey-q-remove" onclick="surveyRemoveQuestion('${q.id}')" title="Hapus pertanyaan">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
             </button>
           </div>
@@ -7482,7 +7582,7 @@ function surveyRenderQuestions() {
           <input
             class="ced-input"
             type="text"
-            placeholder="Type or paste the question (you can include A/B/C/D options directly)..."
+            placeholder="Tulis atau paste pertanyaan (bisa langsung dengan pilihan A/B/C/D)..."
             value="${escapeHtml(q.text || '')}"
             oninput="surveyUpdateField('${q.id}', 'text', this.value)"
             onpaste="surveyHandlePaste('${q.id}', event)"
@@ -7496,7 +7596,7 @@ function surveyRenderQuestions() {
             ${optionsHtml}
             <button type="button" class="survey-opt-add" onclick="surveyAddOption('${q.id}')">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Option
+              Tambah Opsi
             </button>
           </div>
         ` : ''}
@@ -7882,8 +7982,8 @@ window.surveyImportLookupPaste = function(qid) {
   const status = document.getElementById('survey-save-status');
   if (status) {
     status.textContent = importedCount > 0
-      ? `✓ ${importedCount} row(s) imported successfully.`
-      : '⚠️ No new valid rows to import (check the format or duplicates).';
+      ? `✓ ${importedCount} baris berhasil diimpor.`
+      : '⚠️ Tidak ada baris baru yang valid untuk diimpor (cek format atau duplikat).';
     status.style.color = importedCount > 0 ? 'var(--success)' : 'var(--text-dim)';
     setTimeout(() => { status.textContent = ''; }, 4000);
   }
@@ -7898,26 +7998,26 @@ async function surveySaveConfig() {
   // Validasi ringan: pertanyaan tanpa teks akan membingungkan saat dipakai nanti.
   const invalid = surveyQuestions.find(q => !q.text || !q.text.trim());
   if (invalid) {
-    status.textContent = '✗ Every question must have text.';
+    status.textContent = '✗ Setiap pertanyaan wajib punya teks.';
     status.style.color = 'var(--danger)';
     return;
   }
   const invalidChoice = surveyQuestions.find(q => ['choice','checkbox','dropdown'].includes(q.type) && (!q.options || q.options.filter(o => o && o.trim()).length < 2));
   if (invalidChoice) {
-    status.textContent = '✗ Multiple choice, checkbox, & dropdown need at least 2 filled options.';
+    status.textContent = '✗ Pilihan ganda, kotak centang, & dropdown butuh minimal 2 opsi terisi.';
     status.style.color = 'var(--danger)';
     return;
   }
   const invalidLookup = surveyQuestions.find(q => q.type === 'id_lookup' &&
     (!Array.isArray(q.lookup) || q.lookup.filter(r => r.name && r.name.trim() && r.sid && r.sid.trim()).length < 2));
   if (invalidLookup) {
-    status.textContent = '✗ ID type needs at least 2 fully filled Name+ID rows.';
+    status.textContent = '✗ Tipe ID butuh minimal 2 baris Nama+ID terisi lengkap.';
     status.style.color = 'var(--danger)';
     return;
   }
 
   btn.disabled = true;
-  status.textContent = '⏳ Saving survey configuration to Firestore...';
+  status.textContent = '⏳ Menyimpan konfigurasi survei ke Firestore...';
   status.style.color = 'var(--accent)';
 
   // Bersihkan opsi kosong sebelum simpan
@@ -7965,11 +8065,11 @@ async function surveySaveConfig() {
 
   try {
     await db.collection('settings').doc('survey_config').set(payload, { merge: true });
-    status.textContent = `✓ Saved! Event: "${eventNameRaw}" · ${cleanQuestions.length} active question(s).`;
+    status.textContent = `✓ Tersimpan! Event: "${eventNameRaw}" · ${cleanQuestions.length} pertanyaan aktif.`;
     status.style.color = 'var(--success)';
     setTimeout(() => { status.textContent = ''; }, 5000);
   } catch (err) {
-    status.textContent = '✗ Failed to save: ' + err.message;
+    status.textContent = '✗ Gagal menyimpan: ' + err.message;
     status.style.color = 'var(--danger)';
     console.error('[Survey Save]', err);
   } finally {
@@ -8077,7 +8177,7 @@ async function cedLoadFromFirestore() {
     if (qrColorField) qrColorField.style.display = ced.showQR ? 'block' : 'none';
     if (qrBtn) {
       if (ced.showQR) {
-        qrBtn.innerHTML = '❌ Remove QR Code Placeholder';
+        qrBtn.innerHTML = '❌ Hapus QR Code Placeholder';
         qrBtn.style.background  = 'rgba(255, 77, 109, 0.1)';
         qrBtn.style.borderColor = '#ff4d6d';
         qrBtn.style.color       = '#ff4d6d';
@@ -8144,7 +8244,7 @@ async function cedLoadFromFirestore() {
       ced.backImageUrl = d.backImageUrl;
       const nmBack = document.getElementById('ced-upload-name-back');
       if (nmBack) {
-        nmBack.textContent  = '✓ Back page loaded from Firestore';
+        nmBack.textContent  = '✓ Halaman belakang loaded from Firestore';
         nmBack.style.display = 'block';
         nmBack.style.color = 'var(--success)';
       }
@@ -8167,7 +8267,7 @@ async function cedLoadFromFirestore() {
       ced.backImageUrl = lsBackUrl;
       const nmBack = document.getElementById('ced-upload-name-back');
       if (nmBack) {
-        nmBack.textContent  = '✓ Back page: ' + (lsBackName || 'cached') + ' (from local cache)';
+        nmBack.textContent  = '✓ Halaman belakang: ' + (lsBackName || 'cached') + ' (dari cache lokal)';
         nmBack.style.display = 'block';
         nmBack.style.color = 'var(--success)';
       }
@@ -8210,10 +8310,10 @@ const myWidget = cloudinary.createUploadWidget({
     // by appending it to body and overriding z-index via CSS injection
   }, (error, result) => {
     if (!error && result && result.event === "success") {
-      console.log('Upload successful! URL: ', result.info.secure_url);
+      console.log('Upload berhasil! URL: ', result.info.secure_url);
       
       const nm = document.getElementById('ced-upload-name');
-      nm.textContent = '⏳ Loading image from Cloudinary...';
+      nm.textContent = '⏳ Memuat gambar dari Cloudinary...';
       nm.style.display = 'block';
       nm.style.color = 'var(--accent)';
 
@@ -8236,7 +8336,7 @@ const myWidget = cloudinary.createUploadWidget({
         cedRedraw(); // Update canvas
       };
       img.onerror = () => {
-        nm.textContent = '✗ Failed to load image to canvas';
+        nm.textContent = '✗ Gagal memuat gambar ke canvas';
         nm.style.color = 'var(--danger)';
       }
       img.src = result.info.secure_url;
@@ -8282,7 +8382,7 @@ const myWidgetBack = cloudinary.createUploadWidget({
       console.log('Upload back-page berhasil! URL: ', result.info.secure_url);
 
       const nm = document.getElementById('ced-upload-name-back');
-      nm.textContent = '⏳ Loading back page image...';
+      nm.textContent = '⏳ Memuat gambar halaman belakang...';
       nm.style.display = 'block';
       nm.style.color = 'var(--accent)';
 
@@ -8299,11 +8399,11 @@ const myWidgetBack = cloudinary.createUploadWidget({
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => {
-        nm.textContent = '✓ Back page ready: ' + backFileName;
+        nm.textContent = '✓ Halaman belakang siap: ' + backFileName;
         nm.style.color = 'var(--success)';
       };
       img.onerror = () => {
-        nm.textContent = '✗ Failed to load back page image';
+        nm.textContent = '✗ Gagal memuat gambar halaman belakang';
         nm.style.color = 'var(--danger)';
       };
       img.src = result.info.secure_url;
@@ -8696,24 +8796,24 @@ async function cedSaveConfig() {
     // Kirim paket data (Teks & Koordinat) ke Firestore
     await db.collection('settings').doc('certificate_config').set(payload, { merge: true });
     
-    status.textContent = '✓ Saved! Template & coordinates updated successfully.';
+    status.textContent = '✓ Tersimpan! Template & koordinat berhasil diperbarui.';
     status.style.color = 'var(--success)';
 
     // Update indikator UI
     const nm = document.getElementById('ced-upload-name');
     if (nm && nm.style.display !== 'none') {
-      nm.textContent = '✓ Template active from Cloudinary';
+      nm.textContent = '✓ Template aktif dari Cloudinary';
     }
     const nmBack = document.getElementById('ced-upload-name-back');
     if (nmBack && ced.backImageUrl) {
-      nmBack.textContent = '✓ Back page active from Cloudinary';
+      nmBack.textContent = '✓ Halaman belakang aktif dari Cloudinary';
       nmBack.style.display = 'block';
       nmBack.style.color = 'var(--success)';
     }
 
     setTimeout(() => { status.textContent = ''; }, 5000);
   } catch (err) {
-    status.textContent = '✗ Failed to save: ' + err.message;
+    status.textContent = '✗ Gagal menyimpan: ' + err.message;
     status.style.color = 'var(--danger)';
     console.error('[CED Save]', err);
   } finally {
@@ -8859,7 +8959,7 @@ async function cedSaveConfig() {
 
     if (ced.showQR) {
       qrBbox.style.display = 'block';
-      btn.innerHTML = '❌ Remove QR Code Placeholder';
+      btn.innerHTML = '❌ Hapus QR Code Placeholder';
       btn.style.background = 'rgba(255, 77, 109, 0.1)';
       btn.style.borderColor = '#ff4d6d';
       btn.style.color = '#ff4d6d';

@@ -888,11 +888,21 @@
     <div id="cert-modal-box">
       <div id="cert-modal-header">
         <span id="cert-modal-title">E-Certificate</span>
-        <button id="cert-modal-close" onclick="closeCertModal()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button id="cert-modal-hd-btn" onclick="certModalToggleHD()" title="Toggle HD quality" style="
+            background:rgba(245,230,0,0.1); border:1px solid rgba(245,230,0,0.35);
+            border-radius:8px; color:var(--gold); cursor:pointer;
+            width:38px; height:30px; font-size:11px; font-weight:700;
+            font-family:var(--font-mono,monospace); letter-spacing:0.05em;
+            display:flex; align-items:center; justify-content:center;
+            transition:all 0.2s;
+          ">HD</button>
+          <button id="cert-modal-close" onclick="closeCertModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div id="cert-modal-canvas-wrap">
         <div id="cert-modal-loading">
@@ -1020,7 +1030,7 @@
       });
     }
 
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpQIwnXA7omIX9vRlS4FnGSoFMfE88J7PpoYOgsDTCmm7PJYYsg4E9K_enbjzgebTxgA/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxUWefLapwBRHntmZjIcLffgMwJYMeAX9AKqpVsO4lbLYzrj1m-oHA9_UQ3jqj8nL7FFw/exec";
 
     // ── Deteksi otomatis "kursus/profesi" dari jawaban survey ──────
     const COURSE_KEYWORDS = [
@@ -1411,7 +1421,35 @@
     let _certModalBlob     = null;
     let _certData          = null;
     let _certConfig        = null;
-    let _sheetCertConfig   = null; // config dari Sheet (diisi oleh renderCertificate)
+    let _sheetCertConfig   = null;
+    let _certHDMode        = false; // false = 900×636 preview, true = 2700×1908 HD
+
+    function certModalToggleHD() {
+      const btn = document.getElementById('cert-modal-hd-btn');
+      _certHDMode = !_certHDMode;
+      if (_certHDMode) {
+        btn.style.background  = 'var(--gold)';
+        btn.style.color       = '#000';
+        btn.style.borderColor = 'var(--gold)';
+        btn.textContent       = 'HD ✓';
+      } else {
+        btn.style.background  = 'rgba(245,230,0,0.1)';
+        btn.style.color       = 'var(--gold)';
+        btn.style.borderColor = 'rgba(245,230,0,0.35)';
+        btn.textContent       = 'HD';
+      }
+      if (_certData) {
+        _certModalBlob = null;
+        const canvas  = document.getElementById('cert-modal-canvas');
+        const loading = document.getElementById('cert-modal-loading');
+        const actions = document.getElementById('cert-modal-actions');
+        canvas.style.display  = 'none';
+        loading.style.display = 'flex';
+        loading.innerHTML     = `<div class="spinner-ring"></div>${_certHDMode ? 'Rendering HD…' : 'Rendering…'}`;
+        actions.style.display = 'none';
+        renderCertModal(_certData);
+      }
+    }
 
     // Fetch certificate_config dari Firestore paralel saat halaman load.
     // Kalau Firestore kosong/gagal, _certConfig akan diisi dari Sheet
@@ -1457,6 +1495,15 @@
       document.getElementById('cert-modal-overlay').classList.remove('open');
       document.body.style.overflow = '';
       document.removeEventListener('keydown', _cmEsc);
+      // Reset HD mode
+      _certHDMode = false;
+      const btn = document.getElementById('cert-modal-hd-btn');
+      if (btn) {
+        btn.style.background  = 'rgba(245,230,0,0.1)';
+        btn.style.color       = 'var(--gold)';
+        btn.style.borderColor = 'rgba(245,230,0,0.35)';
+        btn.textContent       = 'HD';
+      }
     }
     function _cmEsc(e) { if (e.key === 'Escape') closeCertModal(); }
 
@@ -1519,11 +1566,16 @@
       if (cfg.qrHeight != null) qrH = cfg.qrHeight;
       if (cfg.qrColor  != null) qrColor = cfg.qrColor;
 
-      // Canvas 900×636 (skala dasar) — koordinat Firestore sudah dalam skala ini
-      const CW = 900, CH = 636;
-      canvas.width = CW; canvas.height = CH;
+      // Canvas size: SCALE 1 = 900×636 (preview normal), SCALE 3 = 2700×1908 (HD)
+      // ctx.scale(SCALE,SCALE) membuat semua koordinat Firestore (skala 900×636) tetap benar
+      const BASE_W = 900, BASE_H = 636;
+      const SCALE  = _certHDMode ? 3 : 1;
+      const CW = BASE_W * SCALE, CH = BASE_H * SCALE;
+      canvas.width  = CW;
+      canvas.height = CH;
       const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, CW, CH);
+      ctx.scale(SCALE, SCALE);
+      ctx.clearRect(0, 0, BASE_W, BASE_H);
 
       try {
         // ── 1. Preload font nama ───────────────────────────────────────

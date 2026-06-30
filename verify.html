@@ -1084,10 +1084,15 @@
         .then(data => {
           if (data && data.status === 'success' && data.found) {
             let detectedCourse   = data.course_name || null;
-            // Custom ID dari Apps Script langsung (kalau backend sudah deteksi sendiri)
+            // Custom ID langsung dari Apps Script — label ASLI kolom survei
+            // (mis. "Certificate ID" atau "Student ID"), bukan hardcode nama field.
             let detectedCustomId = null;
-            if (data.certificate_id) detectedCustomId = { label: 'Certificate ID', value: String(data.certificate_id) };
-            else if (data.student_id) detectedCustomId = { label: 'Student ID', value: String(data.student_id) };
+            if (data.custom_id_value && String(data.custom_id_value).trim()) {
+              detectedCustomId = {
+                label: data.custom_id_label || 'ID',
+                value: String(data.custom_id_value).trim(),
+              };
+            }
 
             if (!detectedCourse || !detectedCustomId) {
               const possibleAnswers = data.survey_answers || data.dynamicResponses || data.responses || null;

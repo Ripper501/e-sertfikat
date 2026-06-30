@@ -776,7 +776,7 @@
             <span id="cert-email" class="info-value">—</span>
           </div>
           <div class="info-row">
-            <span class="info-label">Certificate ID</span>
+            <span class="info-label" id="cert-uid-label">Certificate ID</span>
             <span id="cert-uid" class="info-uid">—</span>
           </div>
         </div>
@@ -1059,7 +1059,9 @@
       return null;
     }
 
-    // === BARU: Fungsi untuk mendeteksi Custom ID dari jawaban kuesioner ===
+    // Deteksi Custom ID dari jawaban kuesioner — return {label, value} agar
+    // label TAMPILAN ikut label asli pertanyaan survei (mis. "Student ID"
+    // atau "Certificate ID"), bukan hardcoded "UID:".
     function detectCustomIdFromAnswers(surveyAnswers) {
       if (!Array.isArray(surveyAnswers) || !surveyAnswers.length) return null;
       for (const item of surveyAnswers) {
@@ -1067,7 +1069,10 @@
         const questionText = (item.questionText || '').toLowerCase();
         const matched = ID_KEYWORDS.some(kw => questionText.includes(kw));
         if (matched && item.answer && item.answer.trim()) {
-          return item.answer.trim();
+          return {
+            label: (item.questionText || 'ID').trim(), // label asli dari survei
+            value: item.answer.trim(),
+          };
         }
       }
       return null;
@@ -1079,7 +1084,10 @@
         .then(data => {
           if (data && data.status === 'success' && data.found) {
             let detectedCourse   = data.course_name || null;
-            let detectedCustomId = data.certificate_id || data.student_id || null;
+            // Custom ID dari Apps Script langsung (kalau backend sudah deteksi sendiri)
+            let detectedCustomId = null;
+            if (data.certificate_id) detectedCustomId = { label: 'Certificate ID', value: String(data.certificate_id) };
+            else if (data.student_id) detectedCustomId = { label: 'Student ID', value: String(data.student_id) };
 
             if (!detectedCourse || !detectedCustomId) {
               const possibleAnswers = data.survey_answers || data.dynamicResponses || data.responses || null;
@@ -1098,11 +1106,12 @@
               cert_name:       data.cert_name || '—',
               email:           data.email     || '—',
               issued_at:       data.issued_at || null,
-              uid:             uid,           // ← Firebase UID yang dipakai untuk QR code URL
               source:          'sheet',
               event:           data.event     || null,
+              uid:             uid, // UID asli Firebase — dari parameter URL, BUKAN dari survei
               detectedCourse,
-              detectedCustomId,
+              detectedCustomId, // {label, value} atau null
+              // certConfig dari Sheet — dipakai renderCertModal kalau Firestore kosong
               sheetCertConfig: data.certConfig || null,
             };
           }
@@ -1168,15 +1177,23 @@
       function renderCertificate(data) {
         renderRevealName(data.cert_name || '—');
         document.getElementById('cert-email').textContent = data.email     || '—';
-        
-        // === DIUBAH: Logika Penentuan Tampilan Certificate ID ===
-        // Jika ada Student ID / Certificate ID kustom yang terdeteksi, tampilkan itu.
-        // Jika kosong, pakai UID asli bawaan Firebase dari URL (studentId).
-        const displayUid = data.detectedCustomId && data.detectedCustomId.trim()
-          ? data.detectedCustomId.trim()
-          : studentId;
+
+        // Label dan nilai ID yang ditampilkan ikut field dari form survei
+        // (mis. "Student ID: STU-2026-0005" atau "Certificate ID: FBA-XXX").
+        // Kalau survei tidak punya field ID kustom, fallback ke UID asli Firebase
+        // dengan label default "Certificate ID".
+        const idLabelEl = document.getElementById('cert-uid-label');
+        let displayUid, displayLabel;
+        if (data.detectedCustomId && data.detectedCustomId.value && data.detectedCustomId.value.trim()) {
+          displayUid   = data.detectedCustomId.value.trim();
+          displayLabel = data.detectedCustomId.label || 'ID';
+        } else {
+          displayUid   = data.uid || studentId;
+          displayLabel = 'Certificate ID';
+        }
+        if (idLabelEl) idLabelEl.textContent = displayLabel;
         document.getElementById('cert-uid').textContent = displayUid;
-        
+
         document.getElementById('cert-issue').textContent = formatDate(data.issued_at);
 
         const courseEl     = document.getElementById('cert-course');
@@ -1204,11 +1221,16 @@
         if (shareBtn) {
           shareBtn.style.display = 'flex';
           // onclick sudah di-set di HTML: onclick="openCertModal()"
-          // Jangan di-override di sini — simpan data untuk dipakai modal
+          // Jangan di-override di sini — simpan data untuk dipakai modal.
+          // PENTING: `uid` = UID asli Firebase (dipakai QR & watermark canvas).
+          // `displayId`/`displayLabel` = ID kustom dari survei (kalau ada, dipakai
+          // HANYA untuk teks watermark, BUKAN untuk isi URL QR).
           _certData = {
-            name:  data.cert_name  || data.name  || '',
-            uid:   data.uid        || '',
-            email: data.email      || ''
+            name:         data.cert_name  || data.name  || '',
+            uid:          data.uid        || studentId  || '',
+            email:        data.email      || '',
+            displayId:    displayUid,
+            displayLabel: displayLabel,
           };
         }
 
@@ -1381,10 +1403,10 @@
               cert_name: d.cert_name,
               email:     d.email,
               issued_at: d.issued_at,
-              uid:       studentId,       // ← Firebase UID (= document ID = yang dipakai QR code URL)
               source:    'firestore',
+              uid:       studentId, // UID asli Firebase — dari URL parameter, dipakai QR & watermark
               detectedCourse:   detectCourseFromAnswers(d.survey_answers),
-              detectedCustomId: detectCustomIdFromAnswers(d.survey_answers),
+              detectedCustomId: detectCustomIdFromAnswers(d.survey_answers), // {label, value} atau null
             });
             return;
           }
@@ -1445,7 +1467,7 @@
         const actions = document.getElementById('cert-modal-actions');
         canvas.style.display  = 'none';
         loading.style.display = 'flex';
-        loading.innerHTML     = `<div class="spinner-ring"></div>${_certHDMode ? 'Rendering Full HD… (loading original resolution)' : 'Rendering…'}`;
+        loading.innerHTML     = `<div class="spinner-ring"></div>${_certHDMode ? 'Rendering HD…' : 'Rendering…'}`;
         actions.style.display = 'none';
         renderCertModal(_certData);
       }
@@ -1471,16 +1493,11 @@
       });
 
     function openCertModal() {
-      // _certData sudah diisi oleh renderCertificate() saat halaman load
-      // Fallback: baca langsung dari DOM jika perlu
-      if (!_certData || !_certData.uid) {
-        _certData = {
-          name:  document.getElementById('cert-name')?.textContent?.trim()  || '',
-          uid:   document.getElementById('cert-uid')?.textContent?.trim()   || '',
-          email: document.getElementById('cert-email')?.textContent?.trim() || ''
-        };
-      }
-      if (!_certData.name || !_certData.uid) return;
+      // _certData sudah diisi oleh renderCertificate() saat halaman load.
+      // Tidak ada fallback baca dari DOM untuk `uid` karena elemen
+      // #cert-uid sekarang bisa berisi Custom ID dari survei (bukan UID asli) —
+      // kalau _certData belum siap, modal tidak dibuka daripada salah generate QR.
+      if (!_certData || !_certData.uid || !_certData.name) return;
 
       _certModalBlob = null;
       document.getElementById('cert-modal-canvas').style.display  = 'none';
@@ -1566,88 +1583,11 @@
       if (cfg.qrHeight != null) qrH = cfg.qrHeight;
       if (cfg.qrColor  != null) qrColor = cfg.qrColor;
 
-      // Canvas size
-      // Normal : 900×636   (preview cepat)
-      // HD     : resolusi ASLI gambar Cloudinary × diperbesar jika perlu untuk
-      //          cetak tajam — TIDAK pernah lebih kecil dari 4500×3180 (~150 DPI
-      //          A4 landscape) agar hasil print tetap terlihat tajam.
-      // Semua koordinat Firestore disimpan dalam basis 900×636. SCALE di bawah
-      // mengkonversi koordinat itu ke ukuran fisik canvas yang sesungguhnya.
+      // Canvas size: SCALE 1 = 900×636 (preview normal), SCALE 3 = 2700×1908 (HD)
+      // ctx.scale(SCALE,SCALE) membuat semua koordinat Firestore (skala 900×636) tetap benar
       const BASE_W = 900, BASE_H = 636;
-
-      // ── Fungsi: modifikasi URL Cloudinary agar kirim resolusi asli/terbaik ──
-      // Cloudinary URL biasanya: .../upload/[transformations]/[public_id.ext]
-      // Kita ganti transformasi itu dengan "fl_preserve_transparency,q_100"
-      // yang artinya: "kirim kualitas 100%, jangan resize, format asli".
-      // Kalau URL bukan Cloudinary (mis. base64 / URL lain), dikembalikan apa adanya.
-      function _toHDCloudinaryUrl(src) {
-        if (!src || src.startsWith('data:')) return src; // base64 → langsung pakai
-        try {
-          const u = new URL(src);
-          // Hanya modifikasi kalau ini URL Cloudinary
-          if (!u.hostname.includes('cloudinary.com') && !u.hostname.includes('res.cloudinary')) return src;
-          // Pisahkan path: /image/upload/[transforms]/[public_id]
-          // Kita ganti segmen transforms (setelah /upload/) dengan parameter kualitas max
-          const uploadIdx = u.pathname.indexOf('/upload/');
-          if (uploadIdx === -1) return src;
-          const afterUpload = u.pathname.slice(uploadIdx + 8); // string setelah "/upload/"
-          // Cari public_id: bagian terakhir yang tidak dimulai dengan huruf kecil + underscore (bukan transform)
-          // Cara paling andal: split by "/" dan ambil segmen dari kanan sampai ketemu transform
-          const parts = afterUpload.split('/');
-          // Transform Cloudinary biasanya mengandung "," atau "_" seperti "w_900,h_636,c_fill,q_80"
-          // Public ID biasanya di bagian paling kanan (termasuk ekstensi file)
-          // Strategi: buang semua segmen yang terlihat seperti transform (mengandung koma atau underscore+digit)
-          const isTransform = s => /[,]/.test(s) || /^[a-z]{1,3}_/.test(s);
-          let publicIdStart = 0;
-          for (let i = 0; i < parts.length; i++) {
-            if (isTransform(parts[i])) publicIdStart = i + 1;
-          }
-          const publicId = parts.slice(publicIdStart).join('/');
-          // Bangun URL baru: minta kualitas 100%, tanpa resize, format asli
-          const hdPath = u.pathname.slice(0, uploadIdx + 8) + 'q_100,fl_progressive/' + publicId;
-          return u.origin + hdPath;
-        } catch (e) {
-          return src; // kalau parsing URL gagal, pakai aslinya
-        }
-      }
-
-      // ── Tentukan SCALE dan ukuran canvas ────────────────────────────────
-      // Mode normal: langsung set 900×636, cepat.
-      // Mode HD: pertama load gambar dari Cloudinary resolusi asli untuk tahu
-      //          dimensi aslinya, lalu gunakan itu sebagai ukuran canvas.
-      //          Minimal 4500×3180 untuk memastikan tajam saat dicetak A4.
-      let SCALE, CW, CH;
-      let hdTemplateImg = null; // cache gambar HD yang sudah di-load
-
-      if (_certHDMode && cfgSrc) {
-        try {
-          // Muat gambar resolusi asli dari Cloudinary
-          const hdSrc = _toHDCloudinaryUrl(cfgSrc);
-          hdTemplateImg = await _cmLoadImg(hdSrc);
-
-          const natW = hdTemplateImg.naturalWidth  || hdTemplateImg.width  || BASE_W;
-          const natH = hdTemplateImg.naturalHeight || hdTemplateImg.height || BASE_H;
-
-          // Pakai resolusi asli gambar, diperbesar kalau masih kurang dari minimum cetak
-          const MIN_W = 4500, MIN_H = 3180;
-          if (natW >= MIN_W && natH >= MIN_H) {
-            // Gambar Cloudinary sudah cukup besar — pakai resolusi aslinya langsung
-            CW = natW; CH = natH;
-          } else {
-            // Gambar lebih kecil dari minimum — scale up sampai penuhi minimum
-            const scaleToMin = Math.max(MIN_W / natW, MIN_H / natH);
-            CW = Math.round(natW * scaleToMin);
-            CH = Math.round(natH * scaleToMin);
-          }
-          SCALE = CW / BASE_W; // misalnya 4500/900 = 5
-        } catch (e) {
-          // Fallback kalau URL HD gagal dimuat: gunakan SCALE 4 (3600×2544)
-          CW = BASE_W * 4; CH = BASE_H * 4; SCALE = 4;
-        }
-      } else {
-        SCALE = 1; CW = BASE_W; CH = BASE_H;
-      }
-
+      const SCALE  = _certHDMode ? 3 : 1;
+      const CW = BASE_W * SCALE, CH = BASE_H * SCALE;
       canvas.width  = CW;
       canvas.height = CH;
       const ctx = canvas.getContext('2d');
@@ -1675,9 +1615,7 @@
         // mode HD diaktifkan — bagian kanan sertifikat terpotong keluar).
         if (cfgSrc) {
           try {
-            // Mode HD: pakai gambar resolusi asli yang sudah dimuat di atas (hdTemplateImg).
-            // Mode normal: muat fresh dari URL asli.
-            const tpl = (hdTemplateImg) ? hdTemplateImg : await _cmLoadImg(cfgSrc);
+            const tpl = await _cmLoadImg(cfgSrc);
             ctx.drawImage(tpl, 0, 0, BASE_W, BASE_H);
           } catch(e) {
             ctx.fillStyle = '#1b1c27'; ctx.fillRect(0, 0, BASE_W, BASE_H);
@@ -1722,15 +1660,20 @@
         lines.forEach((ln, i) => ctx.fillText(ln, centreX, startY + i * lineH));
         ctx.restore();
 
-        // ── 4. UID watermark ──────────────────────────────────────────
+        // ── 4. ID watermark — ikut label & nilai dari form survei kalau ada
+        //      (mis. "Student ID: STU-2026-0005"), fallback ke UID asli Firebase
+        //      dengan label "UID" kalau survei tidak punya field ID kustom.
+        //      QR code TETAP pakai data.uid (UID asli) — lihat langkah 6 di bawah,
+        //      tidak terpengaruh oleh ID kustom ini sama sekali.
         if (cfgUidVisible) {
           ctx.save();
           try { await document.fonts.load('400 16px "' + cfgUidFont + '"'); } catch(e) {}
           ctx.fillStyle    = cfgUidColor;
           ctx.textAlign    = 'center';
           ctx.textBaseline = 'middle';
-          // Di verify.html pakai uid langsung (cert_id dari survey tidak tersedia)
-          const uidText = 'UID: ' + (data.uid || '');
+          const watermarkLabel = (data.displayLabel || 'UID').toUpperCase();
+          const watermarkValue = data.displayId || data.uid || '';
+          const uidText = watermarkLabel + ': ' + watermarkValue;
           let ufs = 16;
           while (ufs >= 6) {
             ctx.font = '400 ' + ufs + 'px "' + cfgUidFont + '", monospace';

@@ -1098,11 +1098,11 @@
               cert_name:       data.cert_name || '—',
               email:           data.email     || '—',
               issued_at:       data.issued_at || null,
+              uid:             uid,           // ← Firebase UID yang dipakai untuk QR code URL
               source:          'sheet',
               event:           data.event     || null,
               detectedCourse,
               detectedCustomId,
-              // certConfig dari Sheet — dipakai renderCertModal kalau Firestore kosong
               sheetCertConfig: data.certConfig || null,
             };
           }
@@ -1381,9 +1381,9 @@
               cert_name: d.cert_name,
               email:     d.email,
               issued_at: d.issued_at,
+              uid:       studentId,       // ← Firebase UID (= document ID = yang dipakai QR code URL)
               source:    'firestore',
-              detectedCourse: detectCourseFromAnswers(d.survey_answers),
-              // === BARU: Deteksi ID Kustom dari Firestore data ===
+              detectedCourse:   detectCourseFromAnswers(d.survey_answers),
               detectedCustomId: detectCustomIdFromAnswers(d.survey_answers),
             });
             return;

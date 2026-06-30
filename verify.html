@@ -1030,7 +1030,7 @@
       });
     }
 
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxUWefLapwBRHntmZjIcLffgMwJYMeAX9AKqpVsO4lbLYzrj1m-oHA9_UQ3jqj8nL7FFw/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwB8OWQ8rMQXkFgVlI6DJ2DKmzhzJmFXb9JhS55pBAC__Dv56oqoyo4OjZYm2viLPxqhw/exec";
 
     // ── Deteksi otomatis "kursus/profesi" dari jawaban survey ──────
     const COURSE_KEYWORDS = [
@@ -1087,7 +1087,16 @@
             // Custom ID dari Apps Script langsung (kalau backend sudah deteksi sendiri)
             let detectedCustomId = null;
             if (data.certificate_id) detectedCustomId = { label: 'Certificate ID', value: String(data.certificate_id) };
-            else if (data.student_id) detectedCustomId = { label: 'Student ID', value: String(data.student_id) };
+            else if (data.student_id) {
+              // Pakai label asli dari header kolom Sheet kalau Apps Script mengirimnya (student_id_label).
+              // Ini yang menentukan teks yang tampil di verify card:
+              // mis. kalau kolom Sheet bernama "Certificate ID" → tampil "CERTIFICATE ID"
+              //      kalau kolom Sheet bernama "Student ID"     → tampil "STUDENT ID"
+              //      kalau kolom Sheet bernama "ID Siswa"       → tampil "ID SISWA"
+              // Fallback: 'ID' kalau Apps Script belum update (belum kirim field ini).
+              const rawLabel = data.student_id_label || data.student_id_col || 'ID';
+              detectedCustomId = { label: rawLabel, value: String(data.student_id) };
+            }
 
             if (!detectedCourse || !detectedCustomId) {
               const possibleAnswers = data.survey_answers || data.dynamicResponses || data.responses || null;

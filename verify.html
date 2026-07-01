@@ -177,6 +177,11 @@
       animation: spin 0.9s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .cert-modal-mini-spinner {
+      display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid rgba(0,0,0,0.25); border-top-color: #000;
+      animation: spin 0.8s linear infinite; vertical-align: -2px;
+    }
     .loading-text {
       font-size: 13px;
       color: var(--text-muted);
@@ -987,13 +992,13 @@
         <span id="cert-modal-title">E-Certificate</span>
         <div id="cert-modal-header-right">
           <button id="cert-modal-hd-btn" onclick="certModalToggleHD()" title="Toggle HD quality" style="
-            background:var(--gold); border:1px solid var(--gold);
-            border-radius:8px; color:#000; cursor:pointer;
+            background:rgba(245,230,0,0.1); border:1px solid rgba(245,230,0,0.35);
+            border-radius:8px; color:var(--gold); cursor:pointer;
             width:38px; height:30px; font-size:11px; font-weight:700;
             font-family:var(--font-mono,monospace); letter-spacing:0.05em;
             display:flex; align-items:center; justify-content:center;
             transition:all 0.2s;
-          ">HD ✓</button>
+          ">HD</button>
           <button id="cert-modal-close" onclick="closeCertModal()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -1592,7 +1597,8 @@
     let _certData          = null;
     let _certConfig        = null;
     let _sheetCertConfig   = null;
-    let _certHDMode        = true;  // true = 2700×1908 HD (default, konsisten dgn kualitas native halaman belakang), false = 900×636 preview cepat
+    let _certHDMode        = false; // false = 900×636 preview cepat (default, biar buka pertama nggak lelet), true = 2700×1908 HD (preview manual)
+    let _certHDCanvasCacheKey = null; // cache render HD khusus buat download, terpisah dari preview
     let _certModalPage     = 0;     // 0 = halaman depan, 1 = halaman belakang
     let _certModalMaxPage  = 0;     // diupdate begitu diketahui apakah ada halaman 2
 
@@ -1715,6 +1721,7 @@
       if (!_certData || !_certData.uid || !_certData.name) return;
 
       _certModalBlob = null;
+      _certHDCanvasCacheKey = null;
       document.getElementById('cert-modal-canvas').style.display  = 'none';
       document.getElementById('cert-modal-loading').style.display = 'flex';
       document.getElementById('cert-modal-actions').style.display = 'none';
@@ -1744,38 +1751,25 @@
       document.removeEventListener('keydown', _cmArrowKeys);
       const dlMenu = document.getElementById('cert-modal-dl-menu');
       if (dlMenu) dlMenu.classList.remove('open');
-      // Reset HD mode ke default (HD aktif — konsisten dgn kualitas halaman belakang)
-      _certHDMode = true;
+      // Reset HD mode ke default (non-HD — preview cepat)
+      _certHDMode = false;
       const btn = document.getElementById('cert-modal-hd-btn');
       if (btn) {
-        btn.style.background  = 'var(--gold)';
-        btn.style.color       = '#000';
-        btn.style.borderColor = 'var(--gold)';
-        btn.textContent       = 'HD ✓';
+        btn.style.background  = 'rgba(245,230,0,0.1)';
+        btn.style.color       = 'var(--gold)';
+        btn.style.borderColor = 'rgba(245,230,0,0.35)';
+        btn.textContent       = 'HD';
       }
     }
     function _cmEsc(e) { if (e.key === 'Escape') closeCertModal(); }
 
-    async function renderCertModal(data) {
-      const canvas   = document.getElementById('cert-modal-canvas');
-      const loading  = document.getElementById('cert-modal-loading');
-      const actions  = document.getElementById('cert-modal-actions');
-      const shareBtn = document.getElementById('cert-modal-share-btn');
-      if (shareBtn) shareBtn.style.display = navigator.share ? '' : 'none';
-
-      // Tunggu _certConfig siap (max 5 detik)
-      if (_certConfig === null) {
-        await new Promise(r => {
-          const t = setTimeout(r, 5000);
-          const iv = setInterval(() => { if (_certConfig !== null) { clearInterval(iv); clearTimeout(t); r(); } }, 80);
-        });
-      }
-      // Kalau Firestore masih null/kosong, pakai config dari Sheet
-      if (!_certConfig || !_certConfig.templateBase64) {
-        _certConfig = _sheetCertConfig || _certConfig || {};
-      }
-      const cfg = _certConfig || {};
-
+    // ── Gambar sertifikat halaman depan ke canvas manapun (reusable) ────
+    // Dipakai baik untuk preview di modal (scale sesuai _certHDMode) MAUPUN
+    // untuk render HD khusus download (scale dipaksa 3x, terpisah dari
+    // canvas preview yang sedang tampil — supaya preview tetap cepat/ringan
+    // tapi hasil download tetap selalu kualitas penuh).
+    async function _cmRenderFrontCanvas(canvas, scale, data, cfg) {
+      cfg = cfg || {};
       // ── Baca config PERSIS seperti drawCertificateOnCanvas di index.html ──
       let cfgSrc       = 'sertifikat-template.png';
       let cfgFont      = 'Alex Brush';
@@ -1814,142 +1808,174 @@
       if (cfg.qrWidth  != null) qrW = cfg.qrWidth;
       if (cfg.qrHeight != null) qrH = cfg.qrHeight;
       if (cfg.qrColor  != null) qrColor = cfg.qrColor;
-      // Halaman belakang (modul/lampiran) — dari Sheet field "Back Image URL"
-      // atau dari Firestore certificate_config.backImageUrl
-      const backImageUrl = cfg.backImageUrl || cfg.back_image_url || '';
 
       // Canvas size: SCALE 1 = 900×636 (preview normal), SCALE 3 = 2700×1908 (HD)
       // ctx.scale(SCALE,SCALE) membuat semua koordinat Firestore (skala 900×636) tetap benar
       const BASE_W = 900, BASE_H = 636;
-      const SCALE  = _certHDMode ? 3 : 1;
-      const CW = BASE_W * SCALE, CH = BASE_H * SCALE;
+      const CW = BASE_W * scale, CH = BASE_H * scale;
       canvas.width  = CW;
       canvas.height = CH;
       const ctx = canvas.getContext('2d');
-      ctx.scale(SCALE, SCALE);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset kalau canvas ini dipakai ulang (cache)
+      ctx.scale(scale, scale);
       ctx.clearRect(0, 0, BASE_W, BASE_H);
 
+      // ── 1. Preload font nama ───────────────────────────────────────
       try {
-        // ── 1. Preload font nama ───────────────────────────────────────
-        try {
-          const fp = [];
-          if (cfgFontItalic) fp.push('italic');
-          if (cfgFontBold)   fp.push('bold');
-          fp.push('68px');
-          await document.fonts.load(fp.join(' ') + ' "' + cfgFont + '"');
-        } catch(e) {}
+        const fp = [];
+        if (cfgFontItalic) fp.push('italic');
+        if (cfgFontBold)   fp.push('bold');
+        fp.push('68px');
+        await document.fonts.load(fp.join(' ') + ' "' + cfgFont + '"');
+      } catch(e) {}
 
-        // ── 2. Gambar template dari Cloudinary ────────────────────────
-        // PENTING: ctx.scale(SCALE, SCALE) di atas sudah membuat seluruh
-        // sistem koordinat canvas otomatis terkali SCALE — jadi di sini
-        // HARUS pakai basis logis (BASE_W/BASE_H = 900×636), BUKAN CW/CH
-        // (ukuran fisik 2700×1908 saat mode HD). Memakai CW/CH di sini
-        // menyebabkan "double-scaling": gambar template tergambar 3×
-        // lebih besar dari seharusnya, sehingga cuma 1/3 kiri-atas yang
-        // muncul di kanvas (persis bug crop/zoom yang dilaporkan saat
-        // mode HD diaktifkan — bagian kanan sertifikat terpotong keluar).
-        if (cfgSrc) {
-          try {
-            const tpl = await _cmLoadImg(cfgSrc);
-            ctx.drawImage(tpl, 0, 0, BASE_W, BASE_H);
-          } catch(e) {
-            ctx.fillStyle = '#1b1c27'; ctx.fillRect(0, 0, BASE_W, BASE_H);
-          }
-        } else {
+      // ── 2. Gambar template dari Cloudinary ────────────────────────
+      // PENTING: ctx.scale(SCALE, SCALE) di atas sudah membuat seluruh
+      // sistem koordinat canvas otomatis terkali SCALE — jadi di sini
+      // HARUS pakai basis logis (BASE_W/BASE_H = 900×636), BUKAN CW/CH
+      // (ukuran fisik 2700×1908 saat mode HD). Memakai CW/CH di sini
+      // menyebabkan "double-scaling": gambar template tergambar 3×
+      // lebih besar dari seharusnya, sehingga cuma 1/3 kiri-atas yang
+      // muncul di kanvas (persis bug crop/zoom yang dilaporkan saat
+      // mode HD diaktifkan — bagian kanan sertifikat terpotong keluar).
+      if (cfgSrc) {
+        try {
+          const tpl = await _cmLoadImg(cfgSrc);
+          ctx.drawImage(tpl, 0, 0, BASE_W, BASE_H);
+        } catch(e) {
           ctx.fillStyle = '#1b1c27'; ctx.fillRect(0, 0, BASE_W, BASE_H);
         }
+      } else {
+        ctx.fillStyle = '#1b1c27'; ctx.fillRect(0, 0, BASE_W, BASE_H);
+      }
 
-        // ── 3. Nama — auto-scale + wrap (identik dengan drawCertificateOnCanvas) ──
+      // ── 3. Nama — auto-scale + wrap (identik dengan drawCertificateOnCanvas) ──
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = cfgFontColor;
+      const centreX = bboxX + bboxW / 2;
+
+      function wrapTextFinal(c, text, maxWidth) {
+        const words = text.split(' '), lines = []; let cur = '';
+        for (let i = 0; i < words.length; i++) {
+          const test = cur ? cur + ' ' + words[i] : words[i];
+          if (c.measureText(test).width > maxWidth && cur) { lines.push(cur); cur = words[i]; }
+          else cur = test;
+        }
+        if (cur) lines.push(cur); return lines;
+      }
+
+      let fontSize = 68, lines, lineH, ascent, descent, totalH;
+      const SAFE_RATIO = 0.72;
+      while (fontSize >= 10) {
+        const sp = [];
+        if (cfgFontItalic) sp.push('italic');
+        if (cfgFontBold)   sp.push('bold');
+        sp.push(fontSize + 'px');
+        ctx.font = sp.join(' ') + ' "' + cfgFont + '"';
+        lines = wrapTextFinal(ctx, data.name, bboxW);
+        ascent  = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxAscent  || fontSize * 0.80));
+        descent = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxDescent || fontSize * 0.30));
+        lineH  = ascent + descent + fontSize * 0.18;
+        totalH = lines.length * lineH;
+        if (totalH <= bboxH * SAFE_RATIO) break;
+        fontSize--;
+      }
+      const startY = bboxY + (bboxH - totalH) / 2 + ascent;
+      lines.forEach((ln, i) => ctx.fillText(ln, centreX, startY + i * lineH));
+      ctx.restore();
+
+      // ── 4. ID watermark — ikut label & nilai dari form survei kalau ada
+      //      (mis. "Student ID: STU-2026-0005"), fallback ke UID asli Firebase
+      //      dengan label "UID" kalau survei tidak punya field ID kustom.
+      //      QR code TETAP pakai data.uid (UID asli) — lihat langkah 5 di bawah,
+      //      tidak terpengaruh oleh ID kustom ini sama sekali.
+      if (cfgUidVisible) {
         ctx.save();
-        ctx.textAlign = 'center';
-        ctx.fillStyle = cfgFontColor;
-        const centreX = bboxX + bboxW / 2;
-
-        function wrapTextFinal(c, text, maxWidth) {
-          const words = text.split(' '), lines = []; let cur = '';
-          for (let i = 0; i < words.length; i++) {
-            const test = cur ? cur + ' ' + words[i] : words[i];
-            if (c.measureText(test).width > maxWidth && cur) { lines.push(cur); cur = words[i]; }
-            else cur = test;
-          }
-          if (cur) lines.push(cur); return lines;
+        try { await document.fonts.load('400 16px "' + cfgUidFont + '"'); } catch(e) {}
+        ctx.fillStyle    = cfgUidColor;
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        const watermarkLabel = (data.displayLabel || 'UID').toUpperCase();
+        const watermarkValue = data.displayId || data.uid || '';
+        const uidText = watermarkLabel + ': ' + watermarkValue;
+        let ufs = 16;
+        while (ufs >= 6) {
+          ctx.font = '400 ' + ufs + 'px "' + cfgUidFont + '", monospace';
+          const m = ctx.measureText(uidText);
+          if (m.width <= cfgUidW * 0.95) break;
+          ufs--;
         }
-
-        let fontSize = 68, lines, lineH, ascent, descent, totalH;
-        const SAFE_RATIO = 0.72;
-        while (fontSize >= 10) {
-          const sp = [];
-          if (cfgFontItalic) sp.push('italic');
-          if (cfgFontBold)   sp.push('bold');
-          sp.push(fontSize + 'px');
-          ctx.font = sp.join(' ') + ' "' + cfgFont + '"';
-          lines = wrapTextFinal(ctx, data.name, bboxW);
-          ascent  = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxAscent  || fontSize * 0.80));
-          descent = Math.max(...lines.map(l => ctx.measureText(l).actualBoundingBoxDescent || fontSize * 0.30));
-          lineH  = ascent + descent + fontSize * 0.18;
-          totalH = lines.length * lineH;
-          if (totalH <= bboxH * SAFE_RATIO) break;
-          fontSize--;
-        }
-        const startY = bboxY + (bboxH - totalH) / 2 + ascent;
-        lines.forEach((ln, i) => ctx.fillText(ln, centreX, startY + i * lineH));
+        ctx.fillText(uidText, cfgUidX + cfgUidW / 2, cfgUidY + cfgUidH / 2);
         ctx.restore();
+      }
 
-        // ── 4. ID watermark — ikut label & nilai dari form survei kalau ada
-        //      (mis. "Student ID: STU-2026-0005"), fallback ke UID asli Firebase
-        //      dengan label "UID" kalau survei tidak punya field ID kustom.
-        //      QR code TETAP pakai data.uid (UID asli) — lihat langkah 6 di bawah,
-        //      tidak terpengaruh oleh ID kustom ini sama sekali.
-        if (cfgUidVisible) {
-          ctx.save();
-          try { await document.fonts.load('400 16px "' + cfgUidFont + '"'); } catch(e) {}
-          ctx.fillStyle    = cfgUidColor;
-          ctx.textAlign    = 'center';
-          ctx.textBaseline = 'middle';
-          const watermarkLabel = (data.displayLabel || 'UID').toUpperCase();
-          const watermarkValue = data.displayId || data.uid || '';
-          const uidText = watermarkLabel + ': ' + watermarkValue;
-          let ufs = 16;
-          while (ufs >= 6) {
-            ctx.font = '400 ' + ufs + 'px "' + cfgUidFont + '", monospace';
-            const m = ctx.measureText(uidText);
-            if (m.width <= cfgUidW * 0.95) break;
-            ufs--;
-          }
-          ctx.fillText(uidText, cfgUidX + cfgUidW / 2, cfgUidY + cfgUidH / 2);
-          ctx.restore();
-        }
-
-        // ── 5. QR Code ────────────────────────────────────────────────
-        if (showQR && typeof QRCode !== 'undefined') {
-          try {
-            const vUrl = 'https://ripper501.github.io/e-sertfikat/verify.html?id=' + encodeURIComponent(data.uid);
-            const qrEl = document.getElementById('cert-modal-qr-helper');
-            qrEl.innerHTML = '';
-            new QRCode(qrEl, {
-              text: vUrl, width: Math.round(qrW), height: Math.round(qrH),
-              colorDark: qrColor, colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H
+      // ── 5. QR Code ────────────────────────────────────────────────
+      // Pakai div helper sendiri (dibuat & dibuang di sini) — bukan elemen
+      // statis bersama — supaya render preview & render HD download yang
+      // mungkin jalan berdekatan tidak saling rebutan/tabrakan.
+      if (showQR && typeof QRCode !== 'undefined') {
+        let qrEl = null;
+        try {
+          const vUrl = 'https://ripper501.github.io/e-sertfikat/verify.html?id=' + encodeURIComponent(data.uid);
+          qrEl = document.createElement('div');
+          qrEl.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;';
+          document.body.appendChild(qrEl);
+          new QRCode(qrEl, {
+            text: vUrl, width: Math.round(qrW), height: Math.round(qrH),
+            colorDark: qrColor, colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H
+          });
+          await new Promise(r => setTimeout(r, 350));
+          let qrDataUrl = null;
+          const qc = qrEl.querySelector('canvas'); const qi = qrEl.querySelector('img');
+          if (qc) { try { qrDataUrl = qc.toDataURL('image/png'); } catch(e){} }
+          if (!qrDataUrl && qi?.src) qrDataUrl = qi.src;
+          if (qrDataUrl) {
+            await new Promise(r => {
+              const im = new Image();
+              im.onload = () => { ctx.drawImage(im, qrX, qrY, qrW, qrH); r(); };
+              im.onerror = r; setTimeout(r, 2000); im.src = qrDataUrl;
             });
-            await new Promise(r => setTimeout(r, 350));
-            let qrDataUrl = null;
-            const qc = qrEl.querySelector('canvas'); const qi = qrEl.querySelector('img');
-            if (qc) { try { qrDataUrl = qc.toDataURL('image/png'); } catch(e){} }
-            if (!qrDataUrl && qi?.src) qrDataUrl = qi.src;
-            if (qrDataUrl) {
-              await new Promise(r => {
-                const im = new Image();
-                im.onload = () => { ctx.drawImage(im, qrX, qrY, qrW, qrH); r(); };
-                im.onerror = r; setTimeout(r, 2000); im.src = qrDataUrl;
-              });
-              // Gambar logo di tengah QR (identik dengan drawLogoOnQRCenter di index.html)
-              await _cmDrawLogoOnQR(ctx, qrX, qrY, qrW, qrH);
-            }
-          } catch(e) { console.warn('[CertModal] QR gagal:', e.message); }
-        }
+            // Gambar logo di tengah QR (identik dengan drawLogoOnQRCenter di index.html)
+            await _cmDrawLogoOnQR(ctx, qrX, qrY, qrW, qrH);
+          }
+        } catch(e) { console.warn('[CertModal] QR gagal:', e.message); }
+        finally { if (qrEl) qrEl.remove(); }
+      }
 
-        // ── 6. Export halaman depan ke blob ──────────────────────────
+      return canvas;
+    }
+
+    async function renderCertModal(data) {
+      const canvas   = document.getElementById('cert-modal-canvas');
+      const loading  = document.getElementById('cert-modal-loading');
+      const actions  = document.getElementById('cert-modal-actions');
+      const shareBtn = document.getElementById('cert-modal-share-btn');
+      if (shareBtn) shareBtn.style.display = navigator.share ? '' : 'none';
+
+      // Tunggu _certConfig siap (max 5 detik)
+      if (_certConfig === null) {
+        await new Promise(r => {
+          const t = setTimeout(r, 5000);
+          const iv = setInterval(() => { if (_certConfig !== null) { clearInterval(iv); clearTimeout(t); r(); } }, 80);
+        });
+      }
+      // Kalau Firestore masih null/kosong, pakai config dari Sheet
+      if (!_certConfig || !_certConfig.templateBase64) {
+        _certConfig = _sheetCertConfig || _certConfig || {};
+      }
+      const cfg = _certConfig || {};
+      // Halaman belakang (modul/lampiran) — dari Sheet field "Back Image URL"
+      // atau dari Firestore certificate_config.backImageUrl
+      const backImageUrl = cfg.backImageUrl || cfg.back_image_url || '';
+      const SCALE = _certHDMode ? 3 : 1;
+
+      try {
+        await _cmRenderFrontCanvas(canvas, SCALE, data, cfg);
+
+        // ── Export halaman depan (preview) ke blob ────────────────────
         // Catatan: tombol Download/Share BELUM ditampilkan di sini —
-        // baru ditampilkan setelah halaman belakang (step 7) juga selesai
+        // baru ditampilkan setelah halaman belakang juga selesai
         // diproses, supaya tidak ada kondisi balapan (race condition) di
         // mana pengguna sempat klik Download sebelum halaman 2 siap.
         try {
@@ -1963,7 +1989,7 @@
         loading.style.display = 'none';
         canvas.style.display  = 'block';
 
-        // ── 7. Halaman belakang (backImageUrl) ───────────────────────
+        // ── Halaman belakang (backImageUrl) ───────────────────────────
         // Dimuat dan ditampilkan di bawah halaman depan di dalam modal.
         // Kalau backImageUrl kosong/gagal, canvas halaman belakang tetap
         // tersembunyi — tidak ada error ke pengguna.
@@ -1973,8 +1999,8 @@
         if (backImageUrl && page2Wrap && canvasBack) {
           try {
             const backImg = await _cmLoadImg(backImageUrl);
-            const bw = backImg.naturalWidth  || backImg.width  || CW;
-            const bh = backImg.naturalHeight || backImg.height || CH;
+            const bw = backImg.naturalWidth  || backImg.width  || canvas.width;
+            const bh = backImg.naturalHeight || backImg.height || canvas.height;
             canvasBack.width  = bw;
             canvasBack.height = bh;
             const bctx = canvasBack.getContext('2d');
@@ -1992,7 +2018,7 @@
         }
         certModalUpdateNav();
 
-        // ── 8. Baru sekarang tombol Download/Share ditampilkan ───────
+        // ── Baru sekarang tombol Download/Share ditampilkan ───────────
         // (kedua halaman — kalau ada — sudah pasti siap dipakai/diunduh)
         if (actions) actions.style.display = 'flex';
 
@@ -2081,6 +2107,8 @@
       ctx.restore();
     }
 
+    // Fallback lama — dipakai kalau Share gagal, pakai blob preview yang
+    // sedang tampil (cepat, apa adanya, bukan versi HD khusus download).
     function certModalDownload() {
       if (!_certModalBlob) return;
       const n = (_certData?.name || 'cert').replace(/[^a-z0-9]/gi, '_');
@@ -2088,6 +2116,26 @@
       const a = document.createElement('a'); a.href = u; a.download = 'Sertifikat_' + n + '.png';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(u), 3000);
+    }
+
+    // ── Render HD khusus buat download (terpisah dari canvas preview) ──
+    // Selalu 2700×1908 (scale 3x) apa pun status toggle HD preview, dan
+    // di-cache per sertifikat supaya klik Download berkali-kali tidak
+    // render ulang dari nol setiap kali.
+    async function _cmGetHDFrontCanvas() {
+      if (!_certData) return null;
+      const key = (_certData.uid || '') + '|' + (_certConfig?.templateBase64 ? '1' : '0');
+      let hdCanvas = document.getElementById('cert-modal-canvas-hd-export');
+      if (!hdCanvas) {
+        hdCanvas = document.createElement('canvas');
+        hdCanvas.id = 'cert-modal-canvas-hd-export';
+        hdCanvas.style.display = 'none';
+        document.body.appendChild(hdCanvas);
+      }
+      if (_certHDCanvasCacheKey === key && hdCanvas.width) return hdCanvas; // sudah pernah dirender
+      await _cmRenderFrontCanvas(hdCanvas, 3, _certData, _certConfig || {});
+      _certHDCanvasCacheKey = key;
+      return hdCanvas;
     }
 
     // ── Popup pilihan format Download (PNG / PDF) ──────────────────────
@@ -2104,27 +2152,75 @@
       menu.classList.remove('open');
     });
 
-    function certModalDownloadFormat(fmt) {
-      const menu = document.getElementById('cert-modal-dl-menu');
-      if (menu) menu.classList.remove('open');
-      if (fmt === 'pdf') certModalDownloadPDF();
-      else certModalDownload();
+    // Tandai tombol Download sedang "bekerja" (kasih spinner + nonaktifkan
+    // klik sementara) supaya jelas kalau sistem lagi proses — bukan macet.
+    function _cmSetDLBusy(busy, label) {
+      const btn = document.getElementById('cert-modal-dl-btn');
+      if (!btn) return;
+      if (busy) {
+        if (btn.dataset.origHtml === undefined) btn.dataset.origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.style.opacity = '0.75';
+        btn.style.cursor = 'wait';
+        btn.style.pointerEvents = 'none';
+        btn.innerHTML = '<span class="cert-modal-mini-spinner"></span>' + (label || 'Menyiapkan…');
+      } else {
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.style.cursor = '';
+        btn.style.pointerEvents = '';
+        if (btn.dataset.origHtml !== undefined) { btn.innerHTML = btn.dataset.origHtml; delete btn.dataset.origHtml; }
+      }
     }
 
-    // ── Download PDF — gabungkan halaman depan (+ belakang kalau ada) ──
+    async function certModalDownloadFormat(fmt) {
+      const menu = document.getElementById('cert-modal-dl-menu');
+      if (menu) menu.classList.remove('open');
+      _cmSetDLBusy(true, fmt === 'pdf' ? 'Membuat PDF…' : 'Menyiapkan…');
+      // Kasih jeda 1 frame supaya browser sempat "melukis" status loading
+      // dulu SEBELUM proses berat (render HD/encode gambar) mulai — ini
+      // yang bikin tombol tidak terasa macet/nge-freeze saat diklik.
+      await new Promise(r => setTimeout(r, 30));
+      try {
+        if (fmt === 'pdf') await certModalDownloadPDF();
+        else await certModalDownloadPNG();
+      } catch (e) {
+        console.error('[CertModal] Download gagal:', e.message);
+      } finally {
+        _cmSetDLBusy(false);
+      }
+    }
+
+    // ── Download PNG — selalu pakai render HD (bukan blob preview) ─────
+    async function certModalDownloadPNG() {
+      const hdCanvas = await _cmGetHDFrontCanvas();
+      if (!hdCanvas) return;
+      const blob = await new Promise(resolve => {
+        try { hdCanvas.toBlob(b => resolve(b || null), 'image/png'); }
+        catch(e) { resolve(null); }
+      });
+      if (!blob) return;
+      const n = (_certData?.name || 'cert').replace(/[^a-z0-9]/gi, '_');
+      const u = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = u; a.download = 'Sertifikat_' + n + '.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 3000);
+    }
+
+    // ── Download PDF — gabungkan halaman depan HD (+ belakang kalau ada) ──
     async function certModalDownloadPDF() {
-      const canvas1 = document.getElementById('cert-modal-canvas');
-      if (!canvas1 || canvas1.style.display === 'none' || !canvas1.width) return;
       if (typeof window.jspdf === 'undefined') {
         console.warn('[CertModal] jsPDF belum termuat.');
-        certModalDownload();
+        await certModalDownloadPNG();
         return;
       }
       try {
         const { jsPDF } = window.jspdf;
-        const w1 = canvas1.width, h1 = canvas1.height;
+        const hdCanvas = await _cmGetHDFrontCanvas();
+        if (!hdCanvas) return;
+        const w1 = hdCanvas.width, h1 = hdCanvas.height;
         const pdf = new jsPDF({ orientation: w1 >= h1 ? 'l' : 'p', unit: 'px', format: [w1, h1] });
-        pdf.addImage(canvas1.toDataURL('image/png'), 'PNG', 0, 0, w1, h1);
+        pdf.addImage(hdCanvas.toDataURL('image/png'), 'PNG', 0, 0, w1, h1);
 
         const page2Wrap = document.getElementById('cert-modal-page2-wrap');
         const canvas2    = document.getElementById('cert-modal-canvas-back');

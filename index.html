@@ -558,6 +558,28 @@
   }
   .survey-other-input::placeholder { color: rgba(255,255,255,0.6); font-weight: 500; }
 
+  /* ─── C&A (Choice & Answer) ─── */
+  .survey-ca-block { display: flex; flex-direction: column; gap: 0; }
+  .survey-ca-answer-wrap {
+    margin-top: 8px;
+    animation: caAnswerIn 0.2s ease-out both;
+  }
+  @keyframes caAnswerIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .survey-ca-textarea {
+    width: 100%; box-sizing: border-box;
+    background: rgba(255,255,255,0.06);
+    border: 1.5px solid var(--accent);
+    border-radius: 12px; padding: 12px 14px;
+    color: var(--text); font-size: 14px; font-family: var(--font-main);
+    line-height: 1.45; resize: vertical; min-height: 52px; outline: none;
+    box-shadow: 0 0 14px var(--accent-glow);
+  }
+  .survey-ca-textarea::placeholder { color: var(--text-dim); }
+  .survey-ca-textarea:focus { border-color: var(--accent); }
+
   /* ─── PERBAIKAN KHUSUS MOBILE (Layar HP) ─── */
   @media (max-width: 500px) {
     .survey-answer-grid {
@@ -584,6 +606,10 @@
       font-size: 12.5px; 
       line-height: 1.3;
     }
+    /* C&A tetap 1 kolom penuh di HP (butuh ruang untuk textarea alasan) */
+    .survey-ca-grid { grid-template-columns: 1fr !important; }
+    .survey-ca-grid .survey-answer-card { min-height: auto; }
+    .survey-ca-grid .survey-answer-card-text { font-size: 14px; }
   }
 
   /* ─── SPINNER ─────────────────────────────────────────── */
@@ -4626,6 +4652,8 @@ let studentSurveyAnswers   = {};    // { [questionId]: answerString }
 let studentSurveyIndex     = 0;     // index pertanyaan yang sedang ditampilkan
 let studentSurveyOtherSelected = {}; // { [questionId]: true/false } — apakah kartu "Lainnya" yang sedang dipilih
 let studentSurveyOtherDraft    = {}; // { [questionId]: string } — simpan ketikan "Lainnya" walau sempat pindah ke opsi lain lalu balik lagi
+let studentSurveyCASelected    = {}; // { [questionId]: string } — opsi C&A yang sedang dipilih
+let studentSurveyCAText        = {}; // { [questionId]: string } — teks alasan C&A yang sedang diketik
 
 async function surveyStart() {
   // ── Mulai preload gambar sertifikat (template + halaman belakang) DI
@@ -4661,6 +4689,8 @@ async function surveyStart() {
     studentSurveyIndex   = 0;
     studentSurveyOtherSelected = {};
     studentSurveyOtherDraft    = {};
+    studentSurveyCASelected    = {};
+    studentSurveyCAText        = {};
 
     // Pre-fill nama dari Google account jika ada
     if (currentUser?.displayName) {
@@ -4683,6 +4713,8 @@ async function surveyStart() {
     studentSurveyIndex   = 0;
     studentSurveyOtherSelected = {};
     studentSurveyOtherDraft    = {};
+    studentSurveyCASelected    = {};
+    studentSurveyCAText        = {};
     if (currentUser?.displayName) {
       studentSurveyAnswers['__fullname__'] = currentUser.displayName;
     }
@@ -4892,6 +4924,57 @@ function surveyRenderCurrentQuestion() {
       </div>
     `;
 
+  } else if (q.type === 'ca') {
+    // Choice & Answer: peserta pilih SATU opsi (radio), lalu WAJIB ketik
+    // alasan/penjelasan di kotak yang muncul di bawah opsi yang dipilih.
+    // Tersimpan ke Firestore/Sheet dalam format "Opsi - jawaban"
+    // (mis. "Sangat senang - banyak teman baru").
+    const optionsList = q.options || [];
+    // Pecah jawaban tersimpan "Opsi - teks" jadi { opt, text } supaya saat
+    // peserta kembali ke soal ini (klik Back) pilihan & ketikannya pulih.
+    const parsed = _caParseAnswer(existingAnswer, optionsList);
+    const selectedOpt  = studentSurveyCASelected[q.id] !== undefined ? studentSurveyCASelected[q.id] : parsed.opt;
+    const selectedText = (studentSurveyCAText[q.id] !== undefined ? studentSurveyCAText[q.id] : parsed.text) || '';
+
+    answerArea.innerHTML = `<div class="survey-answer-grid survey-ca-grid" style="grid-template-columns:1fr;">` + optionsList.map((opt, oi) => {
+      const isSelected = selectedOpt === opt;
+      const optId = `survey-ca-${studentSurveyIndex}-${oi}`;
+      const c = SURVEY_CARD_PALETTE[oi % SURVEY_CARD_PALETTE.length];
+      const border = isSelected ? 'var(--accent)' : c.border;
+      const glow   = isSelected ? `0 0 0 1px var(--accent), 0 0 22px var(--accent-glow), 0 8px 18px rgba(0,0,0,0.35)` : `0 8px 18px rgba(0,0,0,0.35), 0 0 14px ${c.glow}`;
+      return `
+        <div class="survey-ca-block">
+          <label for="${optId}" class="survey-answer-card" style="
+            background:${c.grad}; border:1.5px solid ${border}; box-shadow:${glow};
+          ">
+            <input type="radio" id="${optId}" name="survey-current-choice" value="${escapeHtml(opt)}" ${isSelected ? 'checked' : ''}
+              onchange="surveyCASelectOption('${q.id}', this.value)" />
+            ${isSelected
+              ? `<span class="survey-answer-check-circle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`
+              : `<span class="survey-answer-radio-dot"></span>`}
+            <span class="survey-answer-card-text">${escapeHtml(opt)}</span>
+          </label>
+          ${isSelected ? `
+            <div class="survey-ca-answer-wrap">
+              <textarea id="survey-ca-input-${studentSurveyIndex}" class="survey-ca-textarea" rows="2"
+                placeholder="Tulis alasan / penjelasanmu..."
+                oninput="surveyCASetText('${q.id}', this.value)">${escapeHtml(selectedText)}</textarea>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('') + `</div>`;
+
+    if (selectedOpt) {
+      setTimeout(() => {
+        const inp = document.getElementById(`survey-ca-input-${studentSurveyIndex}`);
+        if (inp) {
+          inp.focus();
+          inp.setSelectionRange(inp.value.length, inp.value.length);
+        }
+      }, 80);
+    }
+
   } else if (q.type === 'id_lookup') {
     // Dropdown native <select> — <option> teksnya sekarang NAMA + ID
     // sekaligus ("Maria José Ximenes Belo — STU-2026-0001"), supaya siswa
@@ -5098,6 +5181,59 @@ window.surveySetOtherAnswer = function(qid, value) {
   if (validationMsg && value && value.trim()) validationMsg.style.display = 'none';
 };
 
+// ── C&A (Choice & Answer) helpers ────────────────────────────────────
+// Format tersimpan: "Opsi - jawaban". Separator " - " (spasi-dash-spasi).
+const CA_SEP = ' - ';
+
+// Pecah jawaban tersimpan jadi { opt, text }. Cocokkan bagian awal dengan
+// salah satu opsi baku; kalau tidak ketemu (mis. data lama), fallback aman.
+function _caParseAnswer(raw, optionsList) {
+  if (!raw) return { opt: '', text: '' };
+  // Cari opsi yang menjadi prefix "opt - ..." — ambil yang paling panjang
+  // supaya kalau ada opsi yang saling jadi awalan, yang paling spesifik menang.
+  const matches = (optionsList || [])
+    .filter(o => raw === o || raw.startsWith(o + CA_SEP))
+    .sort((a, b) => b.length - a.length);
+  if (matches.length) {
+    const opt = matches[0];
+    const text = raw === opt ? '' : raw.slice((opt + CA_SEP).length);
+    return { opt, text };
+  }
+  return { opt: '', text: raw };
+}
+
+// Gabungkan opsi + teks jadi satu string jawaban tersimpan.
+function _caCombine(opt, text) {
+  if (!opt) return '';
+  const t = (text || '').trim();
+  return t ? (opt + CA_SEP + t) : opt;
+}
+
+// Dipanggil saat peserta memilih salah satu opsi C&A (radio). Pulihkan teks
+// yang mungkin sudah pernah diketik untuk opsi ini (draft per opsi tidak
+// disimpan terpisah — kita simpan satu draft teks per pertanyaan, jadi teks
+// tetap kebawa walau pindah opsi; ini sengaja supaya kalau peserta salah
+// pilih opsi lalu benerin, alasannya tidak perlu diketik ulang).
+window.surveyCASelectOption = function(qid, opt) {
+  if (!studentSurveyConfig) return;
+  const q = studentSurveyConfig.questions[studentSurveyIndex];
+  if (!q || q.id !== qid) return;
+  studentSurveyCASelected[qid] = opt;
+  const text = studentSurveyCAText[qid] || '';
+  studentSurveyAnswers[qid] = _caCombine(opt, text);
+  surveyRenderCurrentQuestion();
+};
+
+// Dipanggil tiap peserta mengetik alasan C&A. TIDAK re-render penuh supaya
+// fokus/kursor tidak hilang saat mengetik.
+window.surveyCASetText = function(qid, value) {
+  studentSurveyCAText[qid] = value;
+  const opt = studentSurveyCASelected[qid] || '';
+  studentSurveyAnswers[qid] = _caCombine(opt, value);
+  const validationMsg = document.getElementById('survey-validation-msg');
+  if (validationMsg && opt && value && value.trim()) validationMsg.style.display = 'none';
+};
+
 // Dipanggil oleh checkbox — toggle opsi dalam CSV answer
 window.surveyToggleCheckbox = function(qid, opt, isChecked, el) {
   if (!studentSurveyConfig) return;
@@ -5159,6 +5295,25 @@ window.surveyGoNext = async function() {
     // Simpan ke certName — inilah yang dipakai di sertifikat
     certName = cleaned;
     studentSurveyAnswers[q.id] = cleaned; // normalisasi spasi
+  }
+
+  // Validasi khusus C&A (Choice & Answer): peserta harus (1) pilih opsi
+  // DAN (2) ketik alasannya. Kalau opsi belum dipilih, sudah tertangkap
+  // oleh cek !answer di atas. Di sini tangani kasus opsi sudah dipilih
+  // tapi teks alasan masih kosong.
+  if (q.type === 'ca') {
+    const opt  = studentSurveyCASelected[q.id] || _caParseAnswer(answer, q.options || []).opt;
+    const text = (studentSurveyCAText[q.id] !== undefined
+                    ? studentSurveyCAText[q.id]
+                    : _caParseAnswer(answer, q.options || []).text) || '';
+    if (!opt) {
+      if (validationMsg) { validationMsg.textContent = 'Pilih salah satu opsi dulu.'; validationMsg.style.display = 'block'; }
+      return;
+    }
+    if (!text.trim()) {
+      if (validationMsg) { validationMsg.textContent = 'Tulis alasan/penjelasanmu dulu.'; validationMsg.style.display = 'block'; }
+      return;
+    }
   }
 
   const isLast = studentSurveyIndex === studentSurveyConfig.questions.length - 1;
@@ -7500,6 +7655,7 @@ function surveyRenderQuestions() {
     dropdown:      { label: 'Dropdown',      icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="3"/><polyline points="9 11 12 14 15 11"/></svg>' },
     linear_scale:  { label: 'Skala linear',  icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><circle cx="7" cy="12" r="2.2" fill="currentColor" stroke="none"/><circle cx="17" cy="12" r="2.2" fill="none"/></svg>' },
     id_lookup:     { label: 'ID',            icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="10" r="1.8"/><path d="M5.5 16c0-1.7 1.5-3 3-3s3 1.3 3 3"/><line x1="13.5" y1="8.5" x2="18" y2="8.5"/><line x1="13.5" y1="12" x2="18" y2="12"/></svg>' },
+    ca:            { label: 'C&A',            icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="8" r="3"/><circle cx="7" cy="8" r="1" fill="currentColor" stroke="none"/><line x1="13" y1="7" x2="20" y2="7"/><line x1="13" y1="10" x2="18" y2="10"/><line x1="4" y1="16" x2="20" y2="16"/><line x1="4" y1="19.5" x2="15" y2="19.5"/></svg>' },
   };
 
   list.innerHTML = surveyQuestions.map((q, i) => {
@@ -7507,7 +7663,8 @@ function surveyRenderQuestions() {
     const isCheckbox      = q.type === 'checkbox';
     const isDropdown      = q.type === 'dropdown';
     const isLinearScale   = q.type === 'linear_scale';
-    const hasOptions      = isChoice || isCheckbox || isDropdown;
+    const isCA            = q.type === 'ca';    // Choice & Answer: pilih opsi lalu wajib ketik alasan
+    const hasOptions      = isChoice || isCheckbox || isDropdown || isCA;
 
     const optionsHtml = (q.options || []).map((opt, oi) => `
       <div class="survey-opt-row">
@@ -7695,6 +7852,12 @@ function surveyRenderQuestions() {
 
         ${hasOptions ? `
           <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+            ${isCA ? `
+              <p style="font-size:11px; color:var(--text-dim); margin:0 0 2px; line-height:1.5;">
+                Peserta pilih salah satu opsi, lalu <strong style="color:var(--text-muted);">wajib ketik alasan/penjelasan</strong> di kolom yang muncul.
+                Tersimpan sebagai <span style="font-family:var(--font-mono); color:var(--text-muted);">Opsi - jawaban</span>.
+              </p>
+            ` : ''}
             ${optionsHtml}
             ${isChoice && q.allowOther ? `
               <div class="survey-opt-row" style="opacity:0.75;">
@@ -7768,7 +7931,7 @@ window.surveyUpdateField = function(qid, field, value) {
   }
   q[field] = value;
   // Saat ganti tipe ke tipe berbasis opsi dan belum ada opsi, beri 2 slot kosong.
-  if (field === 'type' && ['choice','checkbox','dropdown'].includes(value) && (!q.options || q.options.length === 0)) {
+  if (field === 'type' && ['choice','checkbox','dropdown','ca'].includes(value) && (!q.options || q.options.length === 0)) {
     q.options = ['', ''];
   }
   // Saat ganti tipe ke id_lookup dan belum ada baris, beri 2 slot kosong juga.
@@ -8136,9 +8299,9 @@ async function surveySaveConfig() {
     status.style.color = 'var(--danger)';
     return;
   }
-  const invalidChoice = surveyQuestions.find(q => ['choice','checkbox','dropdown'].includes(q.type) && (!q.options || q.options.filter(o => o && o.trim()).length < 2));
+  const invalidChoice = surveyQuestions.find(q => ['choice','checkbox','dropdown','ca'].includes(q.type) && (!q.options || q.options.filter(o => o && o.trim()).length < 2));
   if (invalidChoice) {
-    status.textContent = '✗ Pilihan ganda, kotak centang, & dropdown butuh minimal 2 opsi terisi.';
+    status.textContent = '✗ Pilihan ganda, kotak centang, dropdown, & C&A butuh minimal 2 opsi terisi.';
     status.style.color = 'var(--danger)';
     return;
   }
@@ -8155,8 +8318,8 @@ async function surveySaveConfig() {
   status.style.color = 'var(--accent)';
 
   // Bersihkan opsi kosong sebelum simpan
-  const OPTION_BASED_TYPES = ['choice', 'checkbox', 'dropdown'];
-  const VALID_TYPES = ['choice', 'checkbox', 'dropdown', 'linear_scale', 'text', 'id_lookup'];
+  const OPTION_BASED_TYPES = ['choice', 'checkbox', 'dropdown', 'ca'];
+  const VALID_TYPES = ['choice', 'checkbox', 'dropdown', 'linear_scale', 'text', 'id_lookup', 'ca'];
   const cleanQuestions = surveyQuestions.map(q => {
     const type = VALID_TYPES.includes(q.type) ? q.type : 'text';
     const base = {
@@ -8249,8 +8412,9 @@ async function surveyLoadFromFirestore() {
       return {
         id:      q.id || _surveyNewId(),
         text:    q.text || '',
-        type:    ['choice','checkbox','dropdown','linear_scale','id_lookup'].includes(q.type) ? q.type : 'text',
+        type:    ['choice','checkbox','dropdown','linear_scale','id_lookup','ca'].includes(q.type) ? q.type : 'text',
         options: Array.isArray(q.options) ? q.options.slice() : [],
+        allowOther: q.allowOther === true,
         scaleMin, scaleMax,
         scaleLabels,
         scaleMinLabel: q.scaleMinLabel || '',

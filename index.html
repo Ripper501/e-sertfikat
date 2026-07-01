@@ -4386,7 +4386,24 @@ document.addEventListener('click', function(e) {
 // Kolom standar (Nama Sertifikat, Email, UID, Issued At) DIKECUALIKAN
 // dari survey_answers — sisanya (kolom dinamis per pertanyaan) dipetakan
 // sebagai satu entri jawaban per kolom.
-const SHEET_STANDARD_COLUMNS = new Set(['Nama Sertifikat', 'Email', 'UID', 'Issued At']);
+//
+// Ditambahkan juga: kolom-kolom KONFIGURASI TEMPLATE SERTIFIKAT (Template
+// URL, Nama Font, posisi/bbox nama, UID, QR, Back Image URL, dll) — ini
+// BUKAN jawaban survei peserta, tapi setting desain sertifikat yang ikut
+// tertulis di Sheet yang sama. Kalau tidak dikecualikan, kolom-kolom ini
+// ikut muncul sebagai "pertanyaan" di Survey Results dan bikin bingung/
+// mengganggu (lihat screenshot: "Nama Font", "Nama Color", dst nongol
+// di antara hasil survei sungguhan).
+const SHEET_STANDARD_COLUMNS = new Set([
+  'Nama Sertifikat', 'Email', 'UID', 'Issued At',
+  // Konfigurasi template sertifikat (bukan jawaban survei):
+  'Template URL',
+  'Nama Font', 'Nama Color', 'Nama Bold', 'Nama Italic',
+  'Nama BboxX', 'Nama BboxY', 'Nama BboxW', 'Nama BboxH',
+  'UID Visible', 'UID X', 'UID Y', 'UID W', 'UID H', 'UID Color', 'UID Font',
+  'QR Visible', 'QR X', 'QR Y', 'QR W', 'QR H', 'QR Color',
+  'Back Image URL',
+]);
 
 function adaptSheetRowsToSurveyRows(headers, dataRows) {
   return dataRows.map(rowArray => {

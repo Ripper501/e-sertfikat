@@ -549,6 +549,14 @@
     hyphens: none;               
     -webkit-hyphens: none;
   }
+  .survey-answer-card-other { cursor: pointer; }
+  .survey-other-input {
+    background: transparent; border: none; outline: none;
+    color: #fff; font-size: 15px; font-weight: 600; font-family: inherit;
+    width: 100%; min-width: 0; padding: 0;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .survey-other-input::placeholder { color: rgba(255,255,255,0.6); font-weight: 500; }
 
   /* ─── PERBAIKAN KHUSUS MOBILE (Layar HP) ─── */
   @media (max-width: 500px) {
@@ -4599,6 +4607,8 @@ async function loadGeoTargetFromFirestore() {
 let studentSurveyConfig    = null;  // { eventName, questions: [...] }
 let studentSurveyAnswers   = {};    // { [questionId]: answerString }
 let studentSurveyIndex     = 0;     // index pertanyaan yang sedang ditampilkan
+let studentSurveyOtherSelected = {}; // { [questionId]: true/false } — apakah kartu "Lainnya" yang sedang dipilih
+let studentSurveyOtherDraft    = {}; // { [questionId]: string } — simpan ketikan "Lainnya" walau sempat pindah ke opsi lain lalu balik lagi
 
 async function surveyStart() {
   // ── Mulai preload gambar sertifikat (template + halaman belakang) DI
@@ -4632,6 +4642,8 @@ async function surveyStart() {
     };
     studentSurveyAnswers = {};
     studentSurveyIndex   = 0;
+    studentSurveyOtherSelected = {};
+    studentSurveyOtherDraft    = {};
 
     // Pre-fill nama dari Google account jika ada
     if (currentUser?.displayName) {
@@ -4652,6 +4664,8 @@ async function surveyStart() {
     };
     studentSurveyAnswers = {};
     studentSurveyIndex   = 0;
+    studentSurveyOtherSelected = {};
+    studentSurveyOtherDraft    = {};
     if (currentUser?.displayName) {
       studentSurveyAnswers['__fullname__'] = currentUser.displayName;
     }
@@ -4748,8 +4762,19 @@ function surveyRenderCurrentQuestion() {
     }, 80);
 
   } else if (q.type === 'choice') {
-    answerArea.innerHTML = `<div class="survey-answer-grid">` + (q.options || []).map((opt, oi) => {
-      const isSelected = existingAnswer === opt;
+    const optionsList = q.options || [];
+    // Deteksi apakah kartu "Lainnya" sedang dipilih: pakai flag transient
+    // dulu (kalau sudah pernah di-set di sesi ini); kalau belum pernah
+    // (baru pertama render soal ini), tebak dari jawaban tersimpan — kalau
+    // ada isinya tapi TIDAK cocok satupun opsi baku, berarti itu jawaban custom.
+    let isOtherSelected = studentSurveyOtherSelected[q.id];
+    if (isOtherSelected === undefined) {
+      isOtherSelected = !!(q.allowOther && existingAnswer && !optionsList.includes(existingAnswer));
+    }
+    const otherValue = isOtherSelected ? existingAnswer : (studentSurveyOtherDraft[q.id] || '');
+
+    answerArea.innerHTML = `<div class="survey-answer-grid">` + optionsList.map((opt, oi) => {
+      const isSelected = !isOtherSelected && existingAnswer === opt;
       const optId = `survey-opt-${studentSurveyIndex}-${oi}`;
       const c = SURVEY_CARD_PALETTE[oi % SURVEY_CARD_PALETTE.length];
       const border = isSelected ? 'var(--accent)' : c.border;
@@ -4759,14 +4784,40 @@ function surveyRenderCurrentQuestion() {
           background:${c.grad}; border:1.5px solid ${border}; box-shadow:${glow};
         ">
           <input type="radio" id="${optId}" name="survey-current-choice" value="${escapeHtml(opt)}" ${isSelected ? 'checked' : ''}
-            onchange="surveySetCurrentAnswer(this.value); surveyRenderCurrentQuestion();" />
+            onchange="surveySelectNormalChoice('${q.id}', this.value)" />
           ${isSelected
             ? `<span class="survey-answer-check-circle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`
             : `<span class="survey-answer-radio-dot"></span>`}
           <span class="survey-answer-card-text">${escapeHtml(opt)}</span>
         </label>
       `;
-    }).join('') + `</div>`;
+    }).join('') + (q.allowOther ? `
+        <label for="survey-opt-other-${studentSurveyIndex}" class="survey-answer-card survey-answer-card-other" style="
+          background:${isOtherSelected ? 'linear-gradient(135deg, #4B5563 0%, #1F2937 100%)' : 'rgba(255,255,255,0.05)'};
+          border:1.5px dashed ${isOtherSelected ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};
+          box-shadow:${isOtherSelected ? '0 0 0 1px var(--accent), 0 0 22px var(--accent-glow), 0 8px 18px rgba(0,0,0,0.35)' : '0 8px 18px rgba(0,0,0,0.25)'};
+        ">
+          <input type="radio" id="survey-opt-other-${studentSurveyIndex}" name="survey-current-choice" value="__OTHER__" ${isOtherSelected ? 'checked' : ''}
+            onchange="surveySelectOtherChoice('${q.id}')" />
+          ${isOtherSelected
+            ? `<span class="survey-answer-check-circle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`
+            : `<span class="survey-answer-radio-dot"></span>`}
+          ${isOtherSelected
+            ? `<input type="text" id="survey-other-input-${studentSurveyIndex}" class="survey-other-input" placeholder="Tulis jawabanmu..." value="${escapeHtml(otherValue)}" oninput="surveySetOtherAnswer('${q.id}', this.value)" onclick="event.stopPropagation()" />`
+            : `<span class="survey-answer-card-text">Lainnya...</span>`}
+        </label>
+    ` : '') + `</div>`;
+
+    if (isOtherSelected) {
+      setTimeout(() => {
+        const inp = document.getElementById(`survey-other-input-${studentSurveyIndex}`);
+        if (inp) {
+          inp.focus();
+          inp.setSelectionRange(inp.value.length, inp.value.length);
+          inp.addEventListener('keydown', e => { if (e.key === 'Enter') surveyGoNext(); });
+        }
+      }, 80);
+    }
 
   } else if (q.type === 'checkbox') {
     const selected = existingAnswer ? existingAnswer.split(',').map(s => s.trim()) : [];
@@ -4992,6 +5043,36 @@ window.surveySetCurrentAnswer = function(value) {
   const q = studentSurveyConfig.questions[studentSurveyIndex];
   if (!q) return;
   studentSurveyAnswers[q.id] = value;
+  const validationMsg = document.getElementById('survey-validation-msg');
+  if (validationMsg && value && value.trim()) validationMsg.style.display = 'none';
+};
+
+// Dipanggil saat peserta klik salah satu opsi BAKU (bukan "Lainnya") pada
+// pertanyaan pilihan ganda — pastikan status "Lainnya" ikut dimatikan.
+window.surveySelectNormalChoice = function(qid, value) {
+  studentSurveyOtherSelected[qid] = false;
+  surveySetCurrentAnswer(value);
+  surveyRenderCurrentQuestion();
+};
+
+// Dipanggil saat peserta klik kartu "Lainnya" — tandai status terpilih,
+// pulihkan ketikan sebelumnya (kalau ada) sebagai jawaban, lalu re-render
+// supaya kartu berubah jadi kotak isian teks & langsung fokus ke situ.
+window.surveySelectOtherChoice = function(qid) {
+  if (!studentSurveyConfig) return;
+  const q = studentSurveyConfig.questions[studentSurveyIndex];
+  if (!q || q.id !== qid) return;
+  studentSurveyOtherSelected[qid] = true;
+  studentSurveyAnswers[qid] = studentSurveyOtherDraft[qid] || '';
+  surveyRenderCurrentQuestion();
+};
+
+// Dipanggil tiap kali peserta mengetik di kotak isian "Lainnya". TIDAK
+// re-render penuh (sama seperti pertanyaan teks bebas) supaya fokus/kursor
+// tidak hilang saat mengetik.
+window.surveySetOtherAnswer = function(qid, value) {
+  studentSurveyAnswers[qid]   = value;
+  studentSurveyOtherDraft[qid] = value; // simpan draft biar tidak hilang kalau sempat pindah opsi lalu balik lagi
   const validationMsg = document.getElementById('survey-validation-msg');
   if (validationMsg && value && value.trim()) validationMsg.style.display = 'none';
 };
@@ -7594,10 +7675,32 @@ function surveyRenderQuestions() {
         ${hasOptions ? `
           <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
             ${optionsHtml}
-            <button type="button" class="survey-opt-add" onclick="surveyAddOption('${q.id}')">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Tambah Opsi
-            </button>
+            ${isChoice && q.allowOther ? `
+              <div class="survey-opt-row" style="opacity:0.75;">
+                <span style="
+                  display:inline-flex; align-items:center; justify-content:center;
+                  width:18px; height:18px; flex-shrink:0;
+                  border:2px dashed var(--text-dim); border-radius:50%;
+                  margin-right:2px;
+                "></span>
+                <input class="ced-input" type="text" value="Lainnya..." disabled style="font-style:italic; color:var(--text-dim); cursor:not-allowed;" />
+                <button type="button" class="survey-opt-remove" onclick="surveyToggleOther('${q.id}', false)" title="Hapus opsi Lainnya">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            ` : ''}
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="survey-opt-add" onclick="surveyAddOption('${q.id}')">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Tambah Opsi
+              </button>
+              ${isChoice && !q.allowOther ? `
+                <button type="button" class="survey-opt-add" onclick="surveyToggleOther('${q.id}', true)">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Tambah opsi "Lainnya"
+                </button>
+              ` : ''}
+            </div>
           </div>
         ` : ''}
         ${linearScaleHtml}
@@ -7827,6 +7930,16 @@ window.surveyAddOption = function(qid) {
   surveyRenderQuestions();
 };
 
+// Nyalakan/matikan opsi "Lainnya" (peserta bisa ketik jawaban sendiri) —
+// khusus tipe Pilihan Ganda (choice).
+window.surveyToggleOther = function(qid, enable) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+  surveySnapshot();
+  q.allowOther = !!enable;
+  surveyRenderQuestions();
+};
+
 window.surveyRemoveOption = function(qid, optIndex) {
   const q = surveyQuestions.find(q => q.id === qid);
   if (!q || !q.options) return;
@@ -8053,6 +8166,10 @@ async function surveySaveConfig() {
       base.lookup = (Array.isArray(q.lookup) ? q.lookup : [])
         .map(r => ({ name: (r.name || '').trim(), sid: (r.sid || '').trim() }))
         .filter(r => r.name && r.sid);
+    }
+    if (type === 'choice') {
+      // Opsi "Lainnya" — peserta bisa ketik jawaban sendiri di luar opsi baku.
+      base.allowOther = !!q.allowOther;
     }
     return base;
   });

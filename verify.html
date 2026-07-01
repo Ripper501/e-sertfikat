@@ -2219,16 +2219,21 @@
         const hdCanvas = await _cmGetHDFrontCanvas();
         if (!hdCanvas) return;
         const w1 = hdCanvas.width, h1 = hdCanvas.height;
-        const pdf = new jsPDF({ orientation: w1 >= h1 ? 'l' : 'p', unit: 'px', format: [w1, h1] });
+        const orientation1 = w1 >= h1 ? 'l' : 'p';
+        const pdf = new jsPDF({ orientation: orientation1, unit: 'px', format: [w1, h1] });
         pdf.addImage(hdCanvas.toDataURL('image/png'), 'PNG', 0, 0, w1, h1);
 
+        // Halaman 2 (kalau ada): PENTING — pakai ukuran page yang SAMA PERSIS
+        // dengan halaman 1 (w1×h1), BUKAN ukuran asli file back image-nya
+        // sendiri. Ini persis pola yang dipakai di index.html supaya kedua
+        // halaman PDF konsisten ukurannya. Gambar back page di-fit ke ukuran
+        // itu (bukan dibiarkan pakai resolusi native-nya).
         const page2Wrap = document.getElementById('cert-modal-page2-wrap');
         const canvas2    = document.getElementById('cert-modal-canvas-back');
         const hasPage2   = !!(page2Wrap && page2Wrap.style.display !== 'none' && canvas2 && canvas2.width);
         if (hasPage2) {
-          const w2 = canvas2.width, h2 = canvas2.height;
-          pdf.addPage([w2, h2], w2 >= h2 ? 'l' : 'p');
-          pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, w2, h2);
+          pdf.addPage([w1, h1], orientation1);
+          pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, w1, h1);
         }
 
         const n = (_certData?.name || 'cert').replace(/[^a-z0-9]/gi, '_');

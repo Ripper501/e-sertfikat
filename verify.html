@@ -708,43 +708,30 @@
     }
     #cert-modal-close:hover { background: rgba(224,57,43,0.15); color: #e05555; border-color: #e05555; }
     #cert-modal-canvas-wrap {
-      flex: 1; overflow: hidden; padding: 16px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      flex: 1; overflow: auto; padding: 16px;
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
     }
-    #cert-carousel-container {
-      display: flex; align-items: center; width: 100%; gap: 12px; position: relative;
+    #cert-modal-canvas { width: 100%; height: auto; border-radius: 8px; display: block; }
+    #cert-modal-loading {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      padding: 48px; color: #888; font-size: 13px;
     }
-    #cert-carousel {
-      display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
-      scroll-behavior: smooth; flex: 1; gap: 20px;
-      -ms-overflow-style: none; /* IE/Edge */
-      scrollbar-width: none; /* Firefox */
+    #cert-modal-actions {
+      display: flex; gap: 10px; padding: 12px 16px;
+      border-top: 1px solid rgba(245,230,0,0.1); flex-shrink: 0;
     }
-    #cert-carousel::-webkit-scrollbar { display: none; }
-    .cert-slide {
-      flex: 0 0 100%; scroll-snap-align: center;
-      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    .cert-modal-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 11px 16px; border-radius: 9px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none; font-family: 'Space Grotesk', sans-serif;
     }
-    .page-label {
-      font-size: 10px; color: var(--text-muted); text-align: center;
-      padding: 0 0 8px; letter-spacing: 0.08em; font-family: monospace;
+    .cert-modal-btn-dl { background: var(--gold); color: #000; }
+    .cert-modal-btn-dl:hover { background: #ffffa0; }
+    .cert-modal-btn-share {
+      background: rgba(245,230,0,0.08); color: var(--gold);
+      border: 1px solid rgba(245,230,0,0.3);
     }
-    .cert-nav-btn {
-      background: rgba(245,230,0,0.08); border: 1px solid rgba(245,230,0,0.3);
-      color: var(--gold); border-radius: 50%; width: 38px; height: 38px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; flex-shrink: 0; transition: all 0.2s;
-    }
-    .cert-nav-btn:hover { 
-      background: rgba(245,230,0,0.18); transform: scale(1.05); 
-    }
-
-    @media (max-width: 600px) {
-      .hidden-mobile { display: none !important; }
-      #cert-modal-canvas-wrap { padding: 16px 0; } /* Penuhi layar HP */
-      .cert-slide { padding: 0 16px; }
-      #cert-carousel { gap: 10px; }
-    }
+    .cert-modal-btn-share:hover { background: rgba(245,230,0,0.16); }
   </style>
 </head>
 <body>
@@ -922,36 +909,13 @@
           <div class="spinner-ring"></div>
           Generating certificate…
         </div>
-
-        <!-- Carousel Container -->
-        <div id="cert-carousel-container" style="display:none;">
-          <!-- Tombol Prev (Hanya tampil di Desktop) -->
-          <button id="cert-nav-prev" class="cert-nav-btn hidden-mobile" onclick="scrollCert(-1)" aria-label="Previous Page">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-          </button>
-
-          <!-- Slider Area -->
-          <div id="cert-carousel">
-            <!-- Halaman 1: Sertifikat Depan -->
-            <div class="cert-slide" id="cert-slide-1">
-              <div id="cert-modal-page1-label" class="page-label" style="display:none;">PAGE 1 OF 2</div>
-              <canvas id="cert-modal-canvas" style="width:100%; height:auto; border-radius:8px;"></canvas>
-            </div>
-            <!-- Halaman 2: Gambar Belakang -->
-            <div class="cert-slide" id="cert-slide-2" style="display:none;">
-              <div class="page-label">PAGE 2 OF 2</div>
-              <canvas id="cert-modal-canvas-back" style="width:100%; height:auto; border-radius:8px;"></canvas>
-            </div>
-          </div>
-
-          <!-- Tombol Next (Hanya tampil di Desktop) -->
-          <button id="cert-nav-next" class="cert-nav-btn hidden-mobile" onclick="scrollCert(1)" aria-label="Next Page">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
+        <!-- Halaman 1: sertifikat depan (nama + QR) -->
+        <div id="cert-modal-page1-label" style="display:none; font-size:10px; color:var(--text-muted); text-align:center; padding:6px 0 2px; letter-spacing:0.08em; font-family:monospace;">PAGE 1 OF 2</div>
+        <canvas id="cert-modal-canvas" style="display:none;"></canvas>
+        <!-- Halaman 2: gambar belakang (modul/lampiran) — tampil hanya kalau backImageUrl ada -->
+        <div id="cert-modal-page2-wrap" style="display:none;">
+          <div style="font-size:10px; color:var(--text-muted); text-align:center; padding:10px 0 2px; letter-spacing:0.08em; font-family:monospace;">PAGE 2 OF 2</div>
+          <canvas id="cert-modal-canvas-back" style="width:100%; border-radius:inherit;"></canvas>
         </div>
       </div>
       <div id="cert-modal-actions" style="display:none;">
@@ -1498,7 +1462,6 @@
     let _sheetCertConfig   = null;
     let _certHDMode        = false; // false = 900×636 preview, true = 2700×1908 HD
 
-    // 1. FUNGSI TOGGLE HD (Versi Carousel)
     function certModalToggleHD() {
       const btn = document.getElementById('cert-modal-hd-btn');
       _certHDMode = !_certHDMode;
@@ -1515,10 +1478,10 @@
       }
       if (_certData) {
         _certModalBlob = null;
-        const container = document.getElementById('cert-carousel-container');
+        const canvas  = document.getElementById('cert-modal-canvas');
         const loading = document.getElementById('cert-modal-loading');
         const actions = document.getElementById('cert-modal-actions');
-        if (container) container.style.display = 'none';
+        canvas.style.display  = 'none';
         loading.style.display = 'flex';
         loading.innerHTML     = `<div class="spinner-ring"></div>${_certHDMode ? 'Rendering HD…' : 'Rendering…'}`;
         actions.style.display = 'none';
@@ -1526,48 +1489,51 @@
       }
     }
 
-    // 2. FIRESTORE CONFIG (Tetap sama, jangan diubah)
+    // Fetch certificate_config dari Firestore paralel saat halaman load.
+    // Kalau Firestore kosong/gagal, _certConfig akan diisi dari Sheet
+    // via _sheetCertConfig (diset oleh renderCertificate saat dapat data Sheet).
     db.collection('settings').doc('certificate_config').get()
       .then(s => {
         if (s.exists && s.data() && s.data().templateBase64) {
+          // Firestore punya config lengkap — pakai ini
           _certConfig = s.data();
         } else {
+          // Firestore kosong/belum ada config — tunggu Sheet fallback
+          // (akan diisi oleh renderCertificate via _sheetCertConfig)
           _certConfig = _sheetCertConfig || null;
         }
       })
       .catch(() => {
+        // Firestore error — pakai config dari Sheet kalau sudah ada
         _certConfig = _sheetCertConfig || null;
       });
 
-    // 3. FUNGSI OPEN MODAL (Versi Carousel)
     function openCertModal() {
+      // _certData sudah diisi oleh renderCertificate() saat halaman load.
+      // Tidak ada fallback baca dari DOM untuk `uid` karena elemen
+      // #cert-uid sekarang bisa berisi Custom ID dari survei (bukan UID asli) —
+      // kalau _certData belum siap, modal tidak dibuka daripada salah generate QR.
       if (!_certData || !_certData.uid || !_certData.name) return;
 
       _certModalBlob = null;
-      const container = document.getElementById('cert-carousel-container');
-      if (container) container.style.display = 'none';
+      document.getElementById('cert-modal-canvas').style.display  = 'none';
       document.getElementById('cert-modal-loading').style.display = 'flex';
       document.getElementById('cert-modal-actions').style.display = 'none';
-      
-      // Reset slide halaman belakang dan posisi scroll
-      const p2w = document.getElementById('cert-slide-2');
+      // Reset halaman belakang supaya tidak ada sisa dari render sebelumnya
+      const p2w = document.getElementById('cert-modal-page2-wrap');
       const p1l = document.getElementById('cert-modal-page1-label');
-      const carousel = document.getElementById('cert-carousel');
       if (p2w) p2w.style.display = 'none';
       if (p1l) p1l.style.display = 'none';
-      if (carousel) carousel.scrollLeft = 0;
-      
       document.getElementById('cert-modal-overlay').classList.add('open');
       document.body.style.overflow = 'hidden';
       document.addEventListener('keydown', _cmEsc);
       renderCertModal(_certData);
     }
-
-    // 4. FUNGSI CLOSE MODAL (Tetap sama, jangan diubah)
     function closeCertModal() {
       document.getElementById('cert-modal-overlay').classList.remove('open');
       document.body.style.overflow = '';
       document.removeEventListener('keydown', _cmEsc);
+      // Reset HD mode
       _certHDMode = false;
       const btn = document.getElementById('cert-modal-hd-btn');
       if (btn) {
@@ -1576,14 +1542,6 @@
         btn.style.borderColor = 'rgba(245,230,0,0.35)';
         btn.textContent       = 'HD';
       }
-    }
-
-    // 5. TAMBAHAN: FUNGSI SCROLL (Harus ditambahkan di bagian paling bawah)
-    function scrollCert(dir) {
-      const carousel = document.getElementById('cert-carousel');
-      if (!carousel) return;
-      const slideWidth = carousel.clientWidth;
-      carousel.scrollBy({ left: dir * slideWidth, behavior: 'smooth' });
     }
     function _cmEsc(e) { if (e.key === 'Escape') closeCertModal(); }
 
@@ -1783,23 +1741,23 @@
           canvas.toBlob(blob => {
             if (blob) _certModalBlob = blob;
             loading.style.display = 'none';
-            document.getElementById('cert-carousel-container').style.display = 'flex';
+            canvas.style.display  = 'block';
             actions.style.display = 'flex';
           }, 'image/png');
         } catch(e) {
           loading.style.display = 'none';
-          document.getElementById('cert-carousel-container').style.display = 'flex';
+          canvas.style.display  = 'block';
           if (actions) actions.style.display = 'none';
         }
 
         // ── 7. Halaman belakang (backImageUrl) ───────────────────────
-        const slide2     = document.getElementById('cert-slide-2');
+        // Dimuat dan ditampilkan di bawah halaman depan di dalam modal.
+        // Kalau backImageUrl kosong/gagal, canvas halaman belakang tetap
+        // tersembunyi — tidak ada error ke pengguna.
+        const page2Wrap  = document.getElementById('cert-modal-page2-wrap');
         const canvasBack = document.getElementById('cert-modal-canvas-back');
         const page1Label = document.getElementById('cert-modal-page1-label');
-        const navPrev    = document.getElementById('cert-nav-prev');
-        const navNext    = document.getElementById('cert-nav-next');
-
-        if (backImageUrl && slide2 && canvasBack) {
+        if (backImageUrl && page2Wrap && canvasBack) {
           try {
             const backImg = await _cmLoadImg(backImageUrl);
             const bw = backImg.naturalWidth  || backImg.width  || CW;
@@ -1808,29 +1766,23 @@
             canvasBack.height = bh;
             const bctx = canvasBack.getContext('2d');
             bctx.drawImage(backImg, 0, 0, bw, bh);
-            
-            slide2.style.display  = 'flex';
-            if (page1Label) {
-               page1Label.style.display = 'block';
-               page1Label.textContent = 'PAGE 1 OF 2';
-            }
-            // Tampilkan navigasi desktop jika ada halaman 2
-            if (navPrev) navPrev.style.visibility = 'visible';
-            if (navNext) navNext.style.visibility = 'visible';
+            page2Wrap.style.display  = 'block';
+            if (page1Label) page1Label.style.display = 'block';
           } catch(e) {
             console.warn('[CertModal] Back page gagal dimuat:', e.message);
-            slide2.style.display = 'none';
+            page2Wrap.style.display = 'none';
             if (page1Label) page1Label.style.display = 'none';
-            if (navPrev) navPrev.style.visibility = 'hidden';
-            if (navNext) navNext.style.visibility = 'hidden';
           }
         } else {
-          // Sembunyikan jika tidak ada backImageUrl
-          if (slide2) slide2.style.display = 'none';
+          if (page2Wrap) page2Wrap.style.display = 'none';
           if (page1Label) page1Label.style.display = 'none';
-          if (navPrev) navPrev.style.visibility = 'hidden';
-          if (navNext) navNext.style.visibility = 'hidden';
         }
+
+      } catch(err) {
+        console.error('[CertModal]', err);
+        loading.innerHTML = '<p style="color:#e05555;font-size:13px;">Gagal generate. Coba refresh.</p>';
+      }
+    }
 
     function _cmLoadImg(src) {
       if (src && src.startsWith('data:')) return new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = src; });

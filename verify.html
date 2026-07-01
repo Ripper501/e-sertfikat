@@ -987,13 +987,13 @@
         <span id="cert-modal-title">E-Certificate</span>
         <div id="cert-modal-header-right">
           <button id="cert-modal-hd-btn" onclick="certModalToggleHD()" title="Toggle HD quality" style="
-            background:rgba(245,230,0,0.1); border:1px solid rgba(245,230,0,0.35);
-            border-radius:8px; color:var(--gold); cursor:pointer;
+            background:var(--gold); border:1px solid var(--gold);
+            border-radius:8px; color:#000; cursor:pointer;
             width:38px; height:30px; font-size:11px; font-weight:700;
             font-family:var(--font-mono,monospace); letter-spacing:0.05em;
             display:flex; align-items:center; justify-content:center;
             transition:all 0.2s;
-          ">HD</button>
+          ">HD ✓</button>
           <button id="cert-modal-close" onclick="closeCertModal()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -1592,7 +1592,7 @@
     let _certData          = null;
     let _certConfig        = null;
     let _sheetCertConfig   = null;
-    let _certHDMode        = false; // false = 900×636 preview, true = 2700×1908 HD
+    let _certHDMode        = true;  // true = 2700×1908 HD (default, konsisten dgn kualitas native halaman belakang), false = 900×636 preview cepat
     let _certModalPage     = 0;     // 0 = halaman depan, 1 = halaman belakang
     let _certModalMaxPage  = 0;     // diupdate begitu diketahui apakah ada halaman 2
 
@@ -1744,14 +1744,14 @@
       document.removeEventListener('keydown', _cmArrowKeys);
       const dlMenu = document.getElementById('cert-modal-dl-menu');
       if (dlMenu) dlMenu.classList.remove('open');
-      // Reset HD mode
-      _certHDMode = false;
+      // Reset HD mode ke default (HD aktif — konsisten dgn kualitas halaman belakang)
+      _certHDMode = true;
       const btn = document.getElementById('cert-modal-hd-btn');
       if (btn) {
-        btn.style.background  = 'rgba(245,230,0,0.1)';
-        btn.style.color       = 'var(--gold)';
-        btn.style.borderColor = 'rgba(245,230,0,0.35)';
-        btn.textContent       = 'HD';
+        btn.style.background  = 'var(--gold)';
+        btn.style.color       = '#000';
+        btn.style.borderColor = 'var(--gold)';
+        btn.textContent       = 'HD ✓';
       }
     }
     function _cmEsc(e) { if (e.key === 'Escape') closeCertModal(); }

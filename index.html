@@ -4876,18 +4876,22 @@ function surveyRenderCurrentQuestion() {
     `;
 
   } else if (q.type === 'id_lookup') {
-    // Dropdown native <select> juga, TAPI: <option> teksnya NAMA siswa
-    // (yang dicari/dikenali siswa), sementara value-nya adalah Student ID
-    // (yang benar2 tersimpan ke studentSurveyAnswers → Firestore/Sheet).
-    // Siswa tidak perlu tahu/hafal ID mereka sendiri — cukup cari nama.
+    // Dropdown native <select> — <option> teksnya sekarang NAMA + ID
+    // sekaligus ("Maria José Ximenes Belo — STU-2026-0001"), supaya siswa
+    // tidak bingung ("kok ada nama lagi, saya kan sudah isi nama di soal
+    // sebelumnya?") — teks ini menegaskan kalau baris itu ADALAH nama
+    // mereka BESERTA ID mereka, tinggal pilih nama sendiri, ID otomatis
+    // ikut. Yang benar2 tersimpan ke studentSurveyAnswers → Firestore/Sheet
+    // tetap cuma Student ID-nya saja (value <option>), bukan gabungan teksnya.
     const lookupRows = Array.isArray(q.lookup) ? q.lookup : [];
     // existingAnswer di sini adalah ID yang sudah tersimpan (kalau user kembali
     // ke pertanyaan ini setelah klik Back) — cari index baris yang ID-nya cocok
     // untuk pewarnaan kartu yang konsisten dengan tipe dropdown biasa.
     const selectedLookupIndex = lookupRows.findIndex(r => r.sid === existingAnswer);
     const cLookup = SURVEY_CARD_PALETTE[selectedLookupIndex >= 0 ? selectedLookupIndex % SURVEY_CARD_PALETTE.length : 0];
-    // Label nama yang sedang terpilih, untuk ditampilkan sbg konfirmasi visual di bawah dropdown
+    // Nama + ID yang sedang terpilih, untuk ditampilkan sbg konfirmasi visual di bawah dropdown
     const selectedLookupName = selectedLookupIndex >= 0 ? lookupRows[selectedLookupIndex].name : '';
+    const selectedLookupSid  = selectedLookupIndex >= 0 ? lookupRows[selectedLookupIndex].sid  : '';
 
     answerArea.innerHTML = `
       <div id="survey-dropdown-wrap" style="
@@ -4905,9 +4909,9 @@ function surveyRenderCurrentQuestion() {
           font-family:var(--font-main); font-size:15px; font-weight:${existingAnswer ? '600' : '400'}; cursor:pointer;
           appearance:none; -webkit-appearance:none;
         ">
-          <option value="" disabled ${!existingAnswer ? 'selected' : ''} style="background:#1e2033;">Cari nama kamu...</option>
+          <option value="" disabled ${!existingAnswer ? 'selected' : ''} style="background:#1e2033;">Cari nama & ID kamu...</option>
           ${lookupRows.map(row => `
-            <option value="${escapeHtml(row.sid)}" ${existingAnswer === row.sid ? 'selected' : ''} style="background:#1e2033; color:#fff;">${escapeHtml(row.name)}</option>
+            <option value="${escapeHtml(row.sid)}" ${existingAnswer === row.sid ? 'selected' : ''} style="background:#1e2033; color:#fff;">${escapeHtml(row.name)} — ${escapeHtml(row.sid)}</option>
           `).join('')}
         </select>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="
@@ -4916,7 +4920,7 @@ function surveyRenderCurrentQuestion() {
         "><polyline points="6 9 12 15 18 9"/></svg>
       </div>
       ${existingAnswer ? `<p style="font-size:11.5px; color:var(--text-dim); margin-top:10px; line-height:1.5;">
-        ✓ Terpilih: <strong style="color:var(--text);">${escapeHtml(selectedLookupName)}</strong>
+        ✓ Terpilih: <strong style="color:var(--text);">${escapeHtml(selectedLookupName)}</strong> · <span style="font-family:var(--font-mono); color:var(--text-muted);">${escapeHtml(selectedLookupSid)}</span>
       </p>` : ''}
     `;
 

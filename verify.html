@@ -1596,8 +1596,14 @@
     let _certModalBlob     = null;
     let _certData          = null;
     let _certConfig        = null;
+    // Skala HD disamakan dengan index.html — di sana canvas sertifikat
+    // di-generate langsung di resolusi 6250×4419 (≈ 900×636 dikali ~6.94),
+    // "sepadan resolusi asli template Cloudinary". Sebelumnya verify.html
+    // cuma pakai scale 3x (2700×1908 — ~5.4x lebih sedikit pikselnya),
+    // makanya kelihatan pecah waktu di-zoom dibanding hasil index.html.
+    const CM_HD_SCALE = 6250 / 900; // ≈ 6.9444 → 900×636 jadi ≈ 6250×4417
     let _sheetCertConfig   = null;
-    let _certHDMode        = false; // false = 900×636 preview cepat (default, biar buka pertama nggak lelet), true = 2700×1908 HD (preview manual)
+    let _certHDMode        = false; // false = 900×636 preview cepat (default, biar buka pertama nggak lelet), true = ~6250×4417 HD (preview manual, setara index.html)
     let _certHDCanvasCacheKey = null; // cache render HD khusus buat download, terpisah dari preview
     let _certModalPage     = 0;     // 0 = halaman depan, 1 = halaman belakang
     let _certModalMaxPage  = 0;     // diupdate begitu diketahui apakah ada halaman 2
@@ -1809,7 +1815,7 @@
       if (cfg.qrHeight != null) qrH = cfg.qrHeight;
       if (cfg.qrColor  != null) qrColor = cfg.qrColor;
 
-      // Canvas size: SCALE 1 = 900×636 (preview normal), SCALE 3 = 2700×1908 (HD)
+      // Canvas size: SCALE 1 = 900×636 (preview normal), SCALE CM_HD_SCALE ≈ 6250×4417 (HD, setara index.html)
       // ctx.scale(SCALE,SCALE) membuat semua koordinat Firestore (skala 900×636) tetap benar
       const BASE_W = 900, BASE_H = 636;
       const CW = BASE_W * scale, CH = BASE_H * scale;
@@ -1833,7 +1839,7 @@
       // PENTING: ctx.scale(SCALE, SCALE) di atas sudah membuat seluruh
       // sistem koordinat canvas otomatis terkali SCALE — jadi di sini
       // HARUS pakai basis logis (BASE_W/BASE_H = 900×636), BUKAN CW/CH
-      // (ukuran fisik 2700×1908 saat mode HD). Memakai CW/CH di sini
+      // (ukuran fisik ~6250×4417 saat mode HD). Memakai CW/CH di sini
       // menyebabkan "double-scaling": gambar template tergambar 3×
       // lebih besar dari seharusnya, sehingga cuma 1/3 kiri-atas yang
       // muncul di kanvas (persis bug crop/zoom yang dilaporkan saat
@@ -1968,7 +1974,7 @@
       // Halaman belakang (modul/lampiran) — dari Sheet field "Back Image URL"
       // atau dari Firestore certificate_config.backImageUrl
       const backImageUrl = cfg.backImageUrl || cfg.back_image_url || '';
-      const SCALE = _certHDMode ? 3 : 1;
+      const SCALE = _certHDMode ? CM_HD_SCALE : 1;
 
       try {
         await _cmRenderFrontCanvas(canvas, SCALE, data, cfg);
@@ -2119,7 +2125,7 @@
     }
 
     // ── Render HD khusus buat download (terpisah dari canvas preview) ──
-    // Selalu 2700×1908 (scale 3x) apa pun status toggle HD preview, dan
+    // Selalu render di resolusi HD (setara index.html, ~6250×4417px) apa pun status toggle HD preview, dan
     // di-cache per sertifikat supaya klik Download berkali-kali tidak
     // render ulang dari nol setiap kali.
     async function _cmGetHDFrontCanvas() {
@@ -2133,7 +2139,7 @@
         document.body.appendChild(hdCanvas);
       }
       if (_certHDCanvasCacheKey === key && hdCanvas.width) return hdCanvas; // sudah pernah dirender
-      await _cmRenderFrontCanvas(hdCanvas, 3, _certData, _certConfig || {});
+      await _cmRenderFrontCanvas(hdCanvas, CM_HD_SCALE, _certData, _certConfig || {});
       _certHDCanvasCacheKey = key;
       return hdCanvas;
     }

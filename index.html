@@ -4853,7 +4853,7 @@ function surveyRenderCurrentQuestion() {
             : `<span class="survey-answer-radio-dot"></span>`}
           ${isOtherSelected
             ? `<input type="text" id="survey-other-input-${studentSurveyIndex}" class="survey-other-input" placeholder="Tulis jawabanmu..." value="${escapeHtml(otherValue)}" oninput="surveySetOtherAnswer('${q.id}', this.value)" onclick="event.stopPropagation()" />`
-            : `<span class="survey-answer-card-text">Lainnya...</span>`}
+            : `<span class="survey-answer-card-text">${escapeHtml(q.otherLabel != null && q.otherLabel !== '' ? q.otherLabel : 'Lainnya...')}</span>`}
         </label>
     ` : '') + `</div>`;
 
@@ -7860,14 +7860,19 @@ function surveyRenderQuestions() {
             ` : ''}
             ${optionsHtml}
             ${isChoice && q.allowOther ? `
-              <div class="survey-opt-row" style="opacity:0.75;">
+              <div class="survey-opt-row">
                 <span style="
                   display:inline-flex; align-items:center; justify-content:center;
                   width:18px; height:18px; flex-shrink:0;
                   border:2px dashed var(--text-dim); border-radius:50%;
                   margin-right:2px;
                 "></span>
-                <input class="ced-input" type="text" value="Lainnya..." disabled style="font-style:italic; color:var(--text-dim); cursor:not-allowed;" />
+                <input class="ced-input" type="text"
+                  value="${escapeHtml(q.otherLabel != null ? q.otherLabel : 'Lainnya...')}"
+                  placeholder="Lainnya..."
+                  oninput="surveyUpdateOtherLabel('${q.id}', this.value)"
+                  title="Teks tombol opsi ini (bisa diubah, mis. 'Seluk tan' / 'Other')"
+                  style="font-style:italic;" />
                 <button type="button" class="survey-opt-remove" onclick="surveyToggleOther('${q.id}', false)" title="Hapus opsi Lainnya">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
@@ -8121,7 +8126,19 @@ window.surveyToggleOther = function(qid, enable) {
   if (!q) return;
   surveySnapshot();
   q.allowOther = !!enable;
+  // Set label default saat pertama diaktifkan (kalau belum pernah diisi).
+  if (enable && (q.otherLabel == null || q.otherLabel === '')) q.otherLabel = 'Lainnya...';
   surveyRenderQuestions();
+};
+
+// Ubah teks tombol opsi "Lainnya" (mis. jadi "Seluk tan" utk Tetun, atau
+// "Other" utk Inggris) — supaya tidak terpaku Bahasa Indonesia. TIDAK
+// re-render penuh supaya fokus/kursor input tidak hilang saat mengetik.
+window.surveyUpdateOtherLabel = function(qid, value) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+  surveySnapshotDebounced();
+  q.otherLabel = value;
 };
 
 window.surveyRemoveOption = function(qid, optIndex) {
@@ -8354,6 +8371,12 @@ async function surveySaveConfig() {
     if (type === 'choice') {
       // Opsi "Lainnya" — peserta bisa ketik jawaban sendiri di luar opsi baku.
       base.allowOther = !!q.allowOther;
+      if (base.allowOther) {
+        // Label tombol "Lainnya" — bisa dikustom admin (mis. "Seluk tan",
+        // "Other"). Default "Lainnya..." kalau dikosongkan.
+        const lbl = (q.otherLabel != null ? String(q.otherLabel) : '').trim();
+        base.otherLabel = lbl || 'Lainnya...';
+      }
     }
     return base;
   });
@@ -8415,6 +8438,7 @@ async function surveyLoadFromFirestore() {
         type:    ['choice','checkbox','dropdown','linear_scale','id_lookup','ca'].includes(q.type) ? q.type : 'text',
         options: Array.isArray(q.options) ? q.options.slice() : [],
         allowOther: q.allowOther === true,
+        otherLabel: q.otherLabel != null ? q.otherLabel : 'Lainnya...',
         scaleMin, scaleMax,
         scaleLabels,
         scaleMinLabel: q.scaleMinLabel || '',

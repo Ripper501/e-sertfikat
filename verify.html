@@ -909,7 +909,14 @@
           <div class="spinner-ring"></div>
           Generating certificate…
         </div>
+        <!-- Halaman 1: sertifikat depan (nama + QR) -->
+        <div id="cert-modal-page1-label" style="display:none; font-size:10px; color:var(--text-muted); text-align:center; padding:6px 0 2px; letter-spacing:0.08em; font-family:monospace;">PAGE 1 OF 2</div>
         <canvas id="cert-modal-canvas" style="display:none;"></canvas>
+        <!-- Halaman 2: gambar belakang (modul/lampiran) — tampil hanya kalau backImageUrl ada -->
+        <div id="cert-modal-page2-wrap" style="display:none;">
+          <div style="font-size:10px; color:var(--text-muted); text-align:center; padding:10px 0 2px; letter-spacing:0.08em; font-family:monospace;">PAGE 2 OF 2</div>
+          <canvas id="cert-modal-canvas-back" style="width:100%; border-radius:inherit;"></canvas>
+        </div>
       </div>
       <div id="cert-modal-actions" style="display:none;">
         <button class="cert-modal-btn cert-modal-btn-dl" onclick="certModalDownload()">
@@ -1030,7 +1037,7 @@
       });
     }
 
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhhDjM9zyWKmFiP8c0NB0fuqErIWtccUo-_jcxSIE_0F37YvqQ59NJ8d2Cimrfo9QKCg/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxUWefLapwBRHntmZjIcLffgMwJYMeAX9AKqpVsO4lbLYzrj1m-oHA9_UQ3jqj8nL7FFw/exec";
 
     // ── Deteksi otomatis "kursus/profesi" dari jawaban survey ──────
     const COURSE_KEYWORDS = [
@@ -1512,6 +1519,11 @@
       document.getElementById('cert-modal-canvas').style.display  = 'none';
       document.getElementById('cert-modal-loading').style.display = 'flex';
       document.getElementById('cert-modal-actions').style.display = 'none';
+      // Reset halaman belakang supaya tidak ada sisa dari render sebelumnya
+      const p2w = document.getElementById('cert-modal-page2-wrap');
+      const p1l = document.getElementById('cert-modal-page1-label');
+      if (p2w) p2w.style.display = 'none';
+      if (p1l) p1l.style.display = 'none';
       document.getElementById('cert-modal-overlay').classList.add('open');
       document.body.style.overflow = 'hidden';
       document.addEventListener('keydown', _cmEsc);
@@ -1591,6 +1603,9 @@
       if (cfg.qrWidth  != null) qrW = cfg.qrWidth;
       if (cfg.qrHeight != null) qrH = cfg.qrHeight;
       if (cfg.qrColor  != null) qrColor = cfg.qrColor;
+      // Halaman belakang (modul/lampiran) — dari Sheet field "Back Image URL"
+      // atau dari Firestore certificate_config.backImageUrl
+      const backImageUrl = cfg.backImageUrl || cfg.back_image_url || '';
 
       // Canvas size: SCALE 1 = 900×636 (preview normal), SCALE 3 = 2700×1908 (HD)
       // ctx.scale(SCALE,SCALE) membuat semua koordinat Firestore (skala 900×636) tetap benar
@@ -1721,7 +1736,7 @@
           } catch(e) { console.warn('[CertModal] QR gagal:', e.message); }
         }
 
-        // ── 6. Export ke blob ─────────────────────────────────────────
+        // ── 6. Export halaman depan ke blob ──────────────────────────
         try {
           canvas.toBlob(blob => {
             if (blob) _certModalBlob = blob;
@@ -1730,10 +1745,37 @@
             actions.style.display = 'flex';
           }, 'image/png');
         } catch(e) {
-          // Canvas tainted — tetap tampilkan meski tidak bisa didownload
           loading.style.display = 'none';
           canvas.style.display  = 'block';
           if (actions) actions.style.display = 'none';
+        }
+
+        // ── 7. Halaman belakang (backImageUrl) ───────────────────────
+        // Dimuat dan ditampilkan di bawah halaman depan di dalam modal.
+        // Kalau backImageUrl kosong/gagal, canvas halaman belakang tetap
+        // tersembunyi — tidak ada error ke pengguna.
+        const page2Wrap  = document.getElementById('cert-modal-page2-wrap');
+        const canvasBack = document.getElementById('cert-modal-canvas-back');
+        const page1Label = document.getElementById('cert-modal-page1-label');
+        if (backImageUrl && page2Wrap && canvasBack) {
+          try {
+            const backImg = await _cmLoadImg(backImageUrl);
+            const bw = backImg.naturalWidth  || backImg.width  || CW;
+            const bh = backImg.naturalHeight || backImg.height || CH;
+            canvasBack.width  = bw;
+            canvasBack.height = bh;
+            const bctx = canvasBack.getContext('2d');
+            bctx.drawImage(backImg, 0, 0, bw, bh);
+            page2Wrap.style.display  = 'block';
+            if (page1Label) page1Label.style.display = 'block';
+          } catch(e) {
+            console.warn('[CertModal] Back page gagal dimuat:', e.message);
+            page2Wrap.style.display = 'none';
+            if (page1Label) page1Label.style.display = 'none';
+          }
+        } else {
+          if (page2Wrap) page2Wrap.style.display = 'none';
+          if (page1Label) page1Label.style.display = 'none';
         }
 
       } catch(err) {

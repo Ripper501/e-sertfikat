@@ -550,6 +550,10 @@
     -webkit-hyphens: none;
   }
   .survey-answer-card-other { cursor: pointer; }
+  .survey-answer-card-locked {
+    opacity: 0.4; cursor: not-allowed; filter: grayscale(0.5);
+    pointer-events: none;
+  }
   .survey-other-input {
     background: transparent; border: none; outline: none;
     color: #fff; font-size: 15px; font-weight: 600; font-family: inherit;
@@ -3322,8 +3326,11 @@
 
   /* ─── Checkbox minimum stepper (builder) ─── */
   .survey-checkbox-min-row {
-    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap;
     margin-top:10px; padding-top:10px; border-top:1px solid var(--border-soft);
+  }
+  .survey-checkbox-limit-group {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
   }
   .survey-checkbox-min-label {
     font-size:11.5px; font-weight:600; color:var(--text-muted);
@@ -4921,6 +4928,11 @@ function surveyRenderCurrentQuestion() {
     const cbOtherText = (studentSurveyCbOtherText[q.id] !== undefined ? studentSurveyCbOtherText[q.id] : leftover) || '';
 
     const minReq = Number.isFinite(q.checkboxMin) ? q.checkboxMin : (parseInt(q.checkboxMin, 10) || 0);
+    const maxReq = Number.isFinite(q.checkboxMax) ? q.checkboxMax : (parseInt(q.checkboxMax, 10) || 0);
+    // Hitung "beban" pilihan saat ini = opsi baku tercentang + (1 kalau Other aktif).
+    // Kalau sudah mencapai maksimum, kartu lain yang BELUM aktif dikunci.
+    const currentCount = selected.length + (cbOtherOn ? 1 : 0);
+    const maxReached = maxReq > 0 && currentCount >= maxReq;
 
     answerArea.innerHTML = `<div class="survey-answer-grid">` + optionsList.map((opt, oi) => {
       const isChecked = selected.includes(opt);
@@ -4928,11 +4940,13 @@ function surveyRenderCurrentQuestion() {
       const c = SURVEY_CARD_PALETTE[oi % SURVEY_CARD_PALETTE.length];
       const border = isChecked ? 'var(--accent)' : c.border;
       const glow   = isChecked ? `0 0 0 1px var(--accent), 0 0 22px var(--accent-glow), 0 8px 18px rgba(0,0,0,0.35)` : `0 8px 18px rgba(0,0,0,0.35), 0 0 14px ${c.glow}`;
+      // Kunci opsi ini kalau maks tercapai DAN opsi ini belum tercentang.
+      const locked = maxReached && !isChecked;
       return `
-        <label for="${optId}" class="survey-answer-card" data-checked="${isChecked}" style="
+        <label for="${optId}" class="survey-answer-card${locked ? ' survey-answer-card-locked' : ''}" data-checked="${isChecked}" style="
           background:${c.grad}; border:1.5px solid ${border}; box-shadow:${glow};
         ">
-          <input type="checkbox" id="${optId}" name="survey-current-cb" value="${escapeHtml(opt)}" ${isChecked ? 'checked' : ''}
+          <input type="checkbox" id="${optId}" name="survey-current-cb" value="${escapeHtml(opt)}" ${isChecked ? 'checked' : ''} ${locked ? 'disabled' : ''}
             onchange="surveyToggleCheckbox('${q.id}', '${escapeHtml(opt)}', this.checked, this)" />
           ${isChecked
             ? `<span class="survey-answer-check-box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`
@@ -4941,12 +4955,12 @@ function surveyRenderCurrentQuestion() {
         </label>
       `;
     }).join('') + (q.allowOther ? `
-        <label for="survey-cb-other-${studentSurveyIndex}" class="survey-answer-card survey-answer-card-other" style="
+        <label for="survey-cb-other-${studentSurveyIndex}" class="survey-answer-card survey-answer-card-other${(maxReached && !cbOtherOn) ? ' survey-answer-card-locked' : ''}" style="
           background:${cbOtherOn ? 'linear-gradient(135deg, #4B5563 0%, #1F2937 100%)' : 'rgba(255,255,255,0.05)'};
           border:1.5px dashed ${cbOtherOn ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};
           box-shadow:${cbOtherOn ? '0 0 0 1px var(--accent), 0 0 22px var(--accent-glow), 0 8px 18px rgba(0,0,0,0.35)' : '0 8px 18px rgba(0,0,0,0.25)'};
         ">
-          <input type="checkbox" id="survey-cb-other-${studentSurveyIndex}" name="survey-current-cb" value="__OTHER__" ${cbOtherOn ? 'checked' : ''}
+          <input type="checkbox" id="survey-cb-other-${studentSurveyIndex}" name="survey-current-cb" value="__OTHER__" ${cbOtherOn ? 'checked' : ''} ${(maxReached && !cbOtherOn) ? 'disabled' : ''}
             onchange="surveyToggleCbOther('${q.id}', this.checked)" />
           ${cbOtherOn
             ? `<span class="survey-answer-check-box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`
@@ -4955,7 +4969,7 @@ function surveyRenderCurrentQuestion() {
             ? `<input type="text" id="survey-cb-other-input-${studentSurveyIndex}" class="survey-other-input" placeholder="Type your answer..." value="${escapeHtml(cbOtherText)}" oninput="surveySetCbOtherText('${q.id}', this.value)" onclick="event.stopPropagation()" />`
             : `<span class="survey-answer-card-text">${escapeHtml(q.otherLabel != null && q.otherLabel !== '' ? q.otherLabel : 'Other...')}</span>`}
         </label>
-    ` : '') + `</div>` + `<p style="font-size:11.5px; color:rgba(255,255,255,0.4); margin-top:10px;">☑️ You can choose more than one.${minReq > 0 ? ` Please choose at least <strong style="color:rgba(255,255,255,0.65);">${minReq}</strong>.` : ''}</p>`;
+    ` : '') + `</div>` + `<p style="font-size:11.5px; color:rgba(255,255,255,0.4); margin-top:10px;">☑️ You can choose more than one.${minReq > 0 ? ` Please choose at least <strong style="color:rgba(255,255,255,0.65);">${minReq}</strong>.` : ''}${maxReq > 0 ? ` Up to <strong style="color:rgba(255,255,255,0.65);">${maxReq}</strong> max.` : ''}${maxReached ? ` <span style="color:var(--accent);">Maximum reached.</span>` : ''}</p>`;
 
     if (cbOtherOn) {
       setTimeout(() => {
@@ -5447,6 +5461,15 @@ window.surveyGoNext = async function() {
       }
       if (minReq > 0 && checkedBase.length < minReq) {
         if (validationMsg) { validationMsg.textContent = `Please choose at least ${minReq} option${minReq > 1 ? 's' : ''}.`; validationMsg.style.display = 'block'; }
+        return;
+      }
+    }
+    // Pengaman maksimum (walau di UI opsi sudah dikunci saat maks tercapai).
+    const maxReq = Number.isFinite(q.checkboxMax) ? q.checkboxMax : (parseInt(q.checkboxMax, 10) || 0);
+    if (maxReq > 0) {
+      const totalChosen = checkedBase.length + (otherOn ? 1 : 0);
+      if (totalChosen > maxReq) {
+        if (validationMsg) { validationMsg.textContent = `Please choose no more than ${maxReq} option${maxReq > 1 ? 's' : ''}.`; validationMsg.style.display = 'block'; }
         return;
       }
     }
@@ -8047,20 +8070,38 @@ function surveyRenderQuestions() {
             </div>
             ${isCheckbox ? `
               <div class="survey-checkbox-min-row">
-                <span class="survey-checkbox-min-label">Minimum choices required</span>
-                <div class="survey-stepper">
-                  <button type="button" class="survey-stepper-btn" onclick="surveyChangeCheckboxMin('${q.id}', -1)" title="Decrease" aria-label="Decrease">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  </button>
-                  <input type="number" class="survey-stepper-input" min="0" step="1"
-                    value="${Number.isFinite(q.checkboxMin) ? q.checkboxMin : 0}"
-                    oninput="surveySetCheckboxMin('${q.id}', this.value)"
-                    aria-label="Minimum choices" />
-                  <button type="button" class="survey-stepper-btn" onclick="surveyChangeCheckboxMin('${q.id}', 1)" title="Increase" aria-label="Increase">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  </button>
+                <div class="survey-checkbox-limit-group">
+                  <span class="survey-checkbox-min-label">Minimum choices required</span>
+                  <div class="survey-stepper">
+                    <button type="button" class="survey-stepper-btn" onclick="surveyChangeCheckboxMin('${q.id}', -1)" title="Decrease" aria-label="Decrease">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                    <input type="number" class="survey-stepper-input" min="0" step="1"
+                      value="${Number.isFinite(q.checkboxMin) ? q.checkboxMin : 0}"
+                      oninput="surveySetCheckboxMin('${q.id}', this.value)"
+                      aria-label="Minimum choices" />
+                    <button type="button" class="survey-stepper-btn" onclick="surveyChangeCheckboxMin('${q.id}', 1)" title="Increase" aria-label="Increase">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                  </div>
+                  <span class="survey-checkbox-min-hint">0 = no minimum</span>
                 </div>
-                <span class="survey-checkbox-min-hint">0 = no minimum</span>
+                <div class="survey-checkbox-limit-group">
+                  <span class="survey-checkbox-min-label">Maximum choices allowed</span>
+                  <div class="survey-stepper">
+                    <button type="button" class="survey-stepper-btn" onclick="surveyChangeCheckboxMax('${q.id}', -1)" title="Decrease" aria-label="Decrease">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                    <input type="number" class="survey-stepper-input" min="0" step="1"
+                      value="${Number.isFinite(q.checkboxMax) ? q.checkboxMax : 0}"
+                      oninput="surveySetCheckboxMax('${q.id}', this.value)"
+                      aria-label="Maximum choices" />
+                    <button type="button" class="survey-stepper-btn" onclick="surveyChangeCheckboxMax('${q.id}', 1)" title="Increase" aria-label="Increase">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                  </div>
+                  <span class="survey-checkbox-min-hint">0 = no maximum</span>
+                </div>
               </div>
             ` : ''}
           </div>
@@ -8339,6 +8380,29 @@ window.surveyChangeCheckboxMin = function(qid, delta) {
   surveyRenderQuestions();
 };
 
+// ── Checkbox: maximum jumlah opsi yang boleh dipilih peserta ──────────
+// checkboxMax = 0 artinya tidak ada batas maksimum (bebas). Nilai di-clamp
+// tidak negatif.
+window.surveySetCheckboxMax = function(qid, value) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+  surveySnapshotDebounced();
+  let n = parseInt(value, 10);
+  if (!Number.isFinite(n) || n < 0) n = 0;
+  q.checkboxMax = n;
+};
+
+window.surveyChangeCheckboxMax = function(qid, delta) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+  surveySnapshot();
+  let n = Number.isFinite(q.checkboxMax) ? q.checkboxMax : 0;
+  n += delta;
+  if (n < 0) n = 0;
+  q.checkboxMax = n;
+  surveyRenderQuestions();
+};
+
 window.surveyRemoveOption = function(qid, optIndex) {
   const q = surveyQuestions.find(q => q.id === qid);
   if (!q || !q.options) return;
@@ -8581,6 +8645,10 @@ async function surveySaveConfig() {
       let cmin = parseInt(q.checkboxMin, 10);
       if (!Number.isFinite(cmin) || cmin < 0) cmin = 0;
       base.checkboxMin = cmin;
+      // Maksimum jumlah opsi yang boleh dicentang peserta (0 = tidak ada maksimum).
+      let cmax = parseInt(q.checkboxMax, 10);
+      if (!Number.isFinite(cmax) || cmax < 0) cmax = 0;
+      base.checkboxMax = cmax;
     }
     return base;
   });
@@ -8644,6 +8712,7 @@ async function surveyLoadFromFirestore() {
         allowOther: q.allowOther === true,
         otherLabel: q.otherLabel != null ? q.otherLabel : 'Other...',
         checkboxMin: Number.isFinite(q.checkboxMin) ? q.checkboxMin : (parseInt(q.checkboxMin, 10) || 0),
+        checkboxMax: Number.isFinite(q.checkboxMax) ? q.checkboxMax : (parseInt(q.checkboxMax, 10) || 0),
         scaleMin, scaleMax,
         scaleLabels,
         scaleMinLabel: q.scaleMinLabel || '',

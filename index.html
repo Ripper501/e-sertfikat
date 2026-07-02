@@ -3702,6 +3702,75 @@ let generatedPDFBlob  = null;   // Blob PDF final (untuk download ulang & share)
 let certPreviewUrl    = null;   // Data URL gambar canvas (untuk preview di screen-done)
 let certName      = "";
 
+// ══════════════════════════════════════════════════════════════════
+// PENYIMPANAN SEMENTARA PDF DI PERANGKAT (IndexedDB)
+// Supaya kalau peserta REFRESH di halaman "Certificate Ready", PDF-nya
+// tidak hilang & tetap bisa di-download berulang. localStorage tidak
+// dipakai karena batas ukurannya terlalu kecil untuk PDF (bisa MB-an).
+// Data ini per-perangkat dan sengaja DIHAPUS saat peserta memulai sesi
+// baru (lihat certClearSavedPdf pada awal flow), supaya peserta lain di
+// perangkat yang sama tidak melihat sertifikat peserta sebelumnya.
+// ══════════════════════════════════════════════════════════════════
+const CERT_IDB_NAME  = 'fbCertStore';
+const CERT_IDB_STORE = 'pdf';
+const CERT_IDB_KEY   = 'lastCert';
+
+function _certIdbOpen() {
+  return new Promise((resolve, reject) => {
+    try {
+      const req = indexedDB.open(CERT_IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const dbi = req.result;
+        if (!dbi.objectStoreNames.contains(CERT_IDB_STORE)) dbi.createObjectStore(CERT_IDB_STORE);
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror   = () => reject(req.error);
+    } catch (e) { reject(e); }
+  });
+}
+
+async function certSaveSavedPdf(rec) {
+  // rec = { blob, name, previewUrl, uid, ts }
+  try {
+    const dbi = await _certIdbOpen();
+    await new Promise((resolve, reject) => {
+      const tx = dbi.transaction(CERT_IDB_STORE, 'readwrite');
+      tx.objectStore(CERT_IDB_STORE).put(rec, CERT_IDB_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror    = () => reject(tx.error);
+    });
+    dbi.close();
+  } catch (e) { console.warn('[CertStore] Gagal simpan PDF sementara:', e.message); }
+}
+
+async function certGetSavedPdf() {
+  try {
+    const dbi = await _certIdbOpen();
+    const rec = await new Promise((resolve, reject) => {
+      const tx = dbi.transaction(CERT_IDB_STORE, 'readonly');
+      const rq = tx.objectStore(CERT_IDB_STORE).get(CERT_IDB_KEY);
+      rq.onsuccess = () => resolve(rq.result || null);
+      rq.onerror   = () => reject(rq.error);
+    });
+    dbi.close();
+    return rec;
+  } catch (e) { console.warn('[CertStore] Gagal baca PDF sementara:', e.message); return null; }
+}
+
+async function certClearSavedPdf() {
+  try {
+    const dbi = await _certIdbOpen();
+    await new Promise((resolve, reject) => {
+      const tx = dbi.transaction(CERT_IDB_STORE, 'readwrite');
+      tx.objectStore(CERT_IDB_STORE).delete(CERT_IDB_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror    = () => reject(tx.error);
+    });
+    dbi.close();
+  } catch (e) { /* diamkan — kalau gagal hapus, tidak fatal */ }
+}
+
+
 // Placeholder untuk dukungan multi-event di masa depan. Saat ini selalu null
 // (aplikasi masih single-event), sehingga eventId di surveyFinishAndGenerate()
 // otomatis fallback ke "General_Event". Sebelumnya variabel ini dipakai
@@ -3838,6 +3907,10 @@ auth.onAuthStateChanged(user => {
 async function runVerificationPipeline() {
   showScreen('screen-checking');
   setCheckLabel('Verifying identity…');
+
+  // Sesi peserta baru dimulai → hapus PDF sementara milik peserta sebelumnya
+  // (kalau ada) supaya tidak tercampur di perangkat yang dipakai bergantian.
+  certClearSavedPdf();
 
   // ── 2a. localStorage fast-check ──────────────────────────────
   const lsKey = `cert_claimed_${currentUser.uid}`;
@@ -5974,6 +6047,16 @@ async function generateAndStore() {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     generatedPDFBlob = isIOS ? new Blob([pdfBlob], { type: 'application/octet-stream' }) : pdfBlob;
 
+    // Simpan salinan sementara ke perangkat (IndexedDB) supaya bertahan
+    // kalau peserta me-refresh halaman "Certificate Ready".
+    certSaveSavedPdf({
+      blob: generatedPDFBlob,
+      name: certName,
+      previewUrl: certPreviewUrl,
+      uid: (currentUser && currentUser.uid) || null,
+      ts: Date.now(),
+    });
+
     // Simpan ke Firestore & Kunci Akun (Anti-Cheat)
     // Write-nya sudah DIMULAI lebih awal (lihat claimWritePromise di atas,
     // berjalan paralel dengan proses gambar) — di sini cuma tunggu hasilnya,
@@ -6519,6 +6602,35 @@ function showSuccessScreen() {
   if (shareBtn && !navigator.share) {
     shareBtn.style.display = 'none';
   }
+
+  // ── URL & navigasi setelah sertifikat jadi ──────────────────────
+  // 1) Ganti URL address bar jadi "?download" (replaceState — REFRESH tetap
+  //    berada di halaman ini, tidak balik ke pendaftaran).
+  // 2) Pasang "jebakan Back": tambah satu entri history, lalu kalau peserta
+  //    menekan tombol Back browser, lempar keluar ke home (bukan balik ke
+  //    "?view=student"). Ini mencegah tombol Back membuka lagi pintu
+  //    pendaftaran dari halaman sukses.
+  try {
+    const base = window.location.href.split('?')[0];
+    history.replaceState({ certDone: true }, '', base + '?download');
+    history.pushState({ certDone: true, guard: true }, '', base + '?download');
+    window.removeEventListener('popstate', _certBackGuard);
+    window.addEventListener('popstate', _certBackGuard);
+  } catch (e) { /* history API tidak tersedia — abaikan, tidak fatal */ }
+}
+
+// Saat peserta menekan Back di halaman sukses → lempar keluar ke home
+// browser. window.location.replace dipakai supaya tidak menambah entri
+// history baru (jadi tidak bisa "maju" balik ke halaman sukses lewat Forward).
+function _certBackGuard() {
+  window.removeEventListener('popstate', _certBackGuard);
+  try {
+    // Arahkan ke "home" — halaman kosong about:blank sebagai netral, lalu
+    // kalau bisa, tutup/replace. about:blank aman & universal sebagai "keluar".
+    window.location.replace('about:blank');
+  } catch (e) {
+    window.location.href = 'about:blank';
+  }
 }
 
 // ── Download ulang PDF dari blob yang sudah tersimpan ─────────────
@@ -6796,9 +6908,12 @@ let adminQrLargeInstance = null;
 function detectDevice() {
   const urlParams = new URLSearchParams(window.location.search);
   const isStudentView = urlParams.get('view') === 'student';
+  const isDownloadView = urlParams.has('download'); // halaman "Certificate Ready" setelah refresh
 
-  if (isStudentView) {
-    // Jika ada link ?view=student, paksa menjadi tampilan siswa
+  if (isStudentView || isDownloadView) {
+    // Link ?view=student ATAU ?download → tampilan siswa (bukan admin).
+    // Untuk ?download, restoreCertDownloadView() (dipanggil saat DOMContentLoaded)
+    // akan mencoba memulihkan PDF dari IndexedDB & menampilkan halaman sukses.
     sessionStorage.removeItem(ADMIN_SESSION_KEY);
     return; // Biarkan kode siswa berjalan normal
   } else {
@@ -10015,6 +10130,31 @@ window.removeAdminDevice = function() {
 
 // PANGGIL FUNGSI DETEKSI DI SINI, SETELAH SEMUA VARIABEL SIAP
 detectDevice();
+
+// ── Pemulihan halaman "Certificate Ready" saat REFRESH di ?download ──
+// Kalau URL mengandung ?download, coba ambil PDF yang tersimpan sementara
+// di perangkat (IndexedDB) dan tampilkan lagi halaman sukses lengkap dengan
+// tombol Download. Ini membuat refresh tidak menghilangkan sertifikat.
+(function restoreCertDownloadView() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('download')) return;
+  certGetSavedPdf().then(rec => {
+    if (rec && rec.blob) {
+      generatedPDFBlob = rec.blob;
+      certName         = rec.name || '';
+      certPreviewUrl   = rec.previewUrl || null;
+      showSuccessScreen();
+    } else {
+      // Tidak ada data tersimpan (mis. dibuka di perangkat lain, atau sudah
+      // dibersihkan). Arahkan kembali ke pendaftaran siswa dengan aman.
+      const base = window.location.href.split('?')[0];
+      window.location.replace(base + '?view=student');
+    }
+  }).catch(() => {
+    const base = window.location.href.split('?')[0];
+    window.location.replace(base + '?view=student');
+  });
+})();
 
 // ════════════════════════════════════════════════════════════════
 // CUSTOM FONT PICKER — replaces native <select> for full styling

@@ -3319,6 +3319,38 @@
     padding:6px 11px; border-radius:6px; cursor:pointer; margin-top:6px; transition:var(--transition);
   }
   .survey-opt-add:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ─── Checkbox minimum stepper (builder) ─── */
+  .survey-checkbox-min-row {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    margin-top:10px; padding-top:10px; border-top:1px solid var(--border-soft);
+  }
+  .survey-checkbox-min-label {
+    font-size:11.5px; font-weight:600; color:var(--text-muted);
+  }
+  .survey-checkbox-min-hint {
+    font-size:10.5px; color:var(--text-dim); font-style:italic;
+  }
+  .survey-stepper {
+    display:inline-flex; align-items:center;
+    border:1px solid var(--border-soft); border-radius:8px; overflow:hidden;
+    background:rgba(255,255,255,0.04);
+  }
+  .survey-stepper-btn {
+    display:flex; align-items:center; justify-content:center;
+    width:28px; height:28px; background:transparent; border:none;
+    color:var(--text-muted); cursor:pointer; transition:var(--transition);
+  }
+  .survey-stepper-btn:hover { background:rgba(245,230,0,0.12); color:var(--accent); }
+  .survey-stepper-input {
+    width:44px; height:28px; text-align:center; border:none; outline:none;
+    background:transparent; color:var(--text); font-family:var(--font-mono);
+    font-size:13px; font-weight:700;
+    border-left:1px solid var(--border-soft); border-right:1px solid var(--border-soft);
+    -moz-appearance:textfield;
+  }
+  .survey-stepper-input::-webkit-outer-spin-button,
+  .survey-stepper-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 </style>
 
 <!-- ── PROJECTOR MODAL ────────────────────────────────────── -->
@@ -4654,6 +4686,8 @@ let studentSurveyOtherSelected = {}; // { [questionId]: true/false } — apakah 
 let studentSurveyOtherDraft    = {}; // { [questionId]: string } — simpan ketikan "Lainnya" walau sempat pindah ke opsi lain lalu balik lagi
 let studentSurveyCASelected    = {}; // { [questionId]: string } — opsi C&A yang sedang dipilih
 let studentSurveyCAText        = {}; // { [questionId]: string } — teks alasan C&A yang sedang diketik
+let studentSurveyCbOtherOn     = {}; // { [questionId]: true/false } — apakah "Other" pada checkbox sedang dicentang
+let studentSurveyCbOtherText   = {}; // { [questionId]: string } — teks jawaban "Other" pada checkbox
 
 async function surveyStart() {
   // ── Mulai preload gambar sertifikat (template + halaman belakang) DI
@@ -4691,6 +4725,8 @@ async function surveyStart() {
     studentSurveyOtherDraft    = {};
     studentSurveyCASelected    = {};
     studentSurveyCAText        = {};
+    studentSurveyCbOtherOn     = {};
+    studentSurveyCbOtherText   = {};
 
     // Pre-fill nama dari Google account jika ada
     if (currentUser?.displayName) {
@@ -4715,6 +4751,8 @@ async function surveyStart() {
     studentSurveyOtherDraft    = {};
     studentSurveyCASelected    = {};
     studentSurveyCAText        = {};
+    studentSurveyCbOtherOn     = {};
+    studentSurveyCbOtherText   = {};
     if (currentUser?.displayName) {
       studentSurveyAnswers['__fullname__'] = currentUser.displayName;
     }
@@ -4869,8 +4907,22 @@ function surveyRenderCurrentQuestion() {
     }
 
   } else if (q.type === 'checkbox') {
-    const selected = existingAnswer ? existingAnswer.split(',').map(s => s.trim()) : [];
-    answerArea.innerHTML = `<div class="survey-answer-grid">` + (q.options || []).map((opt, oi) => {
+    const optionsList = q.options || [];
+    // Pisahkan jawaban tersimpan (CSV) jadi: opsi baku yang tercentang, dan
+    // sisa teks yang bukan opsi baku (itu jawaban "Other").
+    const rawParts = existingAnswer ? existingAnswer.split(',').map(s => s.trim()).filter(s => s) : [];
+    const selected = rawParts.filter(p => optionsList.includes(p));
+    const leftover = rawParts.filter(p => !optionsList.includes(p)).join(', ');
+
+    // Status "Other": pakai flag transient kalau sudah pernah di-set sesi ini,
+    // kalau belum, tebak dari adanya leftover text pada jawaban tersimpan.
+    let cbOtherOn = studentSurveyCbOtherOn[q.id];
+    if (cbOtherOn === undefined) cbOtherOn = !!(q.allowOther && leftover);
+    const cbOtherText = (studentSurveyCbOtherText[q.id] !== undefined ? studentSurveyCbOtherText[q.id] : leftover) || '';
+
+    const minReq = Number.isFinite(q.checkboxMin) ? q.checkboxMin : (parseInt(q.checkboxMin, 10) || 0);
+
+    answerArea.innerHTML = `<div class="survey-answer-grid">` + optionsList.map((opt, oi) => {
       const isChecked = selected.includes(opt);
       const optId = `survey-cb-${studentSurveyIndex}-${oi}`;
       const c = SURVEY_CARD_PALETTE[oi % SURVEY_CARD_PALETTE.length];
@@ -4888,7 +4940,32 @@ function surveyRenderCurrentQuestion() {
           <span class="survey-answer-card-text">${escapeHtml(opt)}</span>
         </label>
       `;
-    }).join('') + `</div>` + `<p style="font-size:11.5px; color:rgba(255,255,255,0.4); margin-top:10px;">☑️ You can choose more than one.</p>`;
+    }).join('') + (q.allowOther ? `
+        <label for="survey-cb-other-${studentSurveyIndex}" class="survey-answer-card survey-answer-card-other" style="
+          background:${cbOtherOn ? 'linear-gradient(135deg, #4B5563 0%, #1F2937 100%)' : 'rgba(255,255,255,0.05)'};
+          border:1.5px dashed ${cbOtherOn ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};
+          box-shadow:${cbOtherOn ? '0 0 0 1px var(--accent), 0 0 22px var(--accent-glow), 0 8px 18px rgba(0,0,0,0.35)' : '0 8px 18px rgba(0,0,0,0.25)'};
+        ">
+          <input type="checkbox" id="survey-cb-other-${studentSurveyIndex}" name="survey-current-cb" value="__OTHER__" ${cbOtherOn ? 'checked' : ''}
+            onchange="surveyToggleCbOther('${q.id}', this.checked)" />
+          ${cbOtherOn
+            ? `<span class="survey-answer-check-box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`
+            : `<span class="survey-answer-box-empty"></span>`}
+          ${cbOtherOn
+            ? `<input type="text" id="survey-cb-other-input-${studentSurveyIndex}" class="survey-other-input" placeholder="Type your answer..." value="${escapeHtml(cbOtherText)}" oninput="surveySetCbOtherText('${q.id}', this.value)" onclick="event.stopPropagation()" />`
+            : `<span class="survey-answer-card-text">${escapeHtml(q.otherLabel != null && q.otherLabel !== '' ? q.otherLabel : 'Other...')}</span>`}
+        </label>
+    ` : '') + `</div>` + `<p style="font-size:11.5px; color:rgba(255,255,255,0.4); margin-top:10px;">☑️ You can choose more than one.${minReq > 0 ? ` Please choose at least <strong style="color:rgba(255,255,255,0.65);">${minReq}</strong>.` : ''}</p>`;
+
+    if (cbOtherOn) {
+      setTimeout(() => {
+        const inp = document.getElementById(`survey-cb-other-input-${studentSurveyIndex}`);
+        if (inp) {
+          inp.focus();
+          inp.setSelectionRange(inp.value.length, inp.value.length);
+        }
+      }, 80);
+    }
 
   } else if (q.type === 'dropdown') {
     // Dropdown native <select> — kartu pembungkus diwarnai gradient solid
@@ -5235,13 +5312,31 @@ window.surveyCASetText = function(qid, value) {
 };
 
 // Dipanggil oleh checkbox — toggle opsi dalam CSV answer
+// Rangkai jawaban checkbox final (CSV): opsi baku yang tercentang +
+// (kalau "Other" aktif & terisi) teks Other di belakang. Dipakai bersama
+// oleh semua handler checkbox supaya format tersimpan selalu konsisten.
+function _cbBuildAnswer(q) {
+  const optionsList = q.options || [];
+  const raw = studentSurveyAnswers[q.id] || '';
+  // ambil hanya opsi baku yang sudah tercentang dari state saat ini
+  const checkedBase = raw.split(',').map(s => s.trim()).filter(s => s && optionsList.includes(s));
+  const parts = checkedBase.slice();
+  if (studentSurveyCbOtherOn[q.id]) {
+    const t = (studentSurveyCbOtherText[q.id] || '').trim();
+    if (t) parts.push(t);
+  }
+  return parts.join(', ');
+}
+
 window.surveyToggleCheckbox = function(qid, opt, isChecked, el) {
   if (!studentSurveyConfig) return;
   const q = studentSurveyConfig.questions[studentSurveyIndex];
   if (!q || q.id !== qid) return;
 
+  const optionsList = q.options || [];
   const current = studentSurveyAnswers[q.id] || '';
-  let selected = current ? current.split(',').map(s => s.trim()).filter(s => s) : [];
+  // hanya kelola opsi baku di sini; teks "Other" dikelola state terpisah.
+  let selected = current.split(',').map(s => s.trim()).filter(s => s && optionsList.includes(s));
 
   if (isChecked) {
     if (!selected.includes(opt)) selected.push(opt);
@@ -5249,13 +5344,38 @@ window.surveyToggleCheckbox = function(qid, opt, isChecked, el) {
     selected = selected.filter(s => s !== opt);
   }
   studentSurveyAnswers[q.id] = selected.join(', ');
+  // gabungkan lagi dengan teks Other (kalau ada) untuk nilai final tersimpan
+  studentSurveyAnswers[q.id] = _cbBuildAnswer(q);
 
   // Re-render penuh: checkbox bukan text input yang sedang diketik, jadi
   // aman untuk rebuild seluruh area jawaban supaya warna kartu kembali ke
   // warna kategorinya (bukan abu-abu polos) saat di-uncheck.
   surveyRenderCurrentQuestion();
   const validationMsg = document.getElementById('survey-validation-msg');
-  if (validationMsg && selected.length > 0) validationMsg.style.display = 'none';
+  if (validationMsg && studentSurveyAnswers[q.id]) validationMsg.style.display = 'none';
+};
+
+// Centang/lepas kartu "Other" pada checkbox. Saat dicentang, kartu berubah
+// jadi kotak isian teks (peserta WAJIB mengetik — divalidasi di Next).
+window.surveyToggleCbOther = function(qid, isChecked) {
+  if (!studentSurveyConfig) return;
+  const q = studentSurveyConfig.questions[studentSurveyIndex];
+  if (!q || q.id !== qid) return;
+  studentSurveyCbOtherOn[qid] = !!isChecked;
+  studentSurveyAnswers[qid] = _cbBuildAnswer(q);
+  surveyRenderCurrentQuestion();
+};
+
+// Ketikan teks "Other" pada checkbox. TIDAK re-render penuh supaya
+// fokus/kursor tidak hilang saat mengetik.
+window.surveySetCbOtherText = function(qid, value) {
+  if (!studentSurveyConfig) return;
+  const q = studentSurveyConfig.questions[studentSurveyIndex];
+  if (!q || q.id !== qid) return;
+  studentSurveyCbOtherText[qid] = value;
+  studentSurveyAnswers[qid] = _cbBuildAnswer(q);
+  const validationMsg = document.getElementById('survey-validation-msg');
+  if (validationMsg && value && value.trim()) validationMsg.style.display = 'none';
 };
 
 window.surveyGoBack = function() {
@@ -5270,8 +5390,9 @@ window.surveyGoNext = async function() {
   const answer = (studentSurveyAnswers[q.id] || '').trim();
   const validationMsg = document.getElementById('survey-validation-msg');
 
-  // Semua pertanyaan wajib dijawab
-  if (!answer) {
+  // Semua pertanyaan wajib dijawab (checkbox punya validasi khusus di bawah,
+  // jadi dikecualikan dari cek generik ini).
+  if (!answer && q.type !== 'checkbox') {
     if (validationMsg) {
       validationMsg.textContent = q.isName
         ? 'Please enter your full name before continuing.'
@@ -5295,6 +5416,40 @@ window.surveyGoNext = async function() {
     // Simpan ke certName — inilah yang dipakai di sertifikat
     certName = cleaned;
     studentSurveyAnswers[q.id] = cleaned; // normalisasi spasi
+  }
+
+  // Validasi khusus Checkbox:
+  //  - Kalau "Other" dicentang → WAJIB ada teksnya (seperti C&A). Kalau ada,
+  //    aturan minimum diabaikan (peserta sudah menuliskan jawabannya sendiri).
+  //  - Kalau "Other" tidak dicentang → jumlah opsi baku tercentang harus
+  //    memenuhi minimum (checkboxMin). Kalau minimum 0, minimal tetap 1
+  //    (pertanyaan wajib dijawab).
+  if (q.type === 'checkbox') {
+    const optionsList = q.options || [];
+    const raw = studentSurveyAnswers[q.id] || '';
+    const checkedBase = raw.split(',').map(s => s.trim()).filter(s => s && optionsList.includes(s));
+    const otherOn   = !!studentSurveyCbOtherOn[q.id];
+    const otherText = (studentSurveyCbOtherText[q.id] || '').trim();
+    const minReq = Number.isFinite(q.checkboxMin) ? q.checkboxMin : (parseInt(q.checkboxMin, 10) || 0);
+
+    if (otherOn) {
+      // Other dicentang → wajib ketik teksnya.
+      if (!otherText) {
+        if (validationMsg) { validationMsg.textContent = 'Please type your answer in the "Other" field first.'; validationMsg.style.display = 'block'; }
+        return;
+      }
+      // Other terisi → minimum diabaikan, lolos.
+    } else {
+      // Tidak ada Other → cek minimum (atau minimal 1 kalau minReq 0).
+      if (checkedBase.length === 0) {
+        if (validationMsg) { validationMsg.textContent = 'Please select at least one option before continuing.'; validationMsg.style.display = 'block'; }
+        return;
+      }
+      if (minReq > 0 && checkedBase.length < minReq) {
+        if (validationMsg) { validationMsg.textContent = `Please choose at least ${minReq} option${minReq > 1 ? 's' : ''}.`; validationMsg.style.display = 'block'; }
+        return;
+      }
+    }
   }
 
   // Validasi khusus C&A (Choice & Answer): peserta harus (1) pilih opsi
@@ -7859,12 +8014,12 @@ function surveyRenderQuestions() {
               </p>
             ` : ''}
             ${optionsHtml}
-            ${isChoice && q.allowOther ? `
+            ${(isChoice || isCheckbox) && q.allowOther ? `
               <div class="survey-opt-row">
                 <span style="
                   display:inline-flex; align-items:center; justify-content:center;
                   width:18px; height:18px; flex-shrink:0;
-                  border:2px dashed var(--text-dim); border-radius:50%;
+                  border:2px dashed var(--text-dim); border-radius:${isCheckbox ? '5px' : '50%'};
                   margin-right:2px;
                 "></span>
                 <input class="ced-input" type="text"
@@ -7883,13 +8038,31 @@ function surveyRenderQuestions() {
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Add Option
               </button>
-              ${isChoice && !q.allowOther ? `
+              ${(isChoice || isCheckbox) && !q.allowOther ? `
                 <button type="button" class="survey-opt-add" onclick="surveyToggleOther('${q.id}', true)">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Add "Other" option
                 </button>
               ` : ''}
             </div>
+            ${isCheckbox ? `
+              <div class="survey-checkbox-min-row">
+                <span class="survey-checkbox-min-label">Minimum choices required</span>
+                <div class="survey-stepper">
+                  <button type="button" class="survey-stepper-btn" onclick="surveyChangeCheckboxMin('${q.id}', -1)" title="Decrease" aria-label="Decrease">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </button>
+                  <input type="number" class="survey-stepper-input" min="0" step="1"
+                    value="${Number.isFinite(q.checkboxMin) ? q.checkboxMin : 0}"
+                    oninput="surveySetCheckboxMin('${q.id}', this.value)"
+                    aria-label="Minimum choices" />
+                  <button type="button" class="survey-stepper-btn" onclick="surveyChangeCheckboxMin('${q.id}', 1)" title="Increase" aria-label="Increase">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </button>
+                </div>
+                <span class="survey-checkbox-min-hint">0 = no minimum</span>
+              </div>
+            ` : ''}
           </div>
         ` : ''}
         ${linearScaleHtml}
@@ -8141,6 +8314,31 @@ window.surveyUpdateOtherLabel = function(qid, value) {
   q.otherLabel = value;
 };
 
+// ── Checkbox: minimum jumlah opsi yang wajib dipilih peserta ──────────
+// checkboxMin = 0 artinya tidak ada minimum (bebas). Nilai selalu di-clamp
+// tidak negatif. Diketik langsung (tidak re-render penuh supaya kursor
+// tidak lompat), sedangkan tombol +/- re-render supaya nilai di input ikut
+// terupdate visualnya.
+window.surveySetCheckboxMin = function(qid, value) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+  surveySnapshotDebounced();
+  let n = parseInt(value, 10);
+  if (!Number.isFinite(n) || n < 0) n = 0;
+  q.checkboxMin = n;
+};
+
+window.surveyChangeCheckboxMin = function(qid, delta) {
+  const q = surveyQuestions.find(q => q.id === qid);
+  if (!q) return;
+  surveySnapshot();
+  let n = Number.isFinite(q.checkboxMin) ? q.checkboxMin : 0;
+  n += delta;
+  if (n < 0) n = 0;
+  q.checkboxMin = n;
+  surveyRenderQuestions();
+};
+
 window.surveyRemoveOption = function(qid, optIndex) {
   const q = surveyQuestions.find(q => q.id === qid);
   if (!q || !q.options) return;
@@ -8331,7 +8529,7 @@ async function surveySaveConfig() {
   }
 
   btn.disabled = true;
-  status.textContent = '⏳ Menyimpan konfigurasi survei ke Firestore...';
+  status.textContent = '⏳ Saving survey configuration to Firestore...';
   status.style.color = 'var(--accent)';
 
   // Bersihkan opsi kosong sebelum simpan
@@ -8368,15 +8566,21 @@ async function surveySaveConfig() {
         .map(r => ({ name: (r.name || '').trim(), sid: (r.sid || '').trim() }))
         .filter(r => r.name && r.sid);
     }
-    if (type === 'choice') {
-      // Opsi "Lainnya" — peserta bisa ketik jawaban sendiri di luar opsi baku.
+    if (type === 'choice' || type === 'checkbox') {
+      // Opsi "Other" — peserta bisa ketik jawaban sendiri di luar opsi baku.
       base.allowOther = !!q.allowOther;
       if (base.allowOther) {
-        // Label tombol "Lainnya" — bisa dikustom admin (mis. "Seluk tan",
-        // "Other"). Default "Lainnya..." kalau dikosongkan.
+        // Label tombol "Other" — bisa dikustom admin (mis. "Seluk tan",
+        // "Other"). Default "Other..." kalau dikosongkan.
         const lbl = (q.otherLabel != null ? String(q.otherLabel) : '').trim();
         base.otherLabel = lbl || 'Other...';
       }
+    }
+    if (type === 'checkbox') {
+      // Minimum jumlah opsi yang wajib dicentang peserta (0 = tidak ada minimum).
+      let cmin = parseInt(q.checkboxMin, 10);
+      if (!Number.isFinite(cmin) || cmin < 0) cmin = 0;
+      base.checkboxMin = cmin;
     }
     return base;
   });
@@ -8439,6 +8643,7 @@ async function surveyLoadFromFirestore() {
         options: Array.isArray(q.options) ? q.options.slice() : [],
         allowOther: q.allowOther === true,
         otherLabel: q.otherLabel != null ? q.otherLabel : 'Other...',
+        checkboxMin: Number.isFinite(q.checkboxMin) ? q.checkboxMin : (parseInt(q.checkboxMin, 10) || 0),
         scaleMin, scaleMax,
         scaleLabels,
         scaleMinLabel: q.scaleMinLabel || '',
